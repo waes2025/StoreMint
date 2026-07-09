@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import PendingInvitationsModal from '@/components/PendingInvitationsModal.vue';
 import { 
@@ -133,8 +133,36 @@ const filterStatus = ref('All');
 const activeTab = ref<'overview' | 'products' | 'orders' | 'coupons'>('overview');
 const customerTab = ref<'orders' | 'coupons' | 'settings'>('orders');
 
+// Synchronize tab and display a toast for coming soon modules
+const syncParams = () => {
+    if (typeof window === 'undefined') return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    if (tabParam && ['overview', 'products', 'orders', 'coupons'].includes(tabParam)) {
+        activeTab.value = tabParam as any;
+    }
+    const featureParam = urlParams.get('feature');
+    if (urlParams.get('tab') === 'coming_soon' && featureParam) {
+        triggerToast(`${featureParam} module is coming soon!`);
+    }
+};
+
+onMounted(syncParams);
+watch(() => page.url, syncParams);
+
 // Coupon creation state
 const showCreateCouponModal = ref(false);
+const showEditCouponModal = ref(false);
+const editingCouponId = ref<number | null>(null);
+const editCoupon = ref({
+    code: '',
+    discountType: 'percentage' as 'flat' | 'percentage',
+    discountValue: 10,
+    minOrderAmount: 0,
+    usageLimit: 100,
+    expiresAt: '',
+    status: 'active' as 'active' | 'inactive'
+});
 
 // Invoice View State
 const selectedInvoice = ref<any | null>(null);
@@ -242,6 +270,63 @@ const handleCreateCoupon = () => {
     });
 };
 
+const openEditCouponModal = (coupon: any) => {
+    editingCouponId.value = coupon.id;
+    editCoupon.value = {
+        code: coupon.code,
+        discountType: coupon.discountType,
+        discountValue: coupon.discountValue,
+        minOrderAmount: coupon.minOrderAmount,
+        usageLimit: coupon.usageLimit,
+        expiresAt: coupon.expiresAt === 'Never' ? '' : coupon.expiresAt,
+        status: coupon.status
+    };
+    formErrors.value = {};
+    showEditCouponModal.value = true;
+};
+
+const handleUpdateCoupon = () => {
+    formErrors.value = {};
+    let hasError = false;
+
+    if (!editCoupon.value.code.trim()) {
+        formErrors.value.code = "Coupon code is required.";
+        hasError = true;
+    }
+
+    if (editCoupon.value.discountValue <= 0) {
+        formErrors.value.discountValue = "Value must be positive.";
+        hasError = true;
+    } else if (editCoupon.value.discountType === 'percentage' && editCoupon.value.discountValue > 100) {
+        formErrors.value.discountValue = "Percentage cannot exceed 100%.";
+        hasError = true;
+    }
+
+    if (editCoupon.value.minOrderAmount < 0) {
+        formErrors.value.minOrderAmount = "Minimum order cannot be negative.";
+        hasError = true;
+    }
+
+    if (hasError) return;
+
+    router.put(`/${currentTeamSlug.value}/dashboard/coupons/${editingCouponId.value}`, {
+        code: editCoupon.value.code.trim().toUpperCase(),
+        discountType: editCoupon.value.discountType,
+        discountValue: editCoupon.value.discountValue,
+        minOrderAmount: editCoupon.value.minOrderAmount,
+        usageLimit: editCoupon.value.usageLimit,
+        expiresAt: editCoupon.value.expiresAt || null,
+        status: editCoupon.value.status
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            showEditCouponModal.value = false;
+            editingCouponId.value = null;
+            triggerToast("🎉 Coupon updated successfully!");
+        }
+    });
+};
+
 const toggleCouponStatus = (couponId: number) => {
     router.post(`/${currentTeamSlug.value}/dashboard/coupons/${couponId}/toggle`, {}, {
         preserveScroll: true,
@@ -299,7 +384,7 @@ const filteredCoupons = computed(() => {
     <Head :title="role === 'admin' ? 'Admin Dashboard' : 'Customer Dashboard'" />
 
     <!-- 1. ADMIN DASHBOARD TEMPLATE -->
-    <div v-if="role === 'admin'" class="space-y-6 pb-12 text-neutral-800 dark:text-neutral-200">
+    <div v-if="role === 'admin'" class="px-4 sm:px-6 lg:px-8 py-6 space-y-6 pb-12 text-neutral-800 dark:text-neutral-200 overflow-x-hidden">
         
         <PendingInvitationsModal
             v-if="pendingInvitations && pendingInvitations.length > 0"
@@ -706,13 +791,23 @@ const filteredCoupons = computed(() => {
                                         {{ coupon.status === 'active' ? 'Active' : 'Inactive' }}
                                     </button>
                                 </td>
-                                <td class="p-4 text-center">
-                                    <button 
-                                        @click="deleteCoupon(coupon.id)"
-                                        class="h-8 w-8 rounded-lg bg-neutral-100 text-neutral-400 hover:bg-red-50 hover:text-red-500 flex items-center justify-center transition dark:bg-neutral-800 dark:hover:bg-red-950"
-                                    >
-                                        <Trash2 class="h-3.5 w-3.5" />
-                                    </button>
+                                <td class="p-4">
+                                    <div class="flex items-center justify-center gap-1.5">
+                                        <button 
+                                            @click="openEditCouponModal(coupon)"
+                                            class="h-8 w-8 rounded-lg bg-neutral-100 text-neutral-400 hover:bg-emerald-50 hover:text-emerald-600 flex items-center justify-center transition dark:bg-neutral-800 dark:hover:bg-emerald-950"
+                                            title="Edit Coupon"
+                                        >
+                                            <Edit class="h-3.5 w-3.5" />
+                                        </button>
+                                        <button 
+                                            @click="deleteCoupon(coupon.id)"
+                                            class="h-8 w-8 rounded-lg bg-neutral-100 text-neutral-400 hover:bg-red-50 hover:text-red-500 flex items-center justify-center transition dark:bg-neutral-800 dark:hover:bg-red-950"
+                                            title="Delete Coupon"
+                                        >
+                                            <Trash2 class="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
@@ -825,12 +920,117 @@ const filteredCoupons = computed(() => {
                 </div>
             </div>
 
+            <!-- Edit Coupon Dialog -->
+            <div v-if="showEditCouponModal" class="fixed inset-0 z-50 overflow-hidden flex items-center justify-center">
+                <div @click="showEditCouponModal = false" class="absolute inset-0 bg-neutral-950/40 backdrop-blur-xs"></div>
+                <div class="relative w-full max-w-md rounded-xl border border-neutral-200 bg-white p-6 shadow-2xl dark:border-neutral-800 dark:bg-neutral-900 space-y-4">
+                    <div class="flex items-center justify-between border-b border-neutral-100 pb-3 dark:border-neutral-800">
+                        <h3 class="text-base font-bold tracking-tight">Edit Coupon Code</h3>
+                        <button @click="showEditCouponModal = false" class="rounded p-1 text-neutral-400 hover:text-neutral-600 dark:hover:text-white">
+                            <X class="h-4 w-4" />
+                        </button>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="flex flex-col gap-2">
+                            <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Coupon Code</label>
+                            <input 
+                                v-model="editCoupon.code" 
+                                type="text" 
+                                placeholder="e.g. MINT75"
+                                class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
+                            />
+                            <p v-if="formErrors.code" class="text-[10px] font-semibold text-red-500">{{ formErrors.code }}</p>
+                        </div>
+
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div class="flex flex-col gap-2">
+                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Discount Type</label>
+                                <select 
+                                    v-model="editCoupon.discountType" 
+                                    class="h-10 rounded-lg border border-neutral-200 bg-white px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
+                                >
+                                    <option value="percentage">Percentage (%)</option>
+                                    <option value="flat">Flat Amount ($)</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Discount Value</label>
+                                <input 
+                                    v-model="editCoupon.discountValue" 
+                                    type="number" 
+                                    class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
+                                />
+                                <p v-if="formErrors.discountValue" class="text-[10px] font-semibold text-red-500">{{ formErrors.discountValue }}</p>
+                            </div>
+                        </div>
+
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div class="flex flex-col gap-2">
+                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Min Order ($)</label>
+                                <input 
+                                    v-model="editCoupon.minOrderAmount" 
+                                    type="number" 
+                                    class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
+                                />
+                                <p v-if="formErrors.minOrderAmount" class="text-[10px] font-semibold text-red-500">{{ formErrors.minOrderAmount }}</p>
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Usage Limit</label>
+                                <input 
+                                    v-model="editCoupon.usageLimit" 
+                                    type="number" 
+                                    class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div class="flex flex-col gap-2">
+                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Expiry Date</label>
+                                <input 
+                                    v-model="editCoupon.expiresAt" 
+                                    type="date" 
+                                    class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
+                                />
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Active Status</label>
+                                <select 
+                                    v-model="editCoupon.status" 
+                                    class="h-10 rounded-lg border border-neutral-200 bg-white px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
+                                >
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex justify-end gap-3 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+                        <button 
+                            @click="showEditCouponModal = false"
+                            class="h-9 px-4 rounded-lg border text-xs font-semibold hover:bg-neutral-50 dark:border-neutral-700"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            @click="handleUpdateCoupon"
+                            class="h-9 px-4 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition"
+                        >
+                            Save Changes
+                        </button>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
     </div>
 
     <!-- 2. CUSTOMER DASHBOARD TEMPLATE -->
-    <div v-else class="space-y-6 pb-12 text-neutral-800 dark:text-neutral-200">
+    <div v-else class="px-4 sm:px-6 lg:px-8 py-6 space-y-6 pb-12 text-neutral-800 dark:text-neutral-200 overflow-x-hidden">
         
 
         <!-- Customer Stats -->

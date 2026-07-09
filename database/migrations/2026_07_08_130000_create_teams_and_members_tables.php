@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (!Schema::hasTable('teams')) {
+        if (! Schema::hasTable('teams')) {
             Schema::create('teams', function (Blueprint $table) {
                 $table->bigIncrements('id');
                 $table->string('name');
@@ -22,7 +22,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('team_members')) {
+        if (! Schema::hasTable('team_members')) {
             Schema::create('team_members', function (Blueprint $table) {
                 $table->bigIncrements('id');
                 $table->unsignedBigInteger('team_id');
@@ -36,7 +36,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('team_invitations')) {
+        if (! Schema::hasTable('team_invitations')) {
             Schema::create('team_invitations', function (Blueprint $table) {
                 $table->bigIncrements('id');
                 $table->unsignedBigInteger('team_id');
@@ -55,11 +55,11 @@ return new class extends Migration
 
         if (Schema::hasTable('users')) {
             Schema::table('users', function (Blueprint $table) {
-                if (!Schema::hasColumn('users', 'current_team_id')) {
+                if (! Schema::hasColumn('users', 'current_team_id')) {
                     $table->unsignedBigInteger('current_team_id')->nullable()->after('remember_token');
                     $table->foreign('current_team_id')->references('id')->on('teams')->onDelete('set null');
                 }
-                if (!Schema::hasColumn('users', 'name')) {
+                if (! Schema::hasColumn('users', 'name')) {
                     $table->string('name')->nullable()->after('last_name');
                 }
             });

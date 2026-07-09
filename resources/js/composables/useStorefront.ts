@@ -7,6 +7,11 @@ export function useStorefront(props: {
     dbCategories?: string[];
     dbBrands?: string[];
     dbCoupons?: DbCoupon[];
+    gateways?: {
+        stripe: { enabled: boolean; publishable_key: string; secret_key: string };
+        sslcommerz: { enabled: boolean; store_id: string; store_password: string };
+        cod: { enabled: boolean };
+    };
 }) {
     const { appearance, resolvedAppearance, updateAppearance } = useAppearance();
     const isDarkMode = computed(() => resolvedAppearance.value === 'dark');
@@ -125,6 +130,18 @@ export function useStorefront(props: {
     const couponError = ref('');
     const couponSuccess = ref('');
 
+    // Determine default payment method
+    let defaultPaymentMethod: 'stripe' | 'sslcommerz' | 'cod' = 'cod';
+    if (props.gateways) {
+        if (props.gateways.stripe?.enabled) {
+            defaultPaymentMethod = 'stripe';
+        } else if (props.gateways.sslcommerz?.enabled) {
+            defaultPaymentMethod = 'sslcommerz';
+        } else if (props.gateways.cod?.enabled) {
+            defaultPaymentMethod = 'cod';
+        }
+    }
+
     // Checkout form state
     const checkoutForm = ref({
         name: 'Waes Ahmed',
@@ -133,7 +150,7 @@ export function useStorefront(props: {
         city: 'Dhaka',
         zip: '1207',
         phone: '+880 1712-345678',
-        paymentMethod: 'stripe' as 'cod' | 'sslcommerz' | 'stripe'
+        paymentMethod: defaultPaymentMethod
     });
 
     // Stripe checkout mock state

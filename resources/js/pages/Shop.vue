@@ -46,6 +46,11 @@ const props = defineProps<{
     dbCategories?: string[];
     dbBrands?: string[];
     dbCoupons?: DbCoupon[];
+    gateways?: {
+        stripe: { enabled: boolean; publishable_key: string; secret_key: string };
+        sslcommerz: { enabled: boolean; store_id: string; store_password: string };
+        cod: { enabled: boolean };
+    };
 }>();
 
 // Page properties
@@ -1034,6 +1039,7 @@ onMounted(() => {
                                 <div class="grid gap-4 sm:grid-cols-3">
                                     <!-- Stripe -->
                                     <label 
+                                        v-if="!gateways || gateways.stripe?.enabled"
                                         :class="checkoutForm.paymentMethod === 'stripe' ? 'border-emerald-500 bg-emerald-500/5 ring-1 ring-emerald-500' : 'border-neutral-200'"
                                         class="flex flex-col items-center justify-center p-4 rounded-xl border-2 cursor-pointer hover:border-emerald-500 transition text-center space-y-2 dark:border-neutral-800"
                                     >
@@ -1045,6 +1051,7 @@ onMounted(() => {
                                     
                                     <!-- SSLCommerz -->
                                     <label 
+                                        v-if="!gateways || gateways.sslcommerz?.enabled"
                                         :class="checkoutForm.paymentMethod === 'sslcommerz' ? 'border-emerald-500 bg-emerald-500/5 ring-1 ring-emerald-500' : 'border-neutral-200'"
                                         class="flex flex-col items-center justify-center p-4 rounded-xl border-2 cursor-pointer hover:border-emerald-500 transition text-center space-y-2 dark:border-neutral-800"
                                     >
@@ -1053,9 +1060,10 @@ onMounted(() => {
                                         <span class="text-xs font-bold">SSLCommerz</span>
                                         <span class="text-[10px] text-neutral-400">Local Cards & Mobile Banking</span>
                                     </label>
-
+ 
                                     <!-- COD -->
                                     <label 
+                                        v-if="!gateways || gateways.cod?.enabled"
                                         :class="checkoutForm.paymentMethod === 'cod' ? 'border-emerald-500 bg-emerald-500/5 ring-1 ring-emerald-500' : 'border-neutral-200'"
                                         class="flex flex-col items-center justify-center p-4 rounded-xl border-2 cursor-pointer hover:border-emerald-500 transition text-center space-y-2 dark:border-neutral-800"
                                     >

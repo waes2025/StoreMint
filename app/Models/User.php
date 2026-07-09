@@ -47,12 +47,12 @@ class User extends Authenticatable
         parent::boot();
 
         static::saving(function (User $user) {
-            if ($user->name && !$user->first_name) {
+            if ($user->name && ! $user->first_name) {
                 $parts = explode(' ', $user->name, 2);
                 $user->first_name = $parts[0];
                 $user->last_name = $parts[1] ?? '';
-            } elseif ($user->first_name && !$user->name) {
-                $user->name = trim($user->first_name . ' ' . $user->last_name);
+            } elseif ($user->first_name && ! $user->name) {
+                $user->name = trim($user->first_name.' '.$user->last_name);
             }
         });
     }
@@ -72,11 +72,32 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if the user is an admin.
+     * Get the contact(s) associated with this user through user_contact_access.
+     */
+    public function contacts()
+    {
+        return $this->belongsToMany(
+            Contact::class,
+            'user_contact_access',
+            'user_id',
+            'contact_id'
+        );
+    }
+
+    /**
+     * Get the primary contact for this user.
+     */
+    public function getContactAttribute()
+    {
+        return $this->contacts()->first();
+    }
+
+    /**
+     * Check if the user is an admin or staff member.
      */
     public function isAdmin(): bool
     {
-        return $this->role === 'admin' || $this->user_type === 'admin';
+        return $this->user_type === 'user' || $this->user_type === 'admin';
     }
 
     /**
@@ -84,7 +105,6 @@ class User extends Authenticatable
      */
     public function isCustomer(): bool
     {
-        return $this->role === 'customer' || $this->user_type === 'customer';
+        return $this->user_type === 'customer';
     }
 }
-

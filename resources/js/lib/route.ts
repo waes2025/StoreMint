@@ -1,6 +1,7 @@
 import type { App } from 'vue';
 import * as baseRoutes from '@/routes';
 import appearance from '@/routes/appearance';
+import gateways from '@/routes/gateways';
 import invitations from '@/routes/invitations';
 import login from '@/routes/login';
 import password from '@/routes/password';
@@ -20,6 +21,7 @@ const wrapRoute = (fn: Function, obj: any) => {
 const routeRegistry: Record<string, any> = {
     ...baseRoutes,
     appearance,
+    gateways,
     invitations,
     login: wrapRoute(baseRoutes.login, login),
     password,

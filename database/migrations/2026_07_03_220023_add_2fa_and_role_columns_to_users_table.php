@@ -31,12 +31,8 @@ return new class extends Migration
                     $table->timestamp('two_factor_confirmed_at')->nullable()->after('two_factor_recovery_codes');
                 }
 
-                if (! Schema::hasColumn('users', 'role')) {
-                    $table->enum('role', ['admin', 'customer'])->default('customer')->index()->after('password');
-                }
-
                 if (! Schema::hasColumn('users', 'phone')) {
-                    $table->string('phone', 20)->nullable()->after('role');
+                    $table->string('phone', 20)->nullable()->after('password');
                 }
             });
         }
@@ -54,7 +50,6 @@ return new class extends Migration
                     'two_factor_secret',
                     'two_factor_recovery_codes',
                     'two_factor_confirmed_at',
-                    'role',
                     'phone',
                 ];
 

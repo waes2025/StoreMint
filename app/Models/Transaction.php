@@ -15,14 +15,11 @@ class Transaction extends Model
         'type',
         'status',
         'payment_status',
-        'payment_gateway',
         'invoice_no',
-        'order_number',
         'transaction_date',
         'total_before_tax',
         'discount_amount',
         'coupon_id',
-        'coupon_discount_amount',
         'shipping_charges',
         'final_total',
         'shipping_address',
@@ -36,5 +33,10 @@ class Transaction extends Model
     public function coupon(): BelongsTo
     {
         return $this->belongsTo(Coupon::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(TransactionPayment::class, 'transaction_id');
     }
 }

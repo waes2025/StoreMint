@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -7,24 +8,38 @@ import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { toUrl } from '@/lib/utils';
 import type { NavItem } from '@/types';
 
-const sidebarNavItems: NavItem[] = [
-    {
-        title: 'Profile',
-        href: route('profile.edit').url,
-    },
-    {
-        title: 'Security',
-        href: route('security.edit').url,
-    },
-    {
-        title: 'Teams',
-        href: route('teams.index').url,
-    },
-    {
-        title: 'Appearance',
-        href: route('appearance.edit').url,
-    },
-];
+const page = usePage();
+
+const sidebarNavItems = computed<NavItem[]>(() => {
+    const items: NavItem[] = [
+        {
+            title: 'Profile',
+            href: route('profile.edit').url,
+        },
+        {
+            title: 'Security',
+            href: route('security.edit').url,
+        },
+        {
+            title: 'Teams',
+            href: route('teams.index').url,
+        },
+        {
+            title: 'Appearance',
+            href: route('appearance.edit').url,
+        },
+    ];
+
+    const userType = page.props.auth.user?.user_type;
+    if (userType === 'admin' || userType === 'user') {
+        items.push({
+            title: 'Gateways',
+            href: route('gateways.edit').url,
+        });
+    }
+
+    return items;
+});
 
 const { isCurrentOrParentUrl } = useCurrentUrl();
 

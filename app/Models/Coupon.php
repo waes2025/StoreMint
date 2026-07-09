@@ -25,4 +25,17 @@ class Coupon extends Model
         'status',
         'created_by',
     ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'starts_at' => 'datetime',
+            'expires_at' => 'datetime',
+        ];
+    }
 }

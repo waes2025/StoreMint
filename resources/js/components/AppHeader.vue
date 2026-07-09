@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, Menu, Search } from '@lucide/vue';
-import { computed } from 'vue';
+import { BookOpen, Folder, LayoutGrid, Menu, Search, Globe, ChevronDown, Check, Sun, Monitor, Moon } from '@lucide/vue';
+import { computed, ref, useTemplateRef } from 'vue';
+import { onClickOutside } from '@vueuse/core';
+import { useAppearance } from '@/composables/useAppearance';
 import AppLogo from '@/components/AppLogo.vue';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import TeamSwitcher from '@/components/TeamSwitcher.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -56,7 +57,7 @@ const dashboardUrl = computed(() =>
 
 
 const activeItemStyles =
-    'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100';
+    'text-white bg-emerald-800/80 dark:bg-emerald-900/80';
 
 const mainNavItems = computed<NavItem[]>(() => [
     {
@@ -78,11 +79,25 @@ const rightNavItems: NavItem[] = [
         icon: BookOpen,
     },
 ];
+
+const { appearance, updateAppearance } = useAppearance();
+
+const selectedLang = ref('English');
+const langOpen = ref(false);
+const langDropdownRef = useTemplateRef<HTMLElement>('langDropdownRef');
+const languages = ['English', 'Spanish', 'French', 'German', 'Bengali'];
+
+onClickOutside(langDropdownRef, () => {
+    langOpen.value = false;
+});
 </script>
 
 <template>
     <div>
-        <div class="border-b border-sidebar-border/80">
+        <div 
+            class="border-b border-emerald-500/20 bg-emerald-900 text-white dark:bg-emerald-950 shadow-sm"
+            style="--foreground: 0 0% 100%; --muted-foreground: 142.1 70.6% 85%; --border: 142.1 70.6% 30%; --sidebar-border: 142.1 70.6% 30%; --accent: 142.1 70.6% 25%; --accent-foreground: 0 0% 100%;"
+        >
             <div class="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
                 <!-- Mobile Menu -->
                 <div class="lg:hidden">
@@ -101,9 +116,9 @@ const rightNavItems: NavItem[] = [
                                 >Navigation menu</SheetTitle
                             >
                             <SheetHeader class="flex justify-start text-left">
-                                <AppLogoIcon
-                                    class="size-6 fill-current text-black dark:text-white"
-                                />
+                                <div class="flex items-center gap-x-2">
+                                    <AppLogo />
+                                </div>
                             </SheetHeader>
                             <div
                                 class="flex h-full flex-1 flex-col justify-between space-y-4 py-6"
@@ -186,14 +201,69 @@ const rightNavItems: NavItem[] = [
                                 </Link>
                                 <div
                                     v-if="isCurrentUrl(item.href)"
-                                    class="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-black dark:bg-white"
+                                    class="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-white dark:bg-white"
                                 ></div>
                             </NavigationMenuItem>
                         </NavigationMenuList>
                     </NavigationMenu>
                 </div>
 
-                <div class="ml-auto flex items-center space-x-2">
+                <div class="ml-auto flex items-center space-x-3">
+                    <!-- Language Selector -->
+                    <div class="relative" ref="langDropdownRef">
+                        <button
+                            @click="langOpen = !langOpen"
+                            class="flex items-center gap-1.5 rounded-lg bg-emerald-800 px-3 py-1.5 hover:bg-emerald-750 transition cursor-pointer text-xs text-white font-medium dark:bg-emerald-900 dark:hover:bg-emerald-850"
+                        >
+                            <Globe class="h-3.5 w-3.5 text-emerald-300" />
+                            <span>{{ selectedLang }}</span>
+                            <ChevronDown class="h-3 w-3 text-emerald-400" />
+                        </button>
+                        
+                        <div
+                            v-if="langOpen"
+                            class="absolute right-0 mt-1 w-28 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-1 shadow-md z-30"
+                        >
+                            <button
+                                v-for="lang in languages"
+                                :key="lang"
+                                @click="selectedLang = lang; langOpen = false"
+                                class="flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-[11px] text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-850 cursor-pointer"
+                            >
+                                <span>{{ lang }}</span>
+                                <Check v-if="selectedLang === lang" class="h-2.5 w-2.5 text-emerald-500" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Theme Selector (Segmented Control) -->
+                    <div class="flex items-center gap-0.5 rounded-lg bg-emerald-950 p-0.5 border border-emerald-500/20 shadow-xs dark:bg-neutral-900/60">
+                        <button
+                            @click="updateAppearance('light')"
+                            :class="appearance === 'light' ? 'bg-emerald-800 text-amber-300 shadow-xs dark:bg-emerald-900' : 'text-emerald-400/80 hover:text-emerald-350'"
+                            class="flex h-6 w-6 items-center justify-center rounded-md cursor-pointer transition duration-200"
+                            title="Light Mode"
+                        >
+                            <Sun class="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                            @click="updateAppearance('system')"
+                            :class="appearance === 'system' ? 'bg-emerald-800 text-blue-300 shadow-xs dark:bg-emerald-900' : 'text-emerald-400/80 hover:text-emerald-350'"
+                            class="flex h-6 w-6 items-center justify-center rounded-md cursor-pointer transition duration-200"
+                            title="System Mode"
+                        >
+                            <Monitor class="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                            @click="updateAppearance('dark')"
+                            :class="appearance === 'dark' ? 'bg-emerald-800 text-emerald-300 shadow-xs dark:bg-emerald-900' : 'text-emerald-400/80 hover:text-emerald-350'"
+                            class="flex h-6 w-6 items-center justify-center rounded-md cursor-pointer transition duration-200"
+                            title="Dark Mode"
+                        >
+                            <Moon class="h-3.5 w-3.5" />
+                        </button>
+                    </div>
+
                     <div class="relative flex items-center space-x-1">
                         <Button
                             variant="ghost"

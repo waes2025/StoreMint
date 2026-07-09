@@ -50,7 +50,7 @@ const plusIconClass = computed(() => (props.inHeader ? 'size-4' : 'h-4 w-4'));
 const switchTeam = (team: Team) => {
     const previousTeamSlug = currentTeam.value?.slug;
 
-    router.visit(route('teams.switch', team.slug).url, {
+    router.post(route('teams.switch', team.slug).url, {}, {
 
         onFinish: () => {
             if (!previousTeamSlug || typeof window === 'undefined') {

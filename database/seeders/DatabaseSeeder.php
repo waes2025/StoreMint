@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\TransactionPayment;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +20,6 @@ class DatabaseSeeder extends Seeder
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
 
         // Truncate tables
-        DB::table('invoices')->truncate();
         DB::table('coupon_usages')->truncate();
         DB::table('coupons')->truncate();
         DB::table('variation_location_details')->truncate();
@@ -37,15 +37,12 @@ class DatabaseSeeder extends Seeder
 
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
-        // 1. Insert Default Currency
-        $currencyId = DB::table('currencies')->insertGetId([
-            'country' => 'United States',
-            'currency' => 'US Dollar',
-            'code' => 'USD',
-            'symbol' => '$',
-            'thousand_separator' => ',',
-            'decimal_separator' => '.',
+        $this->call([
+            PermissionsTableSeeder::class,
+            CurrenciesTableSeeder::class,
         ]);
+
+        $currencyId = DB::table('currencies')->where('code', 'USD')->value('id') ?? 2;
 
         // 2. Insert Default User (Owner)
         $userId = DB::table('users')->insertGetId([
@@ -54,7 +51,7 @@ class DatabaseSeeder extends Seeder
             'username' => 'waes',
             'email' => 'waes@example.com',
             'password' => Hash::make('password'),
-            'user_type' => 'admin',
+            'user_type' => 'user',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -89,6 +86,73 @@ class DatabaseSeeder extends Seeder
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        // 4b. Seed Customer Users and Contacts
+        $customersData = [
+            [
+                'first_name' => 'Sarah',
+                'last_name' => 'Connor',
+                'email' => 'sarah@example.com',
+                'username' => 'sarah',
+                'mobile' => '+1 (555) 019-2831',
+            ],
+            [
+                'first_name' => 'Bruce',
+                'last_name' => 'Wayne',
+                'email' => 'bruce@example.com',
+                'username' => 'bruce',
+                'mobile' => '+1 (555) 911-3829',
+            ],
+            [
+                'first_name' => 'Clark',
+                'last_name' => 'Kent',
+                'email' => 'clark@example.com',
+                'username' => 'clark',
+                'mobile' => '+1 (555) 777-8822',
+            ],
+        ];
+
+        $customerMap = [];
+
+        foreach ($customersData as $c) {
+            $cUserId = DB::table('users')->insertGetId([
+                'first_name' => $c['first_name'],
+                'last_name' => $c['last_name'],
+                'username' => $c['username'],
+                'email' => $c['email'],
+                'password' => Hash::make('password'),
+                'user_type' => 'customer',
+                'business_id' => $businessId,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // Create corresponding contact
+            $contactId = DB::table('contacts')->insertGetId([
+                'business_id' => $businessId,
+                'type' => 'customer',
+                'first_name' => $c['first_name'],
+                'last_name' => $c['last_name'],
+                'name' => $c['first_name'].' '.$c['last_name'],
+                'email' => $c['email'],
+                'mobile' => $c['mobile'],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // Link in user_contact_access
+            DB::table('user_contact_access')->insert([
+                'user_id' => $cUserId,
+                'contact_id' => $contactId,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            $customerMap[$c['first_name'].' '.$c['last_name']] = [
+                'user_id' => $cUserId,
+                'contact_id' => $contactId,
+            ];
+        }
 
         // 5. Insert Categories
         $categoryId = DB::table('categories')->insertGetId([
@@ -127,7 +191,7 @@ class DatabaseSeeder extends Seeder
                 'image' => 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => true,
                 'is_best_seller' => true,
-                'brand' => 'Apex'
+                'brand' => 'Apex',
             ],
             [
                 'name' => 'AeroBuds Pro Wireless',
@@ -139,7 +203,7 @@ class DatabaseSeeder extends Seeder
                 'image' => 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => true,
                 'is_best_seller' => false,
-                'brand' => 'Aero'
+                'brand' => 'Aero',
             ],
             [
                 'name' => 'Minimalist Leather Backpack',
@@ -151,7 +215,7 @@ class DatabaseSeeder extends Seeder
                 'image' => 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => false,
                 'is_best_seller' => true,
-                'brand' => 'Sleek'
+                'brand' => 'Sleek',
             ],
             [
                 'name' => 'Lumbar Comfort Office Chair',
@@ -163,7 +227,7 @@ class DatabaseSeeder extends Seeder
                 'image' => 'https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => false,
                 'is_best_seller' => false,
-                'brand' => 'Ergo'
+                'brand' => 'Ergo',
             ],
             [
                 'name' => 'Ember Mug Smart Temperature',
@@ -175,7 +239,7 @@ class DatabaseSeeder extends Seeder
                 'image' => 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => false,
                 'is_best_seller' => false,
-                'brand' => 'Ember'
+                'brand' => 'Ember',
             ],
             [
                 'name' => 'Aura Light Ring Lamp',
@@ -187,12 +251,12 @@ class DatabaseSeeder extends Seeder
                 'image' => 'https://images.unsplash.com/photo-1507646227500-4d389b0012be?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => true,
                 'is_best_seller' => false,
-                'brand' => 'Aura'
+                'brand' => 'Aura',
             ],
         ];
 
         foreach ($productsData as $index => $pData) {
-            $sku = 'SKU-' . strtoupper(Str::random(6));
+            $sku = 'SKU-'.strtoupper(Str::random(6));
             $stockStatus = $pData['stock'] > 0 ? 'in_stock' : 'out_of_stock';
 
             // Insert Product
@@ -292,10 +356,10 @@ class DatabaseSeeder extends Seeder
             'updated_at' => now(),
         ]);
 
-        // 8. Insert Demo Orders & Invoices
+        // 8. Insert Demo Orders
         $orders = [
             [
-                'order_number' => 'ORD-100201',
+                'ref_no' => 'ORD-100201',
                 'invoice_no' => 'INV-2026-9041',
                 'customer_name' => 'Sarah Connor',
                 'email' => 'sarah.c@sky.net',
@@ -303,7 +367,7 @@ class DatabaseSeeder extends Seeder
                 'address' => '404 Resistance Rd, Los Angeles, CA',
                 'items' => [
                     ['slug' => 'quantum-chronograph-watch', 'qty' => 1],
-                    ['slug' => 'aerobuds-pro-wireless', 'qty' => 1]
+                    ['slug' => 'aerobuds-pro-wireless', 'qty' => 1],
                 ],
                 'discount' => 10.00,
                 'coupon_id' => $coupon2,
@@ -312,17 +376,17 @@ class DatabaseSeeder extends Seeder
                 'gateway' => 'stripe',
                 'status' => 'completed',
                 'payment_status' => 'paid',
-                'date' => now()->subHours(2)
+                'date' => now()->subHours(2),
             ],
             [
-                'order_number' => 'ORD-100202',
+                'ref_no' => 'ORD-100202',
                 'invoice_no' => 'INV-2026-4859',
                 'customer_name' => 'Bruce Wayne',
                 'email' => 'bruce@waynecorp.com',
                 'phone' => '+1 (555) 911-3829',
                 'address' => 'Wayne Manor, Gotham City',
                 'items' => [
-                    ['slug' => 'lumbar-comfort-office-chair', 'qty' => 2]
+                    ['slug' => 'lumbar-comfort-office-chair', 'qty' => 2],
                 ],
                 'discount' => 100.00, // percentage 50% capped
                 'coupon_id' => $coupon1,
@@ -331,17 +395,17 @@ class DatabaseSeeder extends Seeder
                 'gateway' => 'sslcommerz',
                 'status' => 'completed',
                 'payment_status' => 'paid',
-                'date' => now()->subDays(1)
+                'date' => now()->subDays(1),
             ],
             [
-                'order_number' => 'ORD-100203',
+                'ref_no' => 'ORD-100203',
                 'invoice_no' => 'INV-2026-1182',
                 'customer_name' => 'Clark Kent',
                 'email' => 'clark.k@dailyplanet.com',
                 'phone' => '+1 (555) 777-8822',
                 'address' => '345 Metro Heights, Metropolis',
                 'items' => [
-                    ['slug' => 'minimalist-leather-backpack', 'qty' => 1]
+                    ['slug' => 'minimalist-leather-backpack', 'qty' => 1],
                 ],
                 'discount' => 0.00,
                 'coupon_id' => null,
@@ -350,8 +414,8 @@ class DatabaseSeeder extends Seeder
                 'gateway' => 'cod',
                 'status' => 'ordered',
                 'payment_status' => 'pending',
-                'date' => now()->subDays(2)
-            ]
+                'date' => now()->subDays(2),
+            ],
         ];
 
         foreach ($orders as $order) {
@@ -372,36 +436,58 @@ class DatabaseSeeder extends Seeder
                         'product_id' => $prod->id,
                         'variation_id' => $var->id,
                         'qty' => $itemSpec['qty'],
-                        'price' => $prod->price
+                        'price' => $prod->price,
                     ];
                 }
             }
 
             $grandTotal = $subtotal - $order['coupon_discount'] + $order['shipping'];
 
+            $custInfo = $customerMap[$order['customer_name']] ?? null;
+            $contactIdForTrans = $custInfo ? $custInfo['contact_id'] : null;
+            $userIdForTrans = $custInfo ? $custInfo['user_id'] : $userId;
+
             // Insert Transaction
             $transId = DB::table('transactions')->insertGetId([
                 'business_id' => $businessId,
                 'location_id' => $locationId,
-                'created_by' => $userId,
+                'contact_id' => $contactIdForTrans,
+                'created_by' => $userIdForTrans,
                 'type' => 'sell',
                 'status' => $order['status'],
                 'payment_status' => $order['payment_status'],
                 'invoice_no' => $order['invoice_no'],
-                'order_number' => $order['order_number'],
+                'ref_no' => $order['ref_no'],
                 'transaction_date' => $order['date'],
                 'total_before_tax' => $subtotal,
                 'discount_type' => $order['coupon_id'] ? 'fixed' : null,
                 'discount_amount' => $order['coupon_discount'],
                 'coupon_id' => $order['coupon_id'],
-                'coupon_discount_amount' => $order['coupon_discount'],
                 'shipping_charges' => $order['shipping'],
                 'shipping_address' => $order['address'],
                 'final_total' => $grandTotal,
-                'payment_gateway' => $order['gateway'],
                 'created_at' => $order['date'],
                 'updated_at' => $order['date'],
             ]);
+
+            // Seed transaction payment if order is paid
+            if ($order['payment_status'] === 'paid') {
+                $paymentType = TransactionPayment::determinePaymentType($grandTotal);
+
+                DB::table('transaction_payments')->insert([
+                    'transaction_id' => $transId,
+                    'business_id' => $businessId,
+                    'amount' => $grandTotal,
+                    'method' => 'online',
+                    'payment_type' => $paymentType,
+                    'gateway' => $order['gateway'],
+                    'paid_on' => $order['date'],
+                    'created_by' => $userIdForTrans,
+                    'status' => 'success',
+                    'created_at' => $order['date'],
+                    'updated_at' => $order['date'],
+                ]);
+            }
 
             // Insert Sell Lines & Coupon Usage if applicable
             foreach ($itemsToLink as $linkItem) {
@@ -422,28 +508,12 @@ class DatabaseSeeder extends Seeder
             if ($order['coupon_id']) {
                 DB::table('coupon_usages')->insert([
                     'coupon_id' => $order['coupon_id'],
-                    'user_id' => $userId,
+                    'user_id' => $userIdForTrans,
                     'transaction_id' => $transId,
                     'discount_applied' => $order['coupon_discount'],
-                    'created_at' => $order['date']
+                    'created_at' => $order['date'],
                 ]);
             }
-
-            // Insert Invoice Snapshot
-            DB::table('invoices')->insert([
-                'transaction_id' => $transId,
-                'invoice_number' => $order['invoice_no'],
-                'subtotal' => $subtotal,
-                'discount_amount' => 0.00,
-                'coupon_discount_amount' => $order['coupon_discount'],
-                'tax_amount' => 0.00,
-                'shipping_charges' => $order['shipping'],
-                'grand_total' => $grandTotal,
-                'pdf_path' => null,
-                'issued_at' => $order['date'],
-                'created_at' => $order['date'],
-                'updated_at' => $order['date']
-            ]);
         }
     }
 }

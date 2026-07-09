@@ -2,28 +2,38 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Product;
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Coupon;
+use App\Models\Product;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Http\Request;
 
 class StorefrontController extends Controller
 {
     /**
      * Display the storefront welcome homepage.
      */
-    public function index(Request $request): Response
+    public function index(Request $request): Response|RedirectResponse
     {
+        if ($request->user() && $request->user()->isAdmin()) {
+            return redirect()->route('customer.dashboard');
+        }
+
         return Inertia::render('Welcome', $this->getStorefrontData());
     }
 
     /**
      * Display the storefront shop page.
      */
-    public function shop(Request $request): Response
+    public function shop(Request $request): Response|RedirectResponse
     {
+        if ($request->user() && $request->user()->isAdmin()) {
+            return redirect()->route('customer.dashboard');
+        }
+
         return Inertia::render('Shop', $this->getStorefrontData());
     }
 
@@ -61,13 +71,13 @@ class StorefrontController extends Controller
         // Ensure "All" is not saved in DB but is returned for frontend tabs
         array_unshift($categories, 'All');
 
-        $brands = \App\Models\Brand::pluck('name')->toArray();
+        $brands = Brand::pluck('name')->toArray();
         array_unshift($brands, 'All');
 
         $coupons = Coupon::where('status', 'active')
             ->where(function ($query) {
                 $query->whereNull('expires_at')
-                      ->orWhere('expires_at', '>', now());
+                    ->orWhere('expires_at', '>', now());
             })
             ->get()
             ->map(function ($coupon) {
@@ -81,11 +91,80 @@ class StorefrontController extends Controller
                 ];
             });
 
+        $systemSetting = \Illuminate\Support\Facades\DB::table('system')->where('key', 'payment_gateways')->first();
+        $savedGateways = [];
+        if ($systemSetting) {
+            $val = $systemSetting->value;
+            if ($this->isSerialized($val)) {
+                $savedGateways = @unserialize($val);
+            } else {
+                $savedGateways = json_decode($val, true);
+            }
+        }
+
+        $defaultGateways = [
+            'stripe' => [
+                'enabled' => false,
+                'publishable_key' => '',
+                'secret_key' => '',
+            ],
+            'sslcommerz' => [
+                'enabled' => false,
+                'store_id' => '',
+                'store_password' => '',
+            ],
+            'cod' => [
+                'enabled' => true,
+            ],
+        ];
+
+        $gateways = array_merge($defaultGateways, is_array($savedGateways) ? $savedGateways : []);
+
         return [
             'dbProducts' => $products,
             'dbCategories' => $categories,
             'dbBrands' => $brands,
             'dbCoupons' => $coupons,
+            'gateways' => $gateways,
         ];
+    }
+
+    /**
+     * Check if a value is serialized PHP data.
+     */
+    private function isSerialized($value): bool
+    {
+        if (! is_string($value)) {
+            return false;
+        }
+        $data = trim($value);
+        if ('N;' === $data) {
+            return true;
+        }
+        if (strlen($data) < 4) {
+            return false;
+        }
+        if (':' !== $data[1]) {
+            return false;
+        }
+        $lastc = substr($data, -1);
+        if (';' !== $lastc && '}' !== $lastc) {
+            return false;
+        }
+        $token = $data[0];
+        switch ($token) {
+            case 's':
+                if ('"' !== substr($data, -2, 1)) {
+                    return false;
+                }
+            case 'a':
+            case 'O':
+                return (bool) preg_match("/^{$token}:[0-9]+:/s", $data);
+            case 'b':
+            case 'i':
+            case 'd':
+                return (bool) preg_match("/^{$token}:[0-9.E-]+;/s", $data);
+        }
+        return false;
     }
 }

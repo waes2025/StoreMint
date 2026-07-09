@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import { Leaf } from '@lucide/vue';
 import {
     Card,
     CardContent,
@@ -25,11 +25,12 @@ defineProps<{
                 :href="home()"
                 class="flex items-center gap-2 self-center font-medium"
             >
-                <div class="flex h-9 w-9 items-center justify-center">
-                    <AppLogoIcon
-                        class="size-9 fill-current text-black dark:text-white"
-                    />
+                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-400 to-emerald-600 text-white shadow-md shadow-emerald-500/20">
+                    <Leaf class="size-5" />
                 </div>
+                <span class="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">
+                    Store<span class="text-emerald-500">Mint</span>
+                </span>
             </Link>
 
             <div class="flex flex-col gap-6">

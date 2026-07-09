@@ -10,15 +10,20 @@ trait RedirectsToCurrentTeam
 {
     protected function redirectPathForCurrentTeam(Request $request, string $redirect): string
     {
+        $user = $request->user();
         $team = $this->currentTeam($request);
 
-        if (! $team) {
-            return '/shop';
+        if ($user && $user->isAdmin()) {
+            if (! $team) {
+                return '/dashboard';
+            }
+
+            URL::defaults(['current_team' => $team->slug]);
+
+            return "/{$team->slug}{$redirect}";
         }
 
-        URL::defaults(['current_team' => $team->slug]);
-
-        return "/{$team->slug}{$redirect}";
+        return '/shop';
     }
 
     protected function currentTeam(Request $request): ?Team
