@@ -122,12 +122,29 @@ class StorefrontController extends Controller
 
         $gateways = array_merge($defaultGateways, is_array($savedGateways) ? $savedGateways : []);
 
+        $announcementSetting = \Illuminate\Support\Facades\DB::table('system')->where('key', 'announcement_bar')->first();
+        $announcement = null;
+        if ($announcementSetting) {
+            $announcement = json_decode($announcementSetting->value, true);
+        }
+
+        if (!$announcement) {
+            $announcement = [
+                'enabled' => true,
+                'text' => '✨ GRAND OPENING OFFER: USE COUPON {coupon} FOR 50% OFF ALL PRODUCTS!',
+                'coupon' => 'MINT50',
+                'bg_color' => '#059669',
+                'text_color' => '#ffffff',
+            ];
+        }
+
         return [
             'dbProducts' => $products,
             'dbCategories' => $categories,
             'dbBrands' => $brands,
             'dbCoupons' => $coupons,
             'gateways' => $gateways,
+            'announcement' => $announcement,
         ];
     }
 

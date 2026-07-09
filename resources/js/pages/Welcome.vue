@@ -51,6 +51,13 @@ const props = defineProps<{
         sslcommerz: { enabled: boolean; store_id: string; store_password: string };
         cod: { enabled: boolean };
     };
+    announcement?: {
+        enabled: boolean;
+        text: string;
+        coupon: string;
+        bg_color: string;
+        text_color: string;
+    };
 }>();
 
 // Page properties
@@ -125,6 +132,28 @@ const languages = ['English', 'Spanish', 'French', 'German', 'Bengali'];
 onClickOutside(langDropdownRef, () => {
     langOpen.value = false;
 });
+
+const formatAnnouncementText = (text?: string, coupon?: string) => {
+    if (!text) return '';
+    const escapedText = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+        
+    const safeCoupon = coupon
+        ? coupon
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;')
+        : '';
+        
+    const badgeHtml = `<span class="rounded bg-white/20 px-1 py-0.5 font-mono text-amber-200 font-bold mx-1">${safeCoupon}</span>`;
+    return escapedText.replace('{coupon}', badgeHtml);
+};
 </script>
 
 <template>
@@ -234,10 +263,14 @@ onClickOutside(langDropdownRef, () => {
         </div>
 
         <!-- 36px ANNOUNCEMENT BAR (Guidelines Section 1.5) -->
-        <div class="flex h-9 items-center justify-center bg-emerald-600 px-4 text-center text-xs font-semibold tracking-wider text-white dark:bg-emerald-700">
-            <span class="flex items-center gap-1.5">
-                <Sparkles class="h-3.5 w-3.5" />
-                GRAND OPENING OFFER: USE COUPON <span class="rounded bg-white/20 px-1 py-0.5 font-mono text-amber-200">MINT50</span> FOR 50% OFF ALL PRODUCTS!
+        <div 
+            v-if="props.announcement?.enabled"
+            class="flex h-9 items-center justify-center px-4 text-center text-xs font-semibold tracking-wider transition-all duration-300 animate-fade-in"
+            :style="{ backgroundColor: props.announcement.bg_color, color: props.announcement.text_color }"
+        >
+            <span class="flex items-center gap-1.5 justify-center flex-wrap">
+                <Sparkles class="h-3.5 w-3.5 shrink-0" />
+                <span v-html="formatAnnouncementText(props.announcement.text, props.announcement.coupon)"></span>
             </span>
         </div>
 

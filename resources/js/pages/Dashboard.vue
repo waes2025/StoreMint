@@ -76,6 +76,7 @@ interface Props {
     coupons?: Array<{
         id: number;
         code: string;
+        description?: string;
         discountType: 'flat' | 'percentage';
         discountValue: number;
         minOrderAmount: number;
