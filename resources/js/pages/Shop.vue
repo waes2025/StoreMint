@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref, useTemplateRef } from 'vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
+import { onClickOutside } from '@vueuse/core';
 import { 
     ShoppingBag, 
     ShoppingCart, 
@@ -30,7 +31,12 @@ import {
     ArrowLeft, 
     Leaf,
     LayoutGrid,
-    Eye
+    Eye,
+    Phone,
+    Mail,
+    Globe,
+    ChevronDown,
+    Monitor
 } from '@lucide/vue';
 import { DbProduct, DbCoupon } from '@/types/storefront';
 import { useStorefront } from '@/composables/useStorefront';
@@ -38,6 +44,7 @@ import { useStorefront } from '@/composables/useStorefront';
 const props = defineProps<{
     dbProducts?: DbProduct[];
     dbCategories?: string[];
+    dbBrands?: string[];
     dbCoupons?: DbCoupon[];
 }>();
 
@@ -51,7 +58,9 @@ const dashboardUrl = computed(() =>
 // Destructure storefront state & actions from shared composable
 const {
     isDarkMode,
-    toggleDarkMode,
+    appearance,
+    resolvedAppearance,
+    updateAppearance,
     searchQuery,
     selectedCategory,
     cartOpen,
@@ -88,6 +97,8 @@ const {
     placeOrder,
     toastMessage,
     categories,
+    brands,
+    selectedBrand,
     activeProducts,
     minPrice,
     maxPrice,
@@ -101,6 +112,16 @@ const {
     scrollToCollection,
     selectCategory
 } = useStorefront(props);
+
+// Language setup
+const selectedLang = ref('English');
+const langOpen = ref(false);
+const langDropdownRef = useTemplateRef('langDropdownRef');
+const languages = ['English', 'Spanish', 'French', 'German', 'Bengali'];
+
+onClickOutside(langDropdownRef, () => {
+    langOpen.value = false;
+});
 
 onMounted(() => {
     const params = new URLSearchParams(window.location.search);
@@ -129,20 +150,72 @@ onMounted(() => {
         
         <!-- TOP PERSISTENT DEMO BAR (Designed to showcase tokens & guides) -->
         <div class="sticky top-0 z-50 flex flex-wrap items-center justify-between border-b border-emerald-500/20 bg-emerald-900 px-4 py-2 text-xs font-medium text-white shadow-md dark:bg-emerald-950">
-            <div class="flex items-center gap-2">
-                <span class="inline-flex h-2 w-2 animate-ping rounded-full bg-emerald-400"></span>
-                <span>🎨 StoreMint UI Design Guidelines View (Tailwind v4 Sandbox)</span>
+            <div class="flex items-center gap-4 text-neutral-200">
+                <a href="tel:+18005550199" class="flex items-center gap-1.5 hover:text-white transition">
+                    <Phone class="h-3 w-3 text-emerald-400" />
+                    <span>+1 (800) 555-0199</span>
+                </a>
+                <span class="text-emerald-700/60">|</span>
+                <a href="mailto:support@storemint.com" class="flex items-center gap-1.5 hover:text-white transition">
+                    <Mail class="h-3 w-3 text-emerald-400" />
+                    <span>support@storemint.com</span>
+                </a>
             </div>
             <div class="flex items-center gap-3">
-                <button 
-                    @click="toggleDarkMode" 
-                    class="flex items-center gap-1 rounded bg-emerald-800 px-2 py-1 hover:bg-emerald-700 transition"
-                    title="Toggle Dark Mode"
-                >
-                    <Sun v-if="isDarkMode" class="h-3 w-3 text-amber-300" />
-                    <Moon v-else class="h-3 w-3 text-emerald-300" />
-                    <span>{{ isDarkMode ? 'Light Mode' : 'Dark Mode' }}</span>
-                </button>
+                <!-- Language Selector -->
+                <div class="relative" ref="langDropdownRef">
+                    <button
+                        @click="langOpen = !langOpen"
+                        class="flex items-center gap-1.5 rounded bg-emerald-800 px-2 py-1 hover:bg-emerald-700 transition cursor-pointer text-[11px] text-white font-medium"
+                    >
+                        <Globe class="h-3 w-3 text-emerald-300" />
+                        <span>{{ selectedLang }}</span>
+                        <ChevronDown class="h-2.5 w-2.5 text-emerald-400" />
+                    </button>
+                    
+                    <div
+                        v-if="langOpen"
+                        class="absolute right-0 mt-1 w-28 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-1 shadow-md z-30"
+                    >
+                        <button
+                            v-for="lang in languages"
+                            :key="lang"
+                            @click="selectedLang = lang; langOpen = false"
+                            class="flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-[11px] text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer"
+                        >
+                            <span>{{ lang }}</span>
+                            <Check v-if="selectedLang === lang" class="h-2.5 w-2.5 text-emerald-500" />
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Theme Selector (Segmented Control) -->
+                <div class="flex items-center gap-0.5 rounded-lg bg-emerald-950 p-0.5 border border-emerald-500/20 shadow-xs">
+                    <button
+                        @click="updateAppearance('light')"
+                        :class="appearance === 'light' ? 'bg-emerald-800 text-amber-300 shadow-xs' : 'text-emerald-400/80 hover:text-emerald-300'"
+                        class="flex h-6 w-6 items-center justify-center rounded-md cursor-pointer transition duration-200"
+                        title="Light Mode"
+                    >
+                        <Sun class="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                        @click="updateAppearance('system')"
+                        :class="appearance === 'system' ? 'bg-emerald-800 text-blue-300 shadow-xs' : 'text-emerald-400/80 hover:text-emerald-300'"
+                        class="flex h-6 w-6 items-center justify-center rounded-md cursor-pointer transition duration-200"
+                        title="System Mode"
+                    >
+                        <Monitor class="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                        @click="updateAppearance('dark')"
+                        :class="appearance === 'dark' ? 'bg-emerald-800 text-emerald-300 shadow-xs' : 'text-emerald-400/80 hover:text-emerald-300'"
+                        class="flex h-6 w-6 items-center justify-center rounded-md cursor-pointer transition duration-200"
+                        title="Dark Mode"
+                    >
+                        <Moon class="h-3.5 w-3.5" />
+                    </button>
+                </div>
                 
                 <template v-if="$page.props.auth.user">
                     <Link 
@@ -315,8 +388,8 @@ onMounted(() => {
                                     <span>Filters</span>
                                 </h3>
                                 <button 
-                                    v-if="searchQuery || selectedCategory !== 'All' || minPrice !== null || maxPrice !== null || showInStockOnly"
-                                    @click="searchQuery = ''; selectedCategory = 'All'; minPrice = null; maxPrice = null; showInStockOnly = false; sortBy = 'featured';"
+                                    v-if="searchQuery || selectedCategory !== 'All' || selectedBrand !== 'All' || minPrice !== null || maxPrice !== null || showInStockOnly"
+                                    @click="searchQuery = ''; selectedCategory = 'All'; selectedBrand = 'All'; minPrice = null; maxPrice = null; showInStockOnly = false; sortBy = 'featured';"
                                     class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 transition"
                                 >
                                     Clear All
@@ -353,6 +426,31 @@ onMounted(() => {
                                             v-if="selectedCategory === cat" 
                                             class="h-1.5 w-1.5 rounded-full bg-emerald-500"
                                         ></span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Brands List -->
+                            <div class="space-y-2 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+                                <label class="text-[10px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Brand</label>
+                                <div class="flex flex-col gap-1">
+                                    <button 
+                                        v-for="brand in brands" 
+                                        :key="brand"
+                                        @click="selectedBrand = brand"
+                                        :class="selectedBrand === brand ? 'bg-emerald-50 text-emerald-600 font-semibold dark:bg-emerald-950/40 dark:text-emerald-400' : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/40'"
+                                        class="flex items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition"
+                                    >
+                                        <span>{{ brand }}</span>
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="rounded bg-neutral-100 dark:bg-neutral-800/80 px-1.5 py-0.5 text-[9px] font-bold text-neutral-500 dark:text-neutral-400">
+                                                {{ brand === 'All' ? activeProducts.length : activeProducts.filter(p => p.brand === brand).length }}
+                                            </span>
+                                            <span 
+                                                v-if="selectedBrand === brand" 
+                                                class="h-1.5 w-1.5 rounded-full bg-emerald-500"
+                                            ></span>
+                                        </span>
                                     </button>
                                 </div>
                             </div>
@@ -529,7 +627,7 @@ onMounted(() => {
                                 <h3 class="font-bold text-neutral-800 dark:text-neutral-200">No products found</h3>
                                 <p class="text-xs text-neutral-500 max-w-xs">We couldn't find any products matching your current filters. Try resetting or adjusting them.</p>
                                 <button 
-                                    @click="searchQuery = ''; selectedCategory = 'All'; minPrice = null; maxPrice = null; showInStockOnly = false; sortBy = 'featured';"
+                                    @click="searchQuery = ''; selectedCategory = 'All'; selectedBrand = 'All'; minPrice = null; maxPrice = null; showInStockOnly = false; sortBy = 'featured';"
                                     class="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition"
                                 >
                                     Reset All Filters

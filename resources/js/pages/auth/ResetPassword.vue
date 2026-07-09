@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, inject, computed } from 'vue';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import { Button } from '@/components/ui/button';
@@ -21,10 +21,50 @@ const props = defineProps<{
 }>();
 
 const inputEmail = ref(props.email);
+
+// Inject layout language
+const selectedLang = inject('authLanguage', ref('English'));
+
+const labels = {
+    English: {
+        email: 'Email',
+        password: 'Password',
+        confirmPassword: 'Confirm password',
+        btn: 'Reset password',
+    },
+    Spanish: {
+        email: 'Correo electronico',
+        password: 'Contrasena',
+        confirmPassword: 'Confirmar contrasena',
+        btn: 'Restablecer contrasena',
+    },
+    French: {
+        email: 'E-mail',
+        password: 'Mot de passe',
+        confirmPassword: 'Confirmer le mot de passe',
+        btn: 'Reinitialiser le mot de passe',
+    },
+    German: {
+        email: 'E-Mail',
+        password: 'Passwort',
+        confirmPassword: 'Passwort bestatigen',
+        btn: 'Passwort zurucksetzen',
+    },
+    Bengali: {
+        email: 'ইমেল',
+        password: 'পাসওয়ার্ড',
+        confirmPassword: 'পাসওয়ার্ড নিশ্চিত করুন',
+        btn: 'পাসওয়ার্ড পরিবর্তন করুন',
+    }
+};
+
+const currentText = computed(() => {
+    return labels[selectedLang.value as keyof typeof labels] || labels.English;
+});
 </script>
 
 <template>
-    <Head title="Reset password" />
+    <Head :title="currentText.btn" />
 
     <Form
         v-bind="route('password.update.form')"
@@ -34,26 +74,26 @@ const inputEmail = ref(props.email);
     >
         <div class="grid gap-6">
             <div class="grid gap-2">
-                <Label for="email">Email</Label>
+                <Label for="email" class="text-neutral-700 dark:text-neutral-300 font-semibold text-xs">{{ currentText.email }}</Label>
                 <Input
                     id="email"
                     type="email"
                     name="email"
                     autocomplete="email"
                     v-model="inputEmail"
-                    class="mt-1 block w-full"
+                    class="mt-1 block w-full focus-visible:border-emerald-500 focus-visible:ring-emerald-500/20"
                     readonly
                 />
                 <InputError :message="errors.email" class="mt-2" />
             </div>
 
             <div class="grid gap-2">
-                <Label for="password">Password</Label>
+                <Label for="password" class="text-neutral-700 dark:text-neutral-300 font-semibold text-xs">{{ currentText.password }}</Label>
                 <PasswordInput
                     id="password"
                     name="password"
                     autocomplete="new-password"
-                    class="mt-1 block w-full"
+                    class="mt-1 block w-full focus-visible:border-emerald-500 focus-visible:ring-emerald-500/20"
                     autofocus
                     placeholder="Password"
                     :passwordrules="passwordRules"
@@ -62,12 +102,12 @@ const inputEmail = ref(props.email);
             </div>
 
             <div class="grid gap-2">
-                <Label for="password_confirmation"> Confirm password </Label>
+                <Label for="password_confirmation" class="text-neutral-700 dark:text-neutral-300 font-semibold text-xs">{{ currentText.confirmPassword }}</Label>
                 <PasswordInput
                     id="password_confirmation"
                     name="password_confirmation"
                     autocomplete="new-password"
-                    class="mt-1 block w-full"
+                    class="mt-1 block w-full focus-visible:border-emerald-500 focus-visible:ring-emerald-500/20"
                     placeholder="Confirm password"
                     :passwordrules="passwordRules"
                 />
@@ -76,12 +116,12 @@ const inputEmail = ref(props.email);
 
             <Button
                 type="submit"
-                class="mt-4 w-full"
+                class="mt-4 w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/20 transition-all duration-300 border-none cursor-pointer"
                 :disabled="processing"
                 data-test="reset-password-button"
             >
                 <Spinner v-if="processing" />
-                Reset password
+                {{ currentText.btn }}
             </Button>
         </div>
     </Form>

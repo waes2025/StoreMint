@@ -5,7 +5,7 @@ import type { TeamInvitationContext } from '@/types';
 
 type Props = {
     invitation: TeamInvitationContext;
-    action: 'Log in' | 'Register';
+    action: string;
 };
 
 defineProps<Props>();

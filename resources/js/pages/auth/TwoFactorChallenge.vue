@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, setLayoutProps } from '@inertiajs/vue3';
-import { computed, ref, watchEffect } from 'vue';
+import { computed, ref, watchEffect, inject } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,21 +14,100 @@ import type { TwoFactorConfigContent } from '@/types';
 const showRecoveryInput = ref<boolean>(false);
 const code = ref<string>('');
 
-const authConfigContent = computed<TwoFactorConfigContent>(() => {
+// Inject layout language
+const selectedLang = inject('authLanguage', ref('English'));
+
+const contentTranslations = {
+    English: {
+        recovery: {
+            title: 'Recovery code',
+            description: 'Please confirm access to your account by entering one of your emergency recovery codes.',
+            buttonText: 'login using an authentication code',
+        },
+        auth: {
+            title: 'Authentication code',
+            description: 'Enter the authentication code provided by your authenticator application.',
+            buttonText: 'login using a recovery code',
+        },
+        continueBtn: 'Continue',
+        orYouCan: 'or you can ',
+    },
+    Spanish: {
+        recovery: {
+            title: 'Codigo de recuperacion',
+            description: 'Confirme el acceso ingresando uno de sus codigos de emergencia.',
+            buttonText: 'iniciar sesion con codigo de autenticacion',
+        },
+        auth: {
+            title: 'Codigo de autenticacion',
+            description: 'Ingrese el codigo provisto por su aplicacion de autenticacion.',
+            buttonText: 'iniciar sesion con codigo de recuperacion',
+        },
+        continueBtn: 'Continuar',
+        orYouCan: 'o puede ',
+    },
+    French: {
+        recovery: {
+            title: 'Code de recuperation',
+            description: 'Veuillez confirmer l\'acces en saisissant un code de secours.',
+            buttonText: 'se connecter avec un code d\'authentification',
+        },
+        auth: {
+            title: 'Code d\'authentification',
+            description: 'Entrez le code fourni par votre application d\'authentification.',
+            buttonText: 'se connecter avec un code de recuperation',
+        },
+        continueBtn: 'Continuer',
+        orYouCan: 'ou vous pouvez ',
+    },
+    German: {
+        recovery: {
+            title: 'Wiederherstellungscode',
+            description: 'Geben Sie einen Ihrer Notfall-Wiederherstellungscodes ein.',
+            buttonText: 'Mit Authentifizierungscode anmelden',
+        },
+        auth: {
+            title: 'Authentifizierungscode',
+            description: 'Geben Sie den Code aus Ihrer Authentifizierungs-App ein.',
+            buttonText: 'Mit Wiederherstellungscode anmelden',
+        },
+        continueBtn: 'Weiter',
+        orYouCan: 'oder Sie konnen ',
+    },
+    Bengali: {
+        recovery: {
+            title: 'রিকভারি কোড',
+            description: 'অনুগ্রহ করে আপনার জরুরি রিকভারি কোডগুলোর একটি প্রদান করুন।',
+            buttonText: 'অথেন্টিকেশন কোড ব্যবহার করে লগইন করুন',
+        },
+        auth: {
+            title: 'অথেন্টিকেশন কোড',
+            description: 'আপনার অথেনটিকেটর অ্যাপের দেওয়া কোডটি প্রবেশ করান।',
+            buttonText: 'রিকভারি কোড ব্যবহার করে লগইন করুন',
+        },
+        continueBtn: 'এগিয়ে যান',
+        orYouCan: 'অথবা আপনি করতে পারেন ',
+    }
+};
+
+const authConfigContent = computed(() => {
+    const lang = selectedLang.value as keyof typeof contentTranslations;
+    const trans = contentTranslations[lang] || contentTranslations.English;
     if (showRecoveryInput.value) {
         return {
-            title: 'Recovery code',
-            description:
-                'Please confirm access to your account by entering one of your emergency recovery codes.',
-            buttonText: 'login using an authentication code',
+            title: trans.recovery.title,
+            description: trans.recovery.description,
+            buttonText: trans.recovery.buttonText,
+            continueBtn: trans.continueBtn,
+            orYouCan: trans.orYouCan,
         };
     }
-
     return {
-        title: 'Authentication code',
-        description:
-            'Enter the authentication code provided by your authenticator application.',
-        buttonText: 'login using a recovery code',
+        title: trans.auth.title,
+        description: trans.auth.description,
+        buttonText: trans.auth.buttonText,
+        continueBtn: trans.continueBtn,
+        orYouCan: trans.orYouCan,
     };
 });
 
@@ -47,7 +126,7 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
 </script>
 
 <template>
-    <Head title="Two-factor authentication" />
+    <Head :title="authConfigContent.title" />
 
     <div class="space-y-6">
         <template v-if="!showRecoveryInput">
@@ -81,14 +160,18 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
                     </div>
                     <InputError :message="errors.code" />
                 </div>
-                <Button type="submit" class="w-full" :disabled="processing"
-                    >Continue</Button
+                <Button 
+                    type="submit" 
+                    class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/20 transition-all duration-300 border-none cursor-pointer" 
+                    :disabled="processing"
                 >
-                <div class="text-center text-sm text-muted-foreground">
-                    <span>or you can </span>
+                    {{ authConfigContent.continueBtn }}
+                </Button>
+                <div class="text-center text-xs text-neutral-500">
+                    <span>{{ authConfigContent.orYouCan }}</span>
                     <button
                         type="button"
-                        class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+                        class="font-semibold text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors underline decoration-emerald-500/30 hover:decoration-emerald-500 underline-offset-4 cursor-pointer bg-transparent border-none p-0"
                         @click="() => toggleRecoveryMode(clearErrors)"
                     >
                         {{ authConfigContent.buttonText }}
@@ -110,17 +193,22 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
                     placeholder="Enter recovery code"
                     :autofocus="showRecoveryInput"
                     required
+                    class="focus-visible:border-emerald-500 focus-visible:ring-emerald-500/20"
                 />
                 <InputError :message="errors.recovery_code" />
-                <Button type="submit" class="w-full" :disabled="processing"
-                    >Continue</Button
+                <Button 
+                    type="submit" 
+                    class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/20 transition-all duration-300 border-none cursor-pointer" 
+                    :disabled="processing"
                 >
+                    {{ authConfigContent.continueBtn }}
+                </Button>
 
-                <div class="text-center text-sm text-muted-foreground">
-                    <span>or you can </span>
+                <div class="text-center text-xs text-neutral-500">
+                    <span>{{ authConfigContent.orYouCan }}</span>
                     <button
                         type="button"
-                        class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+                        class="font-semibold text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors underline decoration-emerald-500/30 hover:decoration-emerald-500 underline-offset-4 cursor-pointer bg-transparent border-none p-0"
                         @click="() => toggleRecoveryMode(clearErrors)"
                     >
                         {{ authConfigContent.buttonText }}

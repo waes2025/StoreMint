@@ -5,19 +5,26 @@ import invitations from '@/routes/invitations';
 import login from '@/routes/login';
 import password from '@/routes/password';
 import profile from '@/routes/profile';
+import register from '@/routes/register';
 import security from '@/routes/security';
 import storage from '@/routes/storage';
 import teams from '@/routes/teams';
 import twoFactor from '@/routes/two-factor';
 import userPassword from '@/routes/user-password';
 
+const wrapRoute = (fn: Function, obj: any) => {
+    const wrapped = (...args: any[]) => fn(...args);
+    return Object.assign(wrapped, fn, obj);
+};
+
 const routeRegistry: Record<string, any> = {
     ...baseRoutes,
     appearance,
     invitations,
-    login,
+    login: wrapRoute(baseRoutes.login, login),
     password,
     profile,
+    register: wrapRoute(baseRoutes.register, register),
     security,
     storage,
     teams,

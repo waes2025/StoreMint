@@ -32,7 +32,7 @@ class StorefrontController extends Controller
      */
     private function getStorefrontData(): array
     {
-        $products = Product::with('category')
+        $products = Product::with(['category', 'brand'])
             ->where('is_active', 1)
             ->get()
             ->map(function ($product) {
@@ -50,6 +50,7 @@ class StorefrontController extends Controller
                     'is_featured' => (bool) $product->is_featured,
                     'is_best_seller' => (bool) $product->is_best_seller,
                     'category' => $product->category ? $product->category->name : 'Electronics',
+                    'brand' => $product->brand ? $product->brand->name : null,
                 ];
             });
 
@@ -59,6 +60,9 @@ class StorefrontController extends Controller
 
         // Ensure "All" is not saved in DB but is returned for frontend tabs
         array_unshift($categories, 'All');
+
+        $brands = \App\Models\Brand::pluck('name')->toArray();
+        array_unshift($brands, 'All');
 
         $coupons = Coupon::where('status', 'active')
             ->where(function ($query) {
@@ -80,6 +84,7 @@ class StorefrontController extends Controller
         return [
             'dbProducts' => $products,
             'dbCategories' => $categories,
+            'dbBrands' => $brands,
             'dbCoupons' => $coupons,
         ];
     }

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
+import { Form, Head, Link } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
-import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { inject, computed, ref } from 'vue';
 
 defineOptions({
     layout: {
@@ -17,14 +17,54 @@ defineOptions({
 defineProps<{
     status?: string;
 }>();
+
+// Inject layout language
+const selectedLang = inject('authLanguage', ref('English'));
+
+const labels = {
+    English: {
+        email: 'Email address',
+        btn: 'Email password reset link',
+        orReturn: 'Or, return to',
+        login: 'log in',
+    },
+    Spanish: {
+        email: 'Correo electronico',
+        btn: 'Enviar enlace de restablecimiento',
+        orReturn: 'O volver a',
+        login: 'iniciar sesion',
+    },
+    French: {
+        email: 'Adresse e-mail',
+        btn: 'Envoyer le lien de reinitialisation',
+        orReturn: 'Ou retourner a la page de',
+        login: 'connexion',
+    },
+    German: {
+        email: 'E-Mail-Adresse',
+        btn: 'Link zum Zurucksetzen senden',
+        orReturn: 'Oder zuruck zur',
+        login: 'Anmeldung',
+    },
+    Bengali: {
+        email: 'ইমেল ঠিকানা',
+        btn: 'পাসওয়ার্ড রিসেট লিঙ্ক পাঠান',
+        orReturn: 'অথবা, ফিরে যান',
+        login: 'লগইন পেজে',
+    }
+};
+
+const currentText = computed(() => {
+    return labels[selectedLang.value as keyof typeof labels] || labels.English;
+});
 </script>
 
 <template>
-    <Head title="Forgot password" />
+    <Head :title="currentText.btn" />
 
     <div
         v-if="status"
-        class="mb-4 text-center text-sm font-medium text-green-600"
+        class="mb-4 text-center text-sm font-medium text-emerald-600 dark:text-emerald-400"
     >
         {{ status }}
     </div>
@@ -32,7 +72,7 @@ defineProps<{
     <div class="space-y-6">
         <Form v-bind="route('password.email.form')" v-slot="{ errors, processing }">
             <div class="grid gap-2">
-                <Label for="email">Email address</Label>
+                <Label for="email" class="text-neutral-700 dark:text-neutral-300 font-semibold text-xs">{{ currentText.email }}</Label>
                 <Input
                     id="email"
                     type="email"
@@ -40,25 +80,30 @@ defineProps<{
                     autocomplete="off"
                     autofocus
                     placeholder="email@example.com"
+                    class="focus-visible:border-emerald-500 focus-visible:ring-emerald-500/20"
                 />
                 <InputError :message="errors.email" />
             </div>
 
             <div class="my-6 flex items-center justify-start">
                 <Button
-                    class="w-full"
+                    class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/20 transition-all duration-300 border-none cursor-pointer"
                     :disabled="processing"
-                    data-test="email-password-reset-link-button"
                 >
                     <Spinner v-if="processing" />
-                    Email password reset link
+                    {{ currentText.btn }}
                 </Button>
             </div>
         </Form>
 
-        <div class="space-x-1 text-center text-sm text-muted-foreground">
-            <span>Or, return to</span>
-            <TextLink :href="route('login')">log in</TextLink>
+        <div class="space-x-1 text-center text-xs text-neutral-500">
+            <span>{{ currentText.orReturn }}</span>
+            <Link 
+                :href="route('login').url" 
+                class="font-semibold text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors underline decoration-emerald-500/30 hover:decoration-emerald-500 underline-offset-4"
+            >
+                {{ currentText.login }}
+            </Link>
         </div>
     </div>
 </template>

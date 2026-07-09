@@ -1,21 +1,15 @@
 import { ref, computed } from 'vue';
 import { DbProduct, DbCoupon, Product, Coupon, CartItem, OrderInvoice } from '@/types/storefront';
+import { useAppearance } from '@/composables/useAppearance';
 
 export function useStorefront(props: {
     dbProducts?: DbProduct[];
     dbCategories?: string[];
+    dbBrands?: string[];
     dbCoupons?: DbCoupon[];
 }) {
-    // Toggle dark mode (uses DOM directly)
-    const isDarkMode = ref(false);
-    const toggleDarkMode = () => {
-        isDarkMode.value = !isDarkMode.value;
-        if (isDarkMode.value) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-    };
+    const { appearance, resolvedAppearance, updateAppearance } = useAppearance();
+    const isDarkMode = computed(() => resolvedAppearance.value === 'dark');
 
     // State variables
     const searchQuery = ref('');
@@ -164,6 +158,7 @@ export function useStorefront(props: {
             rating: 4.8,
             reviewsCount: 124,
             category: "Accessories",
+            brand: "Apex",
             imageGradient: "from-slate-700 to-indigo-950",
             stock: 12,
             badge: "Trending",
@@ -177,6 +172,7 @@ export function useStorefront(props: {
             rating: 4.9,
             reviewsCount: 88,
             category: "Electronics",
+            brand: "Aero",
             imageGradient: "from-teal-600 to-emerald-900",
             stock: 5,
             badge: "Hot Deal",
@@ -191,6 +187,7 @@ export function useStorefront(props: {
             rating: 4.6,
             reviewsCount: 45,
             category: "Fashion",
+            brand: "Sleek",
             imageGradient: "from-amber-600 to-orange-950",
             stock: 3,
             badge: "Low Stock",
@@ -204,6 +201,7 @@ export function useStorefront(props: {
             rating: 4.7,
             reviewsCount: 210,
             category: "Furniture",
+            brand: "Ergo",
             imageGradient: "from-purple-700 to-violet-950",
             stock: 15,
             badge: "Best Seller",
@@ -217,6 +215,7 @@ export function useStorefront(props: {
             rating: 4.5,
             reviewsCount: 62,
             category: "Home",
+            brand: "Ember",
             imageGradient: "from-rose-600 to-pink-950",
             stock: 0,
             badge: "Out of Stock",
@@ -231,6 +230,7 @@ export function useStorefront(props: {
             rating: 4.4,
             reviewsCount: 38,
             category: "Electronics",
+            brand: "Aura",
             imageGradient: "from-yellow-500 to-orange-800",
             stock: 22,
             badge: "Sale",
@@ -250,6 +250,7 @@ export function useStorefront(props: {
                 rating: 4.5 + (p.id % 5) * 0.1,
                 reviewsCount: 15 + (p.id % 10) * 12,
                 category: p.category,
+                brand: p.brand || 'Generic',
                 imageGradient: p.id % 3 === 0 ? "from-slate-700 to-indigo-950" : (p.id % 3 === 1 ? "from-teal-600 to-emerald-900" : "from-amber-600 to-orange-950"),
                 stock: p.stock,
                 badge: p.is_best_seller ? 'Best Seller' : (p.is_featured ? 'Featured' : undefined),
@@ -268,7 +269,23 @@ export function useStorefront(props: {
         return ['All', 'Accessories', 'Electronics', 'Fashion', 'Furniture', 'Home'];
     });
 
+    // Computed Brand List
+    const brands = computed(() => {
+        if (props.dbBrands && props.dbBrands.length > 0) {
+            return props.dbBrands;
+        }
+        const uniqueBrands = new Set<string>();
+        uniqueBrands.add('All');
+        activeProducts.value.forEach(p => {
+            if (p.brand) {
+                uniqueBrands.add(p.brand);
+            }
+        });
+        return Array.from(uniqueBrands);
+    });
+
     // Filter states
+    const selectedBrand = ref('All');
     const minPrice = ref<number | null>(null);
     const maxPrice = ref<number | null>(null);
     const showInStockOnly = ref(false);
@@ -290,6 +307,11 @@ export function useStorefront(props: {
         // Category filter
         if (selectedCategory.value !== 'All') {
             prods = prods.filter(p => p.category === selectedCategory.value);
+        }
+
+        // Brand filter
+        if (selectedBrand.value !== 'All') {
+            prods = prods.filter(p => p.brand === selectedBrand.value);
         }
 
         // Price range filter
@@ -546,7 +568,9 @@ export function useStorefront(props: {
     return {
         // Dark Mode
         isDarkMode,
-        toggleDarkMode,
+        appearance,
+        resolvedAppearance,
+        updateAppearance,
 
         // Core UI Navigation State
         searchQuery,
@@ -596,8 +620,10 @@ export function useStorefront(props: {
         toastMessage,
         triggerToast,
 
-        // Products & Categories
+        // Products & Categories & Brands
         categories,
+        brands,
+        selectedBrand,
         activeProducts,
         minPrice,
         maxPrice,

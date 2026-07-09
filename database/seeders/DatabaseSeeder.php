@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
         DB::table('variations')->truncate();
         DB::table('product_variations')->truncate();
         DB::table('products')->truncate();
+        DB::table('brands')->truncate();
         DB::table('categories')->truncate();
         DB::table('business_locations')->truncate();
         DB::table('business')->truncate();
@@ -100,6 +101,20 @@ class DatabaseSeeder extends Seeder
             'updated_at' => now(),
         ]);
 
+        // 5b. Insert Brands
+        $brandsDataList = [
+            ['name' => 'Apex', 'business_id' => $businessId, 'created_by' => $userId, 'slug' => 'apex', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Aero', 'business_id' => $businessId, 'created_by' => $userId, 'slug' => 'aero', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Sleek', 'business_id' => $businessId, 'created_by' => $userId, 'slug' => 'sleek', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Ergo', 'business_id' => $businessId, 'created_by' => $userId, 'slug' => 'ergo', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Ember', 'business_id' => $businessId, 'created_by' => $userId, 'slug' => 'ember', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Aura', 'business_id' => $businessId, 'created_by' => $userId, 'slug' => 'aura', 'created_at' => now(), 'updated_at' => now()],
+        ];
+        $insertedBrands = [];
+        foreach ($brandsDataList as $b) {
+            $insertedBrands[$b['name']] = DB::table('brands')->insertGetId($b);
+        }
+
         // 6. Insert Products (matching storefront list)
         $productsData = [
             [
@@ -111,7 +126,8 @@ class DatabaseSeeder extends Seeder
                 'short_description' => 'Precision engineered chronograph watch with sapphire dial.',
                 'image' => 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => true,
-                'is_best_seller' => true
+                'is_best_seller' => true,
+                'brand' => 'Apex'
             ],
             [
                 'name' => 'AeroBuds Pro Wireless',
@@ -122,7 +138,8 @@ class DatabaseSeeder extends Seeder
                 'short_description' => 'True wireless studio sound earbuds with Active Noise Cancelling.',
                 'image' => 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => true,
-                'is_best_seller' => false
+                'is_best_seller' => false,
+                'brand' => 'Aero'
             ],
             [
                 'name' => 'Minimalist Leather Backpack',
@@ -133,7 +150,8 @@ class DatabaseSeeder extends Seeder
                 'short_description' => 'Sleek top-grain calf leather laptop pack for clean utility.',
                 'image' => 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => false,
-                'is_best_seller' => true
+                'is_best_seller' => true,
+                'brand' => 'Sleek'
             ],
             [
                 'name' => 'Lumbar Comfort Office Chair',
@@ -144,7 +162,8 @@ class DatabaseSeeder extends Seeder
                 'short_description' => 'Ergonomic lumbar adaptive chair with high-breathability mesh.',
                 'image' => 'https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => false,
-                'is_best_seller' => false
+                'is_best_seller' => false,
+                'brand' => 'Ergo'
             ],
             [
                 'name' => 'Ember Mug Smart Temperature',
@@ -155,7 +174,8 @@ class DatabaseSeeder extends Seeder
                 'short_description' => 'App-controlled smart mug keeping your brew at the ideal temperature.',
                 'image' => 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => false,
-                'is_best_seller' => false
+                'is_best_seller' => false,
+                'brand' => 'Ember'
             ],
             [
                 'name' => 'Aura Light Ring Lamp',
@@ -166,7 +186,8 @@ class DatabaseSeeder extends Seeder
                 'short_description' => 'Warm multi-intensity studio lighting for professional streams.',
                 'image' => 'https://images.unsplash.com/photo-1507646227500-4d389b0012be?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => true,
-                'is_best_seller' => false
+                'is_best_seller' => false,
+                'brand' => 'Aura'
             ],
         ];
 
@@ -180,6 +201,7 @@ class DatabaseSeeder extends Seeder
                 'slug' => $pData['slug'],
                 'business_id' => $businessId,
                 'category_id' => $categoryId,
+                'brand_id' => $insertedBrands[$pData['brand']] ?? null,
                 'price' => $pData['price'],
                 'compare_at_price' => $pData['compare_at_price'],
                 'stock_status' => $stockStatus,

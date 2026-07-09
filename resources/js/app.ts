@@ -27,10 +27,12 @@ createInertiaApp({
         }
     },
     setup({ el, App, props, plugin }) {
-        createApp({ render: () => h(App, props) })
+        const app = createApp({ render: () => h(App, props) })
             .use(plugin)
-            .use(WayfinderRoutePlugin)
-            .mount(el);
+            .use(WayfinderRoutePlugin);
+        if (el) {
+            app.mount(el);
+        }
     },
     progress: {
         color: '#4B5563',

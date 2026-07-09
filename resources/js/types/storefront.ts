@@ -12,6 +12,7 @@ export interface DbProduct {
     is_featured: boolean;
     is_best_seller: boolean;
     category: string;
+    brand: string | null;
 }
 
 export interface DbCoupon {
@@ -32,6 +33,7 @@ export interface Product {
     rating: number;
     reviewsCount: number;
     category: string;
+    brand?: string | null;
     imageGradient: string;
     stock: number;
     badge?: string;
