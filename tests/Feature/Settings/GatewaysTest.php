@@ -51,6 +51,8 @@ class GatewaysTest extends TestCase
                     'enabled' => false,
                     'store_id' => '',
                     'store_password' => '',
+                    'merchant_id' => '',
+                    'mode' => 'live',
                 ],
                 'cod' => [
                     'enabled' => true,
@@ -92,6 +94,8 @@ class GatewaysTest extends TestCase
                     'enabled' => false,
                     'store_id' => '',
                     'store_password' => '',
+                    'merchant_id' => '',
+                    'mode' => 'live',
                 ],
                 'cod' => [
                     'enabled' => true,
@@ -133,6 +137,8 @@ class GatewaysTest extends TestCase
                     'enabled' => false,
                     'store_id' => '',
                     'store_password' => '',
+                    'merchant_id' => '',
+                    'mode' => 'live',
                 ],
                 'cod' => [
                     'enabled' => true,
@@ -143,6 +149,40 @@ class GatewaysTest extends TestCase
         $response->assertSessionHasErrors([
             'stripe.publishable_key',
             'stripe.secret_key',
+        ]);
+    }
+
+    public function test_gateways_validation_fails_when_sslcommerz_enabled_without_keys()
+    {
+        $user = User::factory()->create(['user_type' => 'admin']);
+
+        $response = $this
+            ->actingAs($user)
+            ->from(route('gateways.edit'))
+            ->patch(route('gateways.update'), [
+                'storage_format' => 'json',
+                'stripe' => [
+                    'enabled' => false,
+                    'publishable_key' => '',
+                    'secret_key' => '',
+                ],
+                'sslcommerz' => [
+                    'enabled' => true,
+                    'store_id' => '',
+                    'store_password' => '',
+                    'merchant_id' => '',
+                    'mode' => '',
+                ],
+                'cod' => [
+                    'enabled' => true,
+                ],
+            ]);
+
+        $response->assertRedirect(route('gateways.edit'));
+        $response->assertSessionHasErrors([
+            'sslcommerz.store_id',
+            'sslcommerz.store_password',
+            'sslcommerz.mode',
         ]);
     }
 }

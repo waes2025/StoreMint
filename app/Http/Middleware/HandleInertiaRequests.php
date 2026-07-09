@@ -46,6 +46,27 @@ class HandleInertiaRequests extends Middleware
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'currentTeam' => fn () => $user?->currentTeam ? $user->toUserTeam($user->currentTeam) : null,
             'teams' => fn () => $user?->toUserTeams(includeCurrent: true) ?? [],
+            'promo_coupon' => function () {
+                $coupon = \Illuminate\Support\Facades\DB::table('coupons')
+                    ->where('status', 'active')
+                    ->where(function ($query) {
+                        $query->whereNull('expires_at')
+                              ->orWhere('expires_at', '>', now());
+                    })
+                    ->where(function ($query) {
+                        $query->whereNull('starts_at')
+                              ->orWhere('starts_at', '<=', now());
+                    })
+                    ->orderBy('id', 'desc')
+                    ->first();
+
+                return $coupon ? [
+                    'code' => $coupon->code,
+                    'discount_type' => $coupon->discount_type,
+                    'discount_value' => (float) $coupon->discount_value,
+                    'description' => $coupon->description,
+                ] : null;
+            },
         ];
     }
 }

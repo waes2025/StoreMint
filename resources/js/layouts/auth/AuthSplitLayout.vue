@@ -219,6 +219,50 @@ const currentText = computed(() => {
     return translations[selectedLang.value as keyof typeof translations] || translations.English;
 });
 
+const promoCoupon = computed(() => page.props.promo_coupon as {
+    code: string;
+    discount_type: string;
+    discount_value: number;
+    description: string;
+} | null);
+
+const promoTitle = computed(() => {
+    if (promoCoupon.value) {
+        const discountStr = promoCoupon.value.discount_type === 'percentage'
+            ? `${Math.round(promoCoupon.value.discount_value)}%`
+            : `$${Math.round(promoCoupon.value.discount_value)}`;
+        
+        if (selectedLang.value === 'Bengali') {
+            return `প্রথম অর্ডারে ${discountStr} মূল্যছাড় পান`;
+        } else if (selectedLang.value === 'Spanish') {
+            return `${discountStr} de descuento en tu primer pedido`;
+        } else if (selectedLang.value === 'French') {
+            return `${discountStr} de reduction sur votre premier achat`;
+        } else if (selectedLang.value === 'German') {
+            return `${discountStr} Rabatt auf Ihre erste Bestellung`;
+        }
+        return `Get ${discountStr} Off Your First Order`;
+    }
+    return currentText.value.offerTitle;
+});
+
+const promoDesc = computed(() => {
+    if (promoCoupon.value) {
+        const code = promoCoupon.value.code;
+        if (selectedLang.value === 'Bengali') {
+            return `আজই গ্রাহক অ্যাকাউন্ট তৈরি করুন এবং চেকআউটে প্রোমো কোড ${code} ব্যবহার করুন।`;
+        } else if (selectedLang.value === 'Spanish') {
+            return `Registrese hoy para obtener una cuenta de cliente gratuita y use el codigo ${code}.`;
+        } else if (selectedLang.value === 'French') {
+            return `Inscrivez-vous des aujourd'hui et utilisez le code promo ${code} lors du paiement.`;
+        } else if (selectedLang.value === 'German') {
+            return `Erstellen Sie ein kostenloses Kundenkonto und nutzen Sie den Code ${code}.`;
+        }
+        return `Sign up for a free customer account today and use promo code ${code} at checkout.`;
+    }
+    return currentText.value.offerDesc;
+});
+
 const translatedTitle = computed(() => {
     const lang = selectedLang.value as keyof typeof formTranslations;
     const key = props.title || '';
@@ -285,8 +329,8 @@ const translatedDescription = computed(() => {
                             <span class="inline-block text-[9px] font-extrabold tracking-wider bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 px-2.5 py-0.5 rounded-full uppercase border border-emerald-200 dark:border-emerald-800">
                                 {{ currentText.offerTag }}
                             </span>
-                            <h3 class="text-lg font-bold text-neutral-900 dark:text-white">{{ currentText.offerTitle }}</h3>
-                            <p class="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">{{ currentText.offerDesc }}</p>
+                            <h3 class="text-lg font-bold text-neutral-900 dark:text-white">{{ promoTitle }}</h3>
+                            <p class="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">{{ promoDesc }}</p>
                         </div>
                     </div>
                 </div>

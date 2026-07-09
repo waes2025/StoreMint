@@ -44,6 +44,8 @@ class GatewaysController extends Controller
                 'enabled' => false,
                 'store_id' => '',
                 'store_password' => '',
+                'merchant_id' => '',
+                'mode' => 'live',
             ],
             'cod' => [
                 'enabled' => true,
@@ -73,6 +75,8 @@ class GatewaysController extends Controller
             'sslcommerz.enabled' => 'required|boolean',
             'sslcommerz.store_id' => 'nullable|string|required_if:sslcommerz.enabled,true',
             'sslcommerz.store_password' => 'nullable|string|required_if:sslcommerz.enabled,true',
+            'sslcommerz.merchant_id' => 'nullable|string',
+            'sslcommerz.mode' => 'nullable|string|required_if:sslcommerz.enabled,true|in:live,sandbox',
             'cod.enabled' => 'required|boolean',
         ]);
 
@@ -86,6 +90,8 @@ class GatewaysController extends Controller
                 'enabled' => (bool) $request->input('sslcommerz.enabled'),
                 'store_id' => $request->input('sslcommerz.store_id', ''),
                 'store_password' => $request->input('sslcommerz.store_password', ''),
+                'merchant_id' => $request->input('sslcommerz.merchant_id', ''),
+                'mode' => $request->input('sslcommerz.mode', 'live'),
             ],
             'cod' => [
                 'enabled' => (bool) $request->input('cod.enabled'),

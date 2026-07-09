@@ -112,6 +112,8 @@ class StorefrontController extends Controller
                 'enabled' => false,
                 'store_id' => '',
                 'store_password' => '',
+                'merchant_id' => '',
+                'mode' => 'live',
             ],
             'cod' => [
                 'enabled' => true,

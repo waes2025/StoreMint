@@ -16,6 +16,8 @@ const props = defineProps<{
             enabled: boolean;
             store_id: string;
             store_password: string;
+            merchant_id?: string;
+            mode?: 'live' | 'sandbox';
         };
         cod: {
             enabled: boolean;
@@ -46,6 +48,8 @@ const form = useForm({
         enabled: props.gateways.sslcommerz?.enabled ?? false,
         store_id: props.gateways.sslcommerz?.store_id ?? '',
         store_password: props.gateways.sslcommerz?.store_password ?? '',
+        merchant_id: props.gateways.sslcommerz?.merchant_id ?? '',
+        mode: props.gateways.sslcommerz?.mode ?? 'live',
     },
     cod: {
         enabled: props.gateways.cod?.enabled ?? true,
@@ -153,7 +157,33 @@ const submit = () => {
                         />
                         <p v-if="form.errors['sslcommerz.store_password']" class="text-xs text-red-500 font-semibold">{{ form.errors['sslcommerz.store_password'] }}</p>
                     </div>
+                    <div class="flex flex-col gap-2">
+                        <Label for="ssl-merchant">Merchant ID (optional)</Label>
+                        <Input
+                            id="ssl-merchant"
+                            v-model="form.sslcommerz.merchant_id"
+                            placeholder="Merchant ID"
+                            class="w-full"
+                        />
+                        <p v-if="form.errors['sslcommerz.merchant_id']" class="text-xs text-red-500 font-semibold">{{ form.errors['sslcommerz.merchant_id'] }}</p>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <Label for="ssl-mode">Mode</Label>
+                        <select
+                            id="ssl-mode"
+                            v-model="form.sslcommerz.mode"
+                            class="flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:ring-offset-neutral-950 dark:placeholder:text-neutral-400 dark:focus-visible:ring-emerald-800"
+                        >
+                            <option value="live">Live</option>
+                            <option value="sandbox">Sandbox</option>
+                        </select>
+                        <p v-if="form.errors['sslcommerz.mode']" class="text-xs text-red-500 font-semibold">{{ form.errors['sslcommerz.mode'] }}</p>
+                    </div>
                 </div>
+
+                <p v-if="form.sslcommerz.enabled" class="text-xs text-neutral-500 dark:text-neutral-400 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                    Checkout currently signs with the server-environment SSLCommerz credentials; values saved here are stored encrypted and take over when config-driven routing ships. IPN endpoint: <code class="bg-neutral-100 dark:bg-neutral-800 px-1 py-0.5 rounded text-[10px]">/payments/sslcommerz/ipn</code>
+                </p>
             </div>
 
             <!-- 3. Cash on Delivery -->
