@@ -1,0 +1,616 @@
+import { ref, computed } from 'vue';
+import { DbProduct, DbCoupon, Product, Coupon, CartItem, OrderInvoice } from '@/types/storefront';
+
+export function useStorefront(props: {
+    dbProducts?: DbProduct[];
+    dbCategories?: string[];
+    dbCoupons?: DbCoupon[];
+}) {
+    // Toggle dark mode (uses DOM directly)
+    const isDarkMode = ref(false);
+    const toggleDarkMode = () => {
+        isDarkMode.value = !isDarkMode.value;
+        if (isDarkMode.value) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    };
+
+    // State variables
+    const searchQuery = ref('');
+    const selectedCategory = ref('All');
+    const cartOpen = ref(false);
+    const selectedProduct = ref<Product | null>(null);
+    const viewMode = ref<'browse' | 'categories' | 'new-arrivals' | 'support' | 'checkout' | 'confirmation'>('browse');
+
+    // Support & Interactive elements state
+    const supportForm = ref({
+        name: '',
+        email: '',
+        subject: '',
+        message: ''
+    });
+    const supportSubmitted = ref(false);
+    const expandedFaq = ref<number | null>(null);
+    const chatMessages = ref<{ sender: 'user' | 'agent'; text: string }[]>([
+        { sender: 'agent', text: '👋 Hi there! I am Minty, your StoreMint support assistant. Select a quick query below to get started!' }
+    ]);
+
+    const chatOptions = [
+        'Where is my order?',
+        'Can I get a discount?',
+        'Return policy help'
+    ];
+
+    const chatProcessing = ref(false);
+
+    // Toast / Feedback message
+    const toastMessage = ref('');
+    const triggerToast = (msg: string) => {
+        toastMessage.value = msg;
+        setTimeout(() => {
+            if (toastMessage.value === msg) {
+                toastMessage.value = '';
+            }
+        }, 3000);
+    };
+
+    const sendChatMessage = (option: string) => {
+        if (chatProcessing.value) return;
+        
+        chatMessages.value.push({ sender: 'user', text: option });
+        chatProcessing.value = true;
+        
+        setTimeout(() => {
+            let reply = '';
+            if (option === 'Where is my order?') {
+                reply = '📦 StoreMint orders are shipped within 24 hours of payment. You can track your shipment using the tracking link sent to your registered email, or view active orders inside your Admin Dashboard!';
+            } else if (option === 'Can I get a discount?') {
+                reply = '💸 Absolutely! You can use code MINT50 at checkout to get an amazing 50% discount on all items in your cart. Check the discount banner on our home page for details!';
+            } else if (option === 'Return policy help') {
+                reply = '🔄 We support a full 30-day hassle-free refund policy. If you are not satisfied with your purchase, please submit a support ticket here or email support@storemint.com.';
+            } else {
+                reply = 'Thank you for reaching out! Let us know how we can assist you.';
+            }
+            
+            chatMessages.value.push({ sender: 'agent', text: reply });
+            chatProcessing.value = false;
+        }, 800);
+    };
+
+    const submitSupportTicket = () => {
+        if (!supportForm.value.name || !supportForm.value.email || !supportForm.value.message) {
+            triggerToast("⚠️ Please fill in all required fields.");
+            return;
+        }
+        supportSubmitted.value = true;
+        triggerToast("🎟️ Support ticket created!");
+        setTimeout(() => {
+            supportForm.value = { name: '', email: '', subject: '', message: '' };
+            supportSubmitted.value = false;
+        }, 5000);
+    };
+
+    // Cart State
+    const cart = ref<CartItem[]>([]);
+
+    // Coupon State
+    const activeCoupons = computed<Coupon[]>(() => {
+        if (props.dbCoupons && props.dbCoupons.length > 0) {
+            return props.dbCoupons.map(c => ({
+                code: c.code,
+                description: c.description,
+                discountType: c.discountType,
+                discountValue: c.discountValue,
+                minOrderAmount: c.minOrderAmount,
+                maxDiscountAmount: c.maxDiscountAmount || undefined
+            }));
+        }
+        return [
+            {
+                code: 'MINT50',
+                description: '50% off for new shoppers (Max discount $100, min order $50)',
+                discountType: 'percentage',
+                discountValue: 50,
+                minOrderAmount: 50,
+                maxDiscountAmount: 100
+            },
+            {
+                code: 'WELCOME10',
+                description: 'Flat $10 off (Min order $40)',
+                discountType: 'flat',
+                discountValue: 10,
+                minOrderAmount: 40
+            }
+        ];
+    });
+
+    const couponInput = ref('');
+    const appliedCoupon = ref<Coupon | null>(null);
+    const couponError = ref('');
+    const couponSuccess = ref('');
+
+    // Checkout form state
+    const checkoutForm = ref({
+        name: 'Waes Ahmed',
+        email: 'waes@example.com',
+        address: '123 StoreMint Lane',
+        city: 'Dhaka',
+        zip: '1207',
+        phone: '+880 1712-345678',
+        paymentMethod: 'stripe' as 'cod' | 'sslcommerz' | 'stripe'
+    });
+
+    // Stripe checkout mock state
+    const stripeCard = ref({
+        number: '4242 •••• •••• 4242',
+        expiry: '12/29',
+        cvc: '***',
+        isProcessing: false
+    });
+
+    // Invoice detail state
+    const orderInvoice = ref<OrderInvoice | null>(null);
+
+    // Mock products database
+    const mockProducts: Product[] = [
+        {
+            id: 1,
+            name: "Quantum Chronograph Watch",
+            description: "A precision timekeeper with mechanical elegance, featuring a surgical-grade stainless steel casing and sapphire crystal cover.",
+            price: 299.00,
+            originalPrice: 399.00,
+            rating: 4.8,
+            reviewsCount: 124,
+            category: "Accessories",
+            imageGradient: "from-slate-700 to-indigo-950",
+            stock: 12,
+            badge: "Trending",
+            badgeColor: "bg-emerald-500 text-white"
+        },
+        {
+            id: 2,
+            name: "AeroBuds Pro Wireless",
+            description: "Active noise-cancelling earbuds with high-fidelity acoustic drivers and seamless auto-pairing. 36 hours of total playtime.",
+            price: 149.00,
+            rating: 4.9,
+            reviewsCount: 88,
+            category: "Electronics",
+            imageGradient: "from-teal-600 to-emerald-900",
+            stock: 5,
+            badge: "Hot Deal",
+            badgeColor: "bg-amber-500 text-black"
+        },
+        {
+            id: 3,
+            name: "Minimalist Leather Backpack",
+            description: "Crafted from full-grain vegetable-tanned leather. Waterproof lining, fits laptops up to 16 inches.",
+            price: 89.00,
+            originalPrice: 120.00,
+            rating: 4.6,
+            reviewsCount: 45,
+            category: "Fashion",
+            imageGradient: "from-amber-600 to-orange-950",
+            stock: 3,
+            badge: "Low Stock",
+            badgeColor: "bg-red-500 text-white"
+        },
+        {
+            id: 4,
+            name: "Lumbar Comfort Office Chair",
+            description: "Ergonomic workspace solution with responsive lumbar support, 3D armrests, and high-density breathable mesh back.",
+            price: 249.00,
+            rating: 4.7,
+            reviewsCount: 210,
+            category: "Furniture",
+            imageGradient: "from-purple-700 to-violet-950",
+            stock: 15,
+            badge: "Best Seller",
+            badgeColor: "bg-indigo-600 text-white"
+        },
+        {
+            id: 5,
+            name: "Ember Mug Smart Temperature",
+            description: "Keep your hot beverage at the exact temperature you like. App-controlled with built-in battery.",
+            price: 129.00,
+            rating: 4.5,
+            reviewsCount: 62,
+            category: "Home",
+            imageGradient: "from-rose-600 to-pink-950",
+            stock: 0,
+            badge: "Out of Stock",
+            badgeColor: "bg-gray-400 text-white"
+        },
+        {
+            id: 6,
+            name: "Aura Light Ring Lamp",
+            description: "Studio-quality lighting with adjustable color temperatures and brightness levels. Perfect for video calls and content creators.",
+            price: 59.00,
+            originalPrice: 79.00,
+            rating: 4.4,
+            reviewsCount: 38,
+            category: "Electronics",
+            imageGradient: "from-yellow-500 to-orange-800",
+            stock: 22,
+            badge: "Sale",
+            badgeColor: "bg-red-500 text-white"
+        }
+    ];
+
+    // Active products mapper
+    const activeProducts = computed<Product[]>(() => {
+        if (props.dbProducts && props.dbProducts.length > 0) {
+            return props.dbProducts.map(p => ({
+                id: p.id,
+                name: p.name,
+                description: p.short_description || p.description || '',
+                price: p.price,
+                originalPrice: p.compare_at_price || undefined,
+                rating: 4.5 + (p.id % 5) * 0.1,
+                reviewsCount: 15 + (p.id % 10) * 12,
+                category: p.category,
+                imageGradient: p.id % 3 === 0 ? "from-slate-700 to-indigo-950" : (p.id % 3 === 1 ? "from-teal-600 to-emerald-900" : "from-amber-600 to-orange-950"),
+                stock: p.stock,
+                badge: p.is_best_seller ? 'Best Seller' : (p.is_featured ? 'Featured' : undefined),
+                badgeColor: p.is_best_seller ? 'bg-indigo-600 text-white' : 'bg-emerald-500 text-white',
+                image: p.image
+            }));
+        }
+        return mockProducts;
+    });
+
+    // Computed Category List
+    const categories = computed(() => {
+        if (props.dbCategories && props.dbCategories.length > 0) {
+            return props.dbCategories;
+        }
+        return ['All', 'Accessories', 'Electronics', 'Fashion', 'Furniture', 'Home'];
+    });
+
+    // Filter states
+    const minPrice = ref<number | null>(null);
+    const maxPrice = ref<number | null>(null);
+    const showInStockOnly = ref(false);
+    const sortBy = ref('featured');
+
+    // Filtered Products
+    const filteredProducts = computed(() => {
+        let prods = [...activeProducts.value];
+
+        // Search query filter
+        if (searchQuery.value) {
+            const query = searchQuery.value.toLowerCase();
+            prods = prods.filter(p => 
+                p.name.toLowerCase().includes(query) || 
+                p.description.toLowerCase().includes(query)
+            );
+        }
+
+        // Category filter
+        if (selectedCategory.value !== 'All') {
+            prods = prods.filter(p => p.category === selectedCategory.value);
+        }
+
+        // Price range filter
+        if (minPrice.value !== null) {
+            prods = prods.filter(p => p.price >= (minPrice.value as number));
+        }
+        if (maxPrice.value !== null) {
+            prods = prods.filter(p => p.price <= (maxPrice.value as number));
+        }
+
+        // Availability filter
+        if (showInStockOnly.value) {
+            prods = prods.filter(p => p.stock > 0);
+        }
+
+        // Sorting logic
+        if (sortBy.value === 'price-asc') {
+            prods.sort((a, b) => a.price - b.price);
+        } else if (sortBy.value === 'price-desc') {
+            prods.sort((a, b) => b.price - a.price);
+        } else if (sortBy.value === 'rating') {
+            prods.sort((a, b) => b.rating - a.rating);
+        } else if (sortBy.value === 'best-seller') {
+            prods.sort((a, b) => (b.badge === 'Best Seller' ? 1 : 0) - (a.badge === 'Best Seller' ? 1 : 0));
+        }
+
+        return prods;
+    });
+
+    // Featured Products
+    const featuredProducts = computed(() => {
+        if (props.dbProducts && props.dbProducts.length > 0) {
+            const featured = activeProducts.value.filter(p => p.badge === 'Featured' || p.badge === 'Trending');
+            if (featured.length > 0) return featured.slice(0, 4);
+        }
+        return activeProducts.value.filter(p => p.id % 2 === 0).slice(0, 4);
+    });
+
+    // Best Seller Products
+    const bestSellerProducts = computed(() => {
+        if (props.dbProducts && props.dbProducts.length > 0) {
+            const best = activeProducts.value.filter(p => p.badge === 'Best Seller' || p.badge === 'Hot Deal');
+            if (best.length > 0) return best.slice(0, 4);
+        }
+        return activeProducts.value.filter(p => p.id % 2 !== 0).slice(0, 4);
+    });
+
+    // Cart Calculations
+    const cartSubtotal = computed(() => {
+        return cart.value.reduce((total, item) => total + (item.product.price * item.quantity), 0);
+    });
+
+    const discountAmount = computed(() => {
+        if (!appliedCoupon.value) return 0;
+        const coupon = appliedCoupon.value;
+        if (cartSubtotal.value < coupon.minOrderAmount) {
+            return 0;
+        }
+        if (coupon.discountType === 'flat') {
+            return coupon.discountValue;
+        } else {
+            const calculated = (cartSubtotal.value * coupon.discountValue) / 100;
+            if (coupon.maxDiscountAmount && calculated > coupon.maxDiscountAmount) {
+                return coupon.maxDiscountAmount;
+            }
+            return calculated;
+        }
+    });
+
+    const shippingFee = computed(() => {
+        if (cartSubtotal.value === 0) return 0;
+        return cartSubtotal.value > 200 ? 0 : 15.00;
+    });
+
+    const cartTotal = computed(() => {
+        return Math.max(0, cartSubtotal.value - discountAmount.value + shippingFee.value);
+    });
+
+    const cartQuantity = computed(() => {
+        return cart.value.reduce((total, item) => total + item.quantity, 0);
+    });
+
+    // Cart Actions
+    const addToCart = (product: Product, quantity = 1) => {
+        if (product.stock === 0) {
+            triggerToast("⚠️ Product is out of stock!");
+            return;
+        }
+        
+        const existing = cart.value.find(item => item.product.id === product.id);
+        if (existing) {
+            if (existing.quantity + quantity > product.stock) {
+                triggerToast(`⚠️ Cannot add more. Only ${product.stock} items in stock.`);
+                return;
+            }
+            existing.quantity += quantity;
+        } else {
+            cart.value.push({ product, quantity });
+        }
+        triggerToast(`🛒 Added "${product.name}" to cart!`);
+        
+        if (appliedCoupon.value) {
+            revalidateCoupon();
+        }
+    };
+
+    const updateCartQuantity = (productId: number, delta: number) => {
+        const item = cart.value.find(i => i.product.id === productId);
+        if (!item) return;
+        
+        const newQty = item.quantity + delta;
+        if (newQty <= 0) {
+            removeFromCart(productId);
+        } else if (newQty > item.product.stock) {
+            triggerToast(`⚠️ Only ${item.product.stock} items in stock.`);
+        } else {
+            item.quantity = newQty;
+        }
+        
+        if (appliedCoupon.value) {
+            revalidateCoupon();
+        }
+    };
+
+    const removeFromCart = (productId: number) => {
+        cart.value = cart.value.filter(item => item.product.id !== productId);
+        triggerToast("🗑️ Item removed from cart.");
+        if (appliedCoupon.value) {
+            revalidateCoupon();
+        }
+    };
+
+    // Coupon Actions
+    const applyCoupon = () => {
+        couponError.value = '';
+        couponSuccess.value = '';
+        const code = couponInput.value.trim().toUpperCase();
+        
+        if (!code) {
+            couponError.value = 'Please enter a coupon code.';
+            return;
+        }
+        
+        const coupon = activeCoupons.value.find(c => c.code === code);
+        if (!coupon) {
+            couponError.value = 'Invalid coupon code. Try MINT50 or WELCOME10.';
+            return;
+        }
+        
+        if (cartSubtotal.value < coupon.minOrderAmount) {
+            couponError.value = `Minimum order amount of $${coupon.minOrderAmount.toFixed(2)} required for this coupon.`;
+            return;
+        }
+        
+        appliedCoupon.value = coupon;
+        couponSuccess.value = `Coupon "${coupon.code}" applied successfully!`;
+        triggerToast(`🏷️ Coupon "${coupon.code}" applied!`);
+    };
+
+    const removeCoupon = () => {
+        appliedCoupon.value = null;
+        couponInput.value = '';
+        couponSuccess.value = '';
+        couponError.value = '';
+        triggerToast("🏷️ Coupon removed.");
+    };
+
+    const revalidateCoupon = () => {
+        if (!appliedCoupon.value) return;
+        if (cartSubtotal.value < appliedCoupon.value.minOrderAmount) {
+            const code = appliedCoupon.value.code;
+            appliedCoupon.value = null;
+            couponError.value = `Coupon "${code}" was removed because order amount fell below $${activeCoupons.value.find(c => c.code === code)?.minOrderAmount}.`;
+        }
+    };
+
+    // Checkout Steps
+    const proceedToCheckout = () => {
+        if (cart.value.length === 0) {
+            triggerToast("⚠️ Your cart is empty!");
+            return;
+        }
+        viewMode.value = 'checkout';
+        cartOpen.value = false;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const completeCheckout = () => {
+        const invNo = `INV-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+        const ordNo = `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
+        const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        
+        orderInvoice.value = {
+            invoiceNo: invNo,
+            orderNo: ordNo,
+            date: dateStr,
+            paymentMethod: checkoutForm.value.paymentMethod === 'stripe' ? 'Stripe (Credit Card)' : 
+                           checkoutForm.value.paymentMethod === 'sslcommerz' ? 'SSLCommerz (Local Card/Mobile Banking)' : 'Cash on Delivery (COD)',
+            paymentStatus: checkoutForm.value.paymentMethod === 'cod' ? 'Pending' : 'Paid',
+            customer: { ...checkoutForm.value },
+            items: cart.value.map(item => ({
+                name: item.product.name,
+                price: item.product.price,
+                quantity: item.quantity,
+                total: item.product.price * item.quantity
+            })),
+            subtotal: cartSubtotal.value,
+            discount: discountAmount.value,
+            couponCode: appliedCoupon.value?.code,
+            shipping: shippingFee.value,
+            grandTotal: cartTotal.value
+        };
+        
+        cart.value = [];
+        appliedCoupon.value = null;
+        couponInput.value = '';
+        viewMode.value = 'confirmation';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        triggerToast("🎉 Order placed successfully!");
+    };
+
+    const placeOrder = () => {
+        if (checkoutForm.value.paymentMethod === 'stripe') {
+            stripeCard.value.isProcessing = true;
+            setTimeout(() => {
+                stripeCard.value.isProcessing = false;
+                completeCheckout();
+            }, 1500);
+        } else {
+            completeCheckout();
+        }
+    };
+
+    const handlePrint = () => {
+        triggerToast("🖨️ PDF Invoice download triggered!");
+    };
+
+    const resetStorefront = () => {
+        viewMode.value = 'browse';
+        orderInvoice.value = null;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const scrollToCollection = () => {
+        window.scrollTo({ top: 500, behavior: 'smooth' });
+    };
+
+    const selectCategory = (cat: string) => {
+        selectedCategory.value = cat;
+        viewMode.value = 'browse';
+        window.scrollTo({ top: 500, behavior: 'smooth' });
+    };
+
+    return {
+        // Dark Mode
+        isDarkMode,
+        toggleDarkMode,
+
+        // Core UI Navigation State
+        searchQuery,
+        selectedCategory,
+        cartOpen,
+        selectedProduct,
+        viewMode,
+
+        // Support desk state & functions
+        supportForm,
+        supportSubmitted,
+        expandedFaq,
+        chatMessages,
+        chatOptions,
+        chatProcessing,
+        sendChatMessage,
+        submitSupportTicket,
+
+        // Cart State & Calculations
+        cart,
+        cartSubtotal,
+        discountAmount,
+        shippingFee,
+        cartTotal,
+        cartQuantity,
+        addToCart,
+        updateCartQuantity,
+        removeFromCart,
+
+        // Coupons
+        activeCoupons,
+        couponInput,
+        appliedCoupon,
+        couponError,
+        couponSuccess,
+        applyCoupon,
+        removeCoupon,
+
+        // Checkout
+        checkoutForm,
+        stripeCard,
+        orderInvoice,
+        proceedToCheckout,
+        placeOrder,
+
+        // Toast
+        toastMessage,
+        triggerToast,
+
+        // Products & Categories
+        categories,
+        activeProducts,
+        minPrice,
+        maxPrice,
+        showInStockOnly,
+        sortBy,
+        filteredProducts,
+        featuredProducts,
+        bestSellerProducts,
+
+        // Global utilities
+        handlePrint,
+        resetStorefront,
+        scrollToCollection,
+        selectCategory
+    };
+}
