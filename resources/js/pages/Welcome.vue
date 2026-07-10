@@ -40,6 +40,8 @@ import {
 } from '@lucide/vue';
 import { DbProduct, DbCoupon } from '@/types/storefront';
 import { useStorefront } from '@/composables/useStorefront';
+import Footer from '@/components/Footer.vue';
+
 
 const props = defineProps<{
     dbProducts?: DbProduct[];
@@ -1296,6 +1298,9 @@ const formatAnnouncementText = (text?: string, coupon?: string) => {
             </div>
 
         </main>
+
+        <!-- Dynamic Storefront Footer -->
+        <Footer v-model:viewMode="viewMode" />
 
         <!-- CART SIDE OVER DRAWER (Guidelines Section 1.5 / 2.4) -->
         <div v-if="cartOpen" class="fixed inset-0 z-50 overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
