@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TransactionPayment extends Model
 {
@@ -43,6 +44,11 @@ class TransactionPayment extends Model
         'gateway_response' => 'array',
         'paid_on' => 'datetime',
     ];
+
+    public function transaction(): BelongsTo
+    {
+        return $this->belongsTo(Transaction::class, 'transaction_id');
+    }
 
     /**
      * Determine the payment type based on the amount.

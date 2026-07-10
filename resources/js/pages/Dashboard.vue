@@ -96,11 +96,23 @@ interface Props {
         category: string;
     }>;
     pendingInvitations?: DashboardInvitation[];
+    payments?: Array<{
+        id: number;
+        transaction_id: number;
+        order_ref: string;
+        customer: string;
+        amount: number;
+        method: string;
+        gateway: string;
+        paid_on: string;
+        status: string;
+    }>;
 }
 
 const props = defineProps<Props>();
 
 const page = usePage();
+const authUser = computed(() => page.props.auth?.user);
 
 // Breadcrumbs definition for layout
 defineOptions({
@@ -133,7 +145,7 @@ const searchQuery = ref('');
 const filterStatus = ref('All');
 
 // TABS state
-const activeTab = ref<'overview' | 'products' | 'orders' | 'coupons'>('overview');
+const activeTab = ref<'overview' | 'products' | 'orders' | 'coupons' | 'payments'>('overview');
 const customerTab = ref<'home' | 'orders' | 'invoices' | 'support' | 'profile' | 'coupons'>('home');
 
 // Support Desk tickets state
@@ -174,7 +186,7 @@ const syncParams = () => {
     if (typeof window === 'undefined') return;
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get('tab');
-    if (tabParam && ['overview', 'products', 'orders', 'coupons'].includes(tabParam)) {
+    if (tabParam && ['overview', 'products', 'orders', 'coupons', 'payments'].includes(tabParam)) {
         activeTab.value = tabParam as any;
     }
     const featureParam = urlParams.get('feature');
@@ -185,6 +197,10 @@ const syncParams = () => {
 
 onMounted(syncParams);
 watch(() => page.url, syncParams);
+watch(activeTab, () => {
+    searchQuery.value = '';
+    filterStatus.value = 'All';
+});
 
 // Coupon creation state
 const showCreateCouponModal = ref(false);
@@ -414,6 +430,17 @@ const filteredCoupons = computed(() => {
         return matchesStatus && matchesSearch;
     });
 });
+
+const filteredPayments = computed(() => {
+    const list = props.payments || [];
+    return list.filter(p => {
+        const matchesSearch = (p.customer || '').toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+                            (p.order_ref || '').toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+                            (p.gateway || '').toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+                            (p.method || '').toLowerCase().includes(searchQuery.value.toLowerCase());
+        return matchesSearch;
+    });
+});
 </script>
 
 <template>
@@ -428,43 +455,9 @@ const filteredCoupons = computed(() => {
         />
 
         <!-- Admin Header -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-                <h1 class="text-2xl font-extrabold tracking-tight">Admin Overview Dashboard</h1>
-                <p class="text-xs text-neutral-500">Monitor store sales, manage coupons, update stock, and audit payment gateways.</p>
-            </div>
-            
-            <!-- Quick navigation tabs -->
-            <div class="flex flex-wrap items-center bg-neutral-100 rounded-lg p-1 dark:bg-neutral-800 self-start">
-                <button 
-                    @click="activeTab = 'overview'; searchQuery = ''; filterStatus = 'All'"
-                    :class="activeTab === 'overview' ? 'bg-white text-emerald-600 shadow-xs dark:bg-neutral-900 dark:text-emerald-400' : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-white'"
-                    class="px-3 py-1.5 rounded-md text-xs font-semibold transition"
-                >
-                    Overview
-                </button>
-                <button 
-                    @click="activeTab = 'products'; searchQuery = ''; filterStatus = 'All'"
-                    :class="activeTab === 'products' ? 'bg-white text-emerald-600 shadow-xs dark:bg-neutral-900 dark:text-emerald-400' : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-white'"
-                    class="px-3 py-1.5 rounded-md text-xs font-semibold transition"
-                >
-                    Products
-                </button>
-                <button 
-                    @click="activeTab = 'orders'; searchQuery = ''; filterStatus = 'All'"
-                    :class="activeTab === 'orders' ? 'bg-white text-emerald-600 shadow-xs dark:bg-neutral-900 dark:text-emerald-400' : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-white'"
-                    class="px-3 py-1.5 rounded-md text-xs font-semibold transition"
-                >
-                    Orders
-                </button>
-                <button 
-                    @click="activeTab = 'coupons'; searchQuery = ''; filterStatus = 'All'"
-                    :class="activeTab === 'coupons' ? 'bg-white text-emerald-600 shadow-xs dark:bg-neutral-900 dark:text-emerald-400' : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-white'"
-                    class="px-3 py-1.5 rounded-md text-xs font-semibold transition"
-                >
-                    Coupons
-                </button>
-            </div>
+        <div>
+            <h1 class="text-2xl font-extrabold tracking-tight">Admin Overview Dashboard</h1>
+            <p class="text-xs text-neutral-500">Monitor store sales, manage coupons, update stock, and audit payment gateways.</p>
         </div>
 
         <!-- 4-Column Stat Cards -->
@@ -1063,6 +1056,87 @@ const filteredCoupons = computed(() => {
 
         </div>
 
+        <!-- 5. TAB: PAYMENTS TABLE -->
+        <div v-else-if="activeTab === 'payments'" class="space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4 dark:border-neutral-800">
+                <div class="relative flex-1 max-w-sm">
+                    <Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+                    <input 
+                        v-model="searchQuery"
+                        type="text" 
+                        placeholder="Search payments..." 
+                        class="h-10 w-full rounded-lg border border-neutral-200 bg-white pl-10 pr-4 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-900"
+                    />
+                </div>
+            </div>
+
+            <!-- Payments Table -->
+            <div class="rounded-xl border border-neutral-200 bg-white overflow-hidden shadow-xs dark:border-neutral-800 dark:bg-neutral-900">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left border-collapse">
+                        <thead>
+                            <tr class="bg-neutral-50 border-b border-neutral-200 text-neutral-500 dark:bg-neutral-800/40 dark:border-neutral-800">
+                                <th class="p-4 font-semibold w-16">ID</th>
+                                <th class="p-4 font-semibold w-28">Order Ref</th>
+                                <th class="p-4 font-semibold">Customer</th>
+                                <th class="p-4 font-semibold w-32">Payment Method</th>
+                                <th class="p-4 font-semibold w-28 text-center">Gateway</th>
+                                <th class="p-4 font-semibold text-center w-28">Amount</th>
+                                <th class="p-4 font-semibold w-32">Paid On</th>
+                                <th class="p-4 font-semibold w-24">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-neutral-200 dark:divide-neutral-800/50">
+                            <tr v-for="payment in filteredPayments" :key="payment.id" class="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/20">
+                                <td class="p-4 font-mono text-neutral-400">#{{ payment.id }}</td>
+                                <td class="p-4 font-mono font-semibold">{{ payment.order_ref }}</td>
+                                <td class="p-4 font-semibold">{{ payment.customer }}</td>
+                                <td class="p-4 text-neutral-500 capitalize">{{ payment.method }}</td>
+                                <td class="p-4 text-center">
+                                    <span class="rounded bg-neutral-100 px-2 py-0.5 text-[9px] font-bold uppercase text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
+                                        {{ payment.gateway || 'N/A' }}
+                                    </span>
+                                </td>
+                                <td class="p-4 text-center font-bold font-mono">${{ payment.amount.toFixed(2) }}</td>
+                                <td class="p-4 text-neutral-500">{{ payment.paid_on }}</td>
+                                <td class="p-4">
+                                    <span 
+                                        v-if="payment.status === 'Success'" 
+                                        class="inline-flex rounded-full bg-green-50 px-2.5 py-0.5 text-[10px] font-bold text-green-600 dark:bg-green-950 dark:text-green-400"
+                                    >
+                                        Success
+                                    </span>
+                                    <span 
+                                        v-else-if="payment.status === 'Failed'" 
+                                        class="inline-flex rounded-full bg-red-50 px-2.5 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950 dark:text-red-400"
+                                    >
+                                        Failed
+                                    </span>
+                                    <span 
+                                        v-else-if="payment.status === 'Cancelled'" 
+                                        class="inline-flex rounded-full bg-neutral-100 px-2.5 py-0.5 text-[10px] font-bold text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400"
+                                    >
+                                        Cancelled
+                                    </span>
+                                    <span 
+                                        v-else 
+                                        class="inline-flex rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-600 dark:bg-amber-950 dark:text-amber-400"
+                                    >
+                                        {{ payment.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr v-if="filteredPayments.length === 0">
+                                <td colspan="8" class="p-8 text-center text-neutral-400">
+                                    No payments found.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- 2. CUSTOMER DASHBOARD TEMPLATE -->
@@ -1162,7 +1236,7 @@ const filteredCoupons = computed(() => {
                     </div>
                     <div class="relative z-10 space-y-2">
                         <span class="bg-emerald-550/30 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">Customer Portal</span>
-                        <h2 class="text-2xl font-black">Hello, {{ $page.props.auth?.user?.first_name || 'Valued Customer' }}!</h2>
+                        <h2 class="text-2xl font-black">Hello, {{ authUser?.first_name || 'Valued Customer' }}!</h2>
                         <p class="text-xs text-emerald-100 max-w-md">
                             Welcome to your personal dashboard. Here you can track your shipments, view detailed invoices, manage your profile, and receive dedicated shop support.
                         </p>
@@ -1469,24 +1543,24 @@ const filteredCoupons = computed(() => {
                 <!-- Profile Card -->
                 <div class="md:col-span-1 border border-neutral-200 rounded-xl bg-white p-5 space-y-5 text-center shadow-xs dark:border-neutral-800 dark:bg-neutral-900">
                     <div class="mx-auto w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-xl font-bold">
-                        {{ ($page.props.auth?.user?.first_name || 'U').charAt(0) }}{{ ($page.props.auth?.user?.last_name || '').charAt(0) }}
+                        {{ (authUser?.first_name || 'U').charAt(0) }}{{ (authUser?.last_name || '').charAt(0) }}
                     </div>
                     
                     <div class="space-y-1">
-                        <h3 class="text-sm font-bold">{{ $page.props.auth?.user?.first_name }} {{ $page.props.auth?.user?.last_name }}</h3>
+                        <h3 class="text-sm font-bold">{{ authUser?.first_name }} {{ authUser?.last_name }}</h3>
                         <span class="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400 uppercase inline-block">
-                            {{ $page.props.auth?.user?.user_type }}
+                            {{ authUser?.user_type }}
                         </span>
                     </div>
 
                     <div class="border-t border-neutral-100 pt-4 text-left space-y-3 dark:border-neutral-800/80 text-[11px]">
                         <div class="flex justify-between">
                             <span class="text-neutral-400">Username</span>
-                            <span class="font-semibold">{{ $page.props.auth?.user?.username || '-' }}</span>
+                            <span class="font-semibold">{{ authUser?.username || '-' }}</span>
                         </div>
                         <div class="flex justify-between">
                             <span class="text-neutral-400">Email Address</span>
-                            <span class="font-semibold">{{ $page.props.auth?.user?.email || '-' }}</span>
+                            <span class="font-semibold">{{ authUser?.email || '-' }}</span>
                         </div>
                     </div>
                 </div>

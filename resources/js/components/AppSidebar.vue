@@ -6,7 +6,8 @@ import {
     Ticket, 
     CreditCard, 
     Settings, 
-    LogOut 
+    LogOut,
+    Package
 } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
@@ -39,13 +40,16 @@ const dashboardUrl = computed(() => {
 });
 
 const isTabActive = (tabName: string, featureName?: string) => {
-    if (typeof window === 'undefined') return false;
-    const urlParams = new URLSearchParams(window.location.search);
-    const currentTab = urlParams.get('tab') || 'overview';
-    if (tabName === 'coming_soon' && featureName) {
-        return currentTab === 'coming_soon' && urlParams.get('feature') === featureName;
+    try {
+        const urlObj = new URL(page.url, 'http://localhost');
+        const currentTab = urlObj.searchParams.get('tab') || 'overview';
+        if (tabName === 'coming_soon' && featureName) {
+            return currentTab === 'coming_soon' && urlObj.searchParams.get('feature') === featureName;
+        }
+        return currentTab === tabName;
+    } catch {
+        return false;
     }
-    return currentTab === tabName;
 };
 
 // Safe helper to build admin URLs without raising NullPointerExceptions on currentTeam
@@ -103,6 +107,22 @@ const adminRoute = (tabName: string, featureName?: string) => {
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
+                            <SidebarMenuButton :is-active="isTabActive('products')" as-child tooltip="Products">
+                                <Link :href="adminRoute('products')">
+                                    <Package />
+                                    <span>Products</span>
+                                </Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton :is-active="isTabActive('orders')" as-child tooltip="Orders">
+                                <Link :href="adminRoute('orders')">
+                                    <ShoppingBag />
+                                    <span>Orders</span>
+                                </Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                        <SidebarMenuItem>
                             <SidebarMenuButton :is-active="isTabActive('coupons')" as-child tooltip="Coupons">
                                 <Link :href="adminRoute('coupons')">
                                     <Ticket />
@@ -111,8 +131,8 @@ const adminRoute = (tabName: string, featureName?: string) => {
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
-                            <SidebarMenuButton :is-active="isTabActive('coming_soon', 'Payments')" as-child tooltip="Payments">
-                                <Link :href="adminRoute('coming_soon', 'Payments')">
+                            <SidebarMenuButton :is-active="isTabActive('payments')" as-child tooltip="Payments">
+                                <Link :href="adminRoute('payments')">
                                     <CreditCard />
                                     <span>Payments</span>
                                 </Link>
