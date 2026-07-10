@@ -54,7 +54,15 @@ class Product extends Model
         $sold = (float) \Illuminate\Support\Facades\DB::table('transaction_sell_lines')
             ->join('transactions', 'transaction_sell_lines.transaction_id', '=', 'transactions.id')
             ->where('transaction_sell_lines.product_id', $this->id)
-            ->whereNotIn('transactions.status', ['cancelled', 'draft', 'quotation'])
+            ->where(function ($query) {
+                $query->where(function ($q) {
+                    $q->where('transactions.type', 'sell')
+                      ->whereNotIn('transactions.status', ['cancelled', 'draft', 'quotation']);
+                })->orWhere(function ($q) {
+                    $q->whereIn('transactions.type', ['sales_order', 'sale_order'])
+                      ->whereNotIn('transactions.status', ['cancelled', 'draft', 'quotation', 'completed']);
+                });
+            })
             ->sum('transaction_sell_lines.quantity');
 
         return (int) ($purchased - $sold);

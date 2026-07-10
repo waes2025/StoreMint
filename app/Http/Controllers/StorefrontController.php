@@ -268,7 +268,7 @@ class StorefrontController extends Controller
             'location_id' => 1,
             'contact_id' => $contactId,
             'created_by' => $userId,
-            'type' => 'sell',
+            'type' => 'sales_order',
             'status' => $orderStatus,
             'payment_status' => $paymentStatus,
             'invoice_no' => $invNo,
@@ -354,6 +354,8 @@ class StorefrontController extends Controller
             // Increment coupon usage count
             DB::table('coupons')->where('id', $couponId)->increment('used_count');
         }
+        
+        \App\Models\Transaction::checkAndGenerateSell($transId);
         
         return response()->json([
             'success' => true,

@@ -33,7 +33,7 @@ class DashboardController extends Controller
             // Fetch customer orders (transactions placed by this user's associated contacts)
             $orders = Transaction::query()
                 ->whereIn('contact_id', $contactIds)
-                ->where('type', 'sell')
+                ->whereIn('type', ['sell', 'sales_order', 'sale_order'])
                 ->latest()
                 ->get()
                 ->map(function ($o) {
@@ -61,7 +61,7 @@ class DashboardController extends Controller
             $totalOrders = $orders->count();
             $totalSaved = (float) Transaction::query()
                 ->whereIn('contact_id', $contactIds)
-                ->where('type', 'sell')
+                ->whereIn('type', ['sell', 'sales_order', 'sale_order'])
                 ->sum('discount_amount');
 
             // Active coupons available to use
@@ -140,12 +140,12 @@ class DashboardController extends Controller
 
         // Get admin statistics from database
         $totalRevenue = (float) Transaction::query()
-            ->where('type', 'sell')
+            ->whereIn('type', ['sell', 'sales_order', 'sale_order'])
             ->where('payment_status', 'paid')
             ->sum('final_total');
 
         $pendingCount = Transaction::query()
-            ->where('type', 'sell')
+            ->whereIn('type', ['sell', 'sales_order', 'sale_order'])
             ->where('status', 'ordered')
             ->count();
 
@@ -173,7 +173,7 @@ class DashboardController extends Controller
 
         // Orders query
         $orders = Transaction::query()
-            ->where('type', 'sell')
+            ->whereIn('type', ['sell', 'sales_order', 'sale_order'])
             ->latest()
             ->get()
             ->map(function ($o) {
@@ -333,7 +333,15 @@ class DashboardController extends Controller
             $sells = (float) DB::table('transaction_sell_lines')
                 ->join('transactions', 'transaction_sell_lines.transaction_id', '=', 'transactions.id')
                 ->where('transaction_sell_lines.product_id', $product->id)
-                ->whereNotIn('transactions.status', ['cancelled', 'draft', 'quotation'])
+                ->where(function ($query) {
+                    $query->where(function ($q) {
+                        $q->where('transactions.type', 'sell')
+                          ->whereNotIn('transactions.status', ['cancelled', 'draft', 'quotation']);
+                    })->orWhere(function ($q) {
+                        $q->whereIn('transactions.type', ['sales_order', 'sale_order'])
+                          ->whereNotIn('transactions.status', ['cancelled', 'draft', 'quotation', 'completed']);
+                    });
+                })
                 ->sum('transaction_sell_lines.quantity');
 
             $requiredPurchaseQty = $newStock + $sells;
@@ -419,6 +427,8 @@ class DashboardController extends Controller
                 ]);
         }
 
+        Transaction::checkAndGenerateSell($transaction->id);
+
         return back()->with('toast', [
             'type' => 'success',
             'message' => "🚚 Order #{$transaction->ref_no} marked as Shipped and Paid!",
@@ -444,6 +454,24 @@ class DashboardController extends Controller
                 'status' => 'cancelled',
                 'updated_at' => now(),
             ]);
+
+        // If a corresponding sell transaction exists, cancel it too
+        $sellTransaction = Transaction::where('type', 'sell')
+            ->where('parent_transaction_id', $transaction->id)
+            ->first();
+        if ($sellTransaction) {
+            $sellTransaction->update([
+                'status' => 'cancelled',
+                'payment_status' => 'cancelled',
+            ]);
+
+            DB::table('transaction_payments')
+                ->where('transaction_id', $sellTransaction->id)
+                ->update([
+                    'status' => 'cancelled',
+                    'updated_at' => now(),
+                ]);
+        }
 
         return back()->with('toast', [
             'type' => 'success',

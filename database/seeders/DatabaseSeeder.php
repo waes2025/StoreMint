@@ -34,6 +34,7 @@ class DatabaseSeeder extends Seeder
         DB::table('currencies')->truncate();
         DB::table('transaction_sell_lines')->truncate();
         DB::table('purchase_lines')->truncate();
+        DB::table('transaction_payments')->truncate();
         DB::table('transactions')->truncate();
 
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
@@ -484,7 +485,7 @@ class DatabaseSeeder extends Seeder
                 'location_id' => $locationId,
                 'contact_id' => $contactIdForTrans,
                 'created_by' => $userIdForTrans,
-                'type' => 'sell',
+                'type' => 'sales_order',
                 'status' => $order['status'],
                 'payment_status' => $order['payment_status'],
                 'invoice_no' => $order['invoice_no'],
@@ -550,6 +551,8 @@ class DatabaseSeeder extends Seeder
                     'created_at' => $order['date'],
                 ]);
             }
+
+            \App\Models\Transaction::checkAndGenerateSell($transId);
         }
     }
 }
