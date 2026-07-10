@@ -33,7 +33,9 @@ import {
     Copy,
     Heart,
     PercentCircle,
-    Printer
+    Printer,
+    LifeBuoy,
+    MessageSquare
 } from '@lucide/vue';
 import type { DashboardInvitation, Team } from '@/types';
 
@@ -132,7 +134,40 @@ const filterStatus = ref('All');
 
 // TABS state
 const activeTab = ref<'overview' | 'products' | 'orders' | 'coupons'>('overview');
-const customerTab = ref<'orders' | 'coupons' | 'settings'>('orders');
+const customerTab = ref<'home' | 'orders' | 'invoices' | 'support' | 'profile' | 'coupons'>('home');
+
+// Support Desk tickets state
+const supportTickets = ref([
+    { id: 'TKT-8241', category: 'Delivery Issue', orderId: 'ORD-100201', message: 'The package has not arrived yet. Tracking says it is still in warehouse.', status: 'Open', date: 'Jul 08, 2026' },
+    { id: 'TKT-3912', category: 'Billing Inquiry', orderId: 'ORD-100202', message: 'Double charged for the order shipping. Please review.', status: 'Resolved', date: 'Jul 05, 2026' }
+]);
+
+const supportCategory = ref('Delivery Issue');
+const supportOrder = ref('');
+const supportMessage = ref('');
+
+const handleCreateTicket = () => {
+    if (!supportMessage.value.trim()) {
+        triggerToast('⚠️ Please write a message for your support ticket.');
+        return;
+    }
+    
+    const newTktId = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
+    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+    
+    supportTickets.value.unshift({
+        id: newTktId,
+        category: supportCategory.value,
+        orderId: supportOrder.value || 'None',
+        message: supportMessage.value,
+        status: 'Open',
+        date: today
+    });
+    
+    supportMessage.value = '';
+    triggerToast(`💬 Support ticket ${newTktId} submitted! Our team will contact you shortly.`);
+};
+
 
 // Synchronize tab and display a toast for coming soon modules
 const syncParams = () => {
@@ -1033,7 +1068,6 @@ const filteredCoupons = computed(() => {
     <!-- 2. CUSTOMER DASHBOARD TEMPLATE -->
     <div v-else class="px-4 sm:px-6 lg:px-8 py-6 space-y-6 pb-12 text-neutral-800 dark:text-neutral-200 overflow-x-hidden">
         
-
         <!-- Customer Stats -->
         <div class="grid gap-4 grid-cols-3">
             <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs dark:border-neutral-800 dark:bg-neutral-900 flex flex-col justify-between">
@@ -1071,245 +1105,473 @@ const filteredCoupons = computed(() => {
         </div>
 
         <!-- Main section layout -->
-        <div class="grid gap-6 lg:grid-cols-3">
+        <div class="space-y-6">
             
-            <!-- Left 2 columns: Tab Content -->
-            <div class="lg:col-span-2 space-y-4">
-                
-                <!-- Customer Tabs -->
-                <div class="flex border-b border-neutral-200 dark:border-neutral-800 gap-6">
-                    <button 
-                        @click="customerTab = 'orders'"
-                        :class="customerTab === 'orders' ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-neutral-400 hover:text-neutral-700'"
-                        class="pb-3 border-b-2 font-bold text-xs transition"
-                    >
-                        My Order History
-                    </button>
-                    <button 
-                        @click="customerTab = 'coupons'"
-                        :class="customerTab === 'coupons' ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-neutral-400 hover:text-neutral-700'"
-                        class="pb-3 border-b-2 font-bold text-xs transition"
-                    >
-                        Available Coupons
-                    </button>
-                    <button 
-                        @click="customerTab = 'settings'"
-                        :class="customerTab === 'settings' ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-neutral-400 hover:text-neutral-700'"
-                        class="pb-3 border-b-2 font-bold text-xs transition"
-                    >
-                        Account Security Settings
-                    </button>
-                </div>
-
-                <!-- Tab 1: Orders -->
-                <div v-if="customerTab === 'orders'" class="space-y-4">
-                    <div v-if="!orders || orders.length === 0" class="rounded-xl border-2 border-dashed border-neutral-200 p-8 text-center dark:border-neutral-800">
-                        <ShoppingBag class="mx-auto h-8 w-8 text-neutral-300" />
-                        <h3 class="mt-2 text-sm font-bold">No orders placed yet</h3>
-                        <p class="text-xs text-neutral-400 mt-1">Once you complete a checkout, your order will show up here.</p>
-                        <Link href="/shop" class="mt-4 inline-flex h-9 items-center justify-center rounded-lg bg-emerald-600 px-4 text-xs font-semibold text-white hover:bg-emerald-700 transition">
-                            Explore Catalog
-                        </Link>
-                    </div>
-
-                    <div v-else class="rounded-xl border border-neutral-200 bg-white overflow-hidden shadow-xs dark:border-neutral-800 dark:bg-neutral-900">
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-xs text-left border-collapse">
-                                <thead>
-                                    <tr class="bg-neutral-50 border-b border-neutral-200 text-neutral-500 dark:bg-neutral-800/40 dark:border-neutral-800">
-                                        <th class="p-4 font-semibold">Order ID</th>
-                                        <th class="p-4 font-semibold">Invoice No</th>
-                                        <th class="p-4 font-semibold">Date</th>
-                                        <th class="p-4 font-semibold text-center">Payment Gateway</th>
-                                        <th class="p-4 font-semibold text-right">Total Amount</th>
-                                        <th class="p-4 font-semibold text-center">Delivery Status</th>
-                                        <th class="p-4 font-semibold text-center">Invoice Detail</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-neutral-200 dark:divide-neutral-800/50">
-                                    <tr v-for="order in orders" :key="order.id" class="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/20">
-                                        <td class="p-4 font-mono font-semibold">{{ order.id }}</td>
-                                        <td class="p-4 font-mono text-neutral-500">{{ order.invoice_no || '-' }}</td>
-                                        <td class="p-4 text-neutral-500">{{ order.date }}</td>
-                                        <td class="p-4 text-center">
-                                            <span class="rounded bg-neutral-100 px-2 py-0.5 text-[9px] font-bold uppercase text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
-                                                {{ order.gateway }}
-                                            </span>
-                                        </td>
-                                        <td class="p-4 text-right font-bold font-mono">${{ order.total.toFixed(2) }}</td>
-                                        <td class="p-4 text-center">
-                                            <span 
-                                                v-if="order.status === 'Paid'" 
-                                                class="inline-flex rounded-full bg-green-50 px-2.5 py-0.5 text-[10px] font-bold text-green-600 dark:bg-green-950 dark:text-green-400"
-                                            >
-                                                Completed (Shipped)
-                                            </span>
-                                            <span 
-                                                v-else-if="order.status === 'Pending'" 
-                                                class="inline-flex rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-600 dark:bg-amber-950 dark:text-amber-400"
-                                            >
-                                                Processing
-                                            </span>
-                                            <span 
-                                                v-else-if="order.status === 'Failed'" 
-                                                class="inline-flex rounded-full bg-red-50 px-2.5 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950 dark:text-red-400"
-                                            >
-                                                Failed
-                                            </span>
-                                            <span 
-                                                v-else 
-                                                class="inline-flex rounded-full bg-neutral-100 px-2.5 py-0.5 text-[10px] font-bold text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400"
-                                            >
-                                                Cancelled
-                                            </span>
-                                        </td>
-                                        <td class="p-4 text-center">
-                                            <button 
-                                                @click="openInvoice(order)"
-                                                class="inline-flex items-center gap-1.5 rounded-lg bg-neutral-50 border border-neutral-200 px-2.5 py-1 text-[10px] font-bold text-neutral-600 hover:bg-emerald-50 hover:text-emerald-600 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-emerald-950/40 transition"
-                                            >
-                                                <FileText class="h-3.5 w-3.5" />
-                                                <span>View Invoice</span>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tab 2: Available Coupons -->
-                <div v-else-if="customerTab === 'coupons'" class="grid gap-4 sm:grid-cols-2">
-                    <div 
-                        v-for="coupon in coupons" 
-                        :key="coupon.id" 
-                        class="relative overflow-hidden rounded-xl border-2 border-dashed border-emerald-500/30 bg-emerald-50/20 p-5 dark:bg-emerald-950/10 flex flex-col justify-between gap-4"
-                    >
-                        <div class="space-y-1">
-                            <div class="flex items-center justify-between">
-                                <span class="font-mono text-sm font-black tracking-wider text-emerald-600 dark:text-emerald-400">
-                                    {{ coupon.code }}
-                                </span>
-                                <button 
-                                    @click="copyCouponCode(coupon.code)"
-                                    class="h-7 w-7 rounded-md bg-white border flex items-center justify-center hover:bg-neutral-50 dark:bg-neutral-900 dark:border-neutral-700 transition"
-                                >
-                                    <Copy class="h-3.5 w-3.5 text-neutral-500" />
-                                </button>
-                            </div>
-                            <p class="text-xs text-neutral-600 dark:text-neutral-400">
-                                {{ coupon.description || 'Enjoy flat discount storewide' }}
-                            </p>
-                        </div>
-                        <div class="border-t border-dashed border-emerald-500/20 pt-2 flex justify-between items-center text-[10px] text-neutral-500">
-                            <span>Min Order: <strong>${{ coupon.minOrderAmount.toFixed(2) }}</strong></span>
-                            <span class="bg-emerald-600 text-white px-2 py-0.5 rounded-full font-bold">
-                                {{ coupon.discountType === 'percentage' ? `${coupon.discountValue}% OFF` : `$${coupon.discountValue} OFF` }}
-                            </span>
-                        </div>
-                    </div>
-
-                    <div v-if="!coupons || coupons.length === 0" class="col-span-2 text-center text-xs text-neutral-400 py-8">
-                        No active promotional coupons at this moment. Check back soon!
-                    </div>
-                </div>
-
-                <!-- Tab 3: Settings Shortcuts -->
-                <div v-else-if="customerTab === 'settings'" class="grid gap-4 sm:grid-cols-3">
-                    <Link 
-                        href="/settings/profile" 
-                        class="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs hover:border-emerald-500 transition dark:border-neutral-800 dark:bg-neutral-900 space-y-3 flex flex-col justify-between"
-                    >
-                        <div class="h-8 w-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center dark:bg-emerald-950 dark:text-emerald-400">
-                            <User class="h-4 w-4" />
-                        </div>
-                        <div>
-                            <h4 class="text-xs font-bold">Update Profile</h4>
-                            <p class="text-[10px] text-neutral-400 mt-1">Change your name, email address, or contact details.</p>
-                        </div>
-                    </Link>
-
-                    <Link 
-                        href="/settings/password" 
-                        class="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs hover:border-emerald-500 transition dark:border-neutral-800 dark:bg-neutral-900 space-y-3 flex flex-col justify-between"
-                    >
-                        <div class="h-8 w-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center dark:bg-amber-950 dark:text-amber-400">
-                            <Key class="h-4 w-4" />
-                        </div>
-                        <div>
-                            <h4 class="text-xs font-bold">Manage Password</h4>
-                            <p class="text-[10px] text-neutral-400 mt-1">Change and secure your login password regularly.</p>
-                        </div>
-                    </Link>
-
-                    <Link 
-                        href="/settings/security" 
-                        class="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs hover:border-emerald-500 transition dark:border-neutral-800 dark:bg-neutral-900 space-y-3 flex flex-col justify-between"
-                    >
-                        <div class="h-8 w-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center dark:bg-indigo-950 dark:text-indigo-400">
-                            <Shield class="h-4 w-4" />
-                        </div>
-                        <div>
-                            <h4 class="text-xs font-bold">Two-Factor Security</h4>
-                            <p class="text-[10px] text-neutral-400 mt-1">Add authentication steps for improved account safety.</p>
-                        </div>
-                    </Link>
-                </div>
-
+            <!-- Customer Tabs Navigation -->
+            <div class="flex border-b border-neutral-200 dark:border-neutral-800 gap-6 overflow-x-auto pb-px">
+                <button 
+                    @click="customerTab = 'home'"
+                    :class="customerTab === 'home' ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-neutral-400 hover:text-neutral-700'"
+                    class="pb-3 border-b-2 font-bold text-xs transition whitespace-nowrap"
+                >
+                    Home
+                </button>
+                <button 
+                    @click="customerTab = 'orders'"
+                    :class="customerTab === 'orders' ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-neutral-400 hover:text-neutral-700'"
+                    class="pb-3 border-b-2 font-bold text-xs transition whitespace-nowrap"
+                >
+                    Order List
+                </button>
+                <button 
+                    @click="customerTab = 'invoices'"
+                    :class="customerTab === 'invoices' ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-neutral-400 hover:text-neutral-700'"
+                    class="pb-3 border-b-2 font-bold text-xs transition whitespace-nowrap"
+                >
+                    Customer Invoice
+                </button>
+                <button 
+                    @click="customerTab = 'support'"
+                    :class="customerTab === 'support' ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-neutral-400 hover:text-neutral-700'"
+                    class="pb-3 border-b-2 font-bold text-xs transition whitespace-nowrap"
+                >
+                    Shop Support
+                </button>
+                <button 
+                    @click="customerTab = 'profile'"
+                    :class="customerTab === 'profile' ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-neutral-400 hover:text-neutral-700'"
+                    class="pb-3 border-b-2 font-bold text-xs transition whitespace-nowrap"
+                >
+                    Profile
+                </button>
+                <button 
+                    @click="customerTab = 'coupons'"
+                    :class="customerTab === 'coupons' ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-neutral-400 hover:text-neutral-700'"
+                    class="pb-3 border-b-2 font-bold text-xs transition whitespace-nowrap"
+                >
+                    Available Coupons
+                </button>
             </div>
 
-            <!-- Right Column: Recommended products / Side widgets -->
-            <div class="space-y-6">
-                
-                <!-- Recommended Items Widget -->
+            <!-- Tab 1: Home Overview -->
+            <div v-if="customerTab === 'home'" class="space-y-6">
+                <!-- Welcome Hero Banner -->
+                <div class="rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white shadow-md relative overflow-hidden">
+                    <div class="absolute right-0 bottom-0 opacity-10 pointer-events-none transform translate-y-1/4 translate-x-1/4">
+                        <ShoppingBag class="w-64 h-64" />
+                    </div>
+                    <div class="relative z-10 space-y-2">
+                        <span class="bg-emerald-550/30 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">Customer Portal</span>
+                        <h2 class="text-2xl font-black">Hello, {{ $page.props.auth?.user?.first_name || 'Valued Customer' }}!</h2>
+                        <p class="text-xs text-emerald-100 max-w-md">
+                            Welcome to your personal dashboard. Here you can track your shipments, view detailed invoices, manage your profile, and receive dedicated shop support.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Quick Actions Grid -->
+                <div class="grid gap-4 sm:grid-cols-3">
+                    <button 
+                        @click="customerTab = 'orders'"
+                        class="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs text-left hover:border-emerald-500 transition dark:border-neutral-800 dark:bg-neutral-900 group space-y-2"
+                    >
+                        <div class="h-8 w-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center dark:bg-emerald-950 dark:text-emerald-400 group-hover:scale-110 transition duration-300">
+                            <Package class="h-4 w-4" />
+                        </div>
+                        <h4 class="text-xs font-bold">Track Your Orders</h4>
+                        <p class="text-[10px] text-neutral-400">View shipping statuses and historical items purchased.</p>
+                    </button>
+
+                    <button 
+                        @click="customerTab = 'support'"
+                        class="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs text-left hover:border-emerald-500 transition dark:border-neutral-800 dark:bg-neutral-900 group space-y-2"
+                    >
+                        <div class="h-8 w-8 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center dark:bg-teal-950 dark:text-teal-400 group-hover:scale-110 transition duration-300">
+                            <LifeBuoy class="h-4 w-4" />
+                        </div>
+                        <h4 class="text-xs font-bold">Shop Support</h4>
+                        <p class="text-[10px] text-neutral-400">Submit an inquiry or get assist on payment disputes.</p>
+                    </button>
+
+                    <button 
+                        @click="customerTab = 'profile'"
+                        class="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs text-left hover:border-emerald-500 transition dark:border-neutral-800 dark:bg-neutral-900 group space-y-2"
+                    >
+                        <div class="h-8 w-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center dark:bg-indigo-950 dark:text-indigo-400 group-hover:scale-110 transition duration-300">
+                            <User class="h-4 w-4" />
+                        </div>
+                        <h4 class="text-xs font-bold">Manage Profile</h4>
+                        <p class="text-[10px] text-neutral-400">Update security settings or switch associated contacts.</p>
+                    </button>
+                </div>
+
+                <!-- Recommended For You Section -->
                 <div class="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs dark:border-neutral-800 dark:bg-neutral-900 space-y-4">
                     <h3 class="text-xs font-black uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
                         <TrendingUp class="h-4 w-4 text-emerald-500" /> Recommended For You
                     </h3>
-
-                    <div class="space-y-3">
+                    <div class="grid gap-4 sm:grid-cols-3">
                         <div 
                             v-for="prod in recommendedProducts" 
                             :key="prod.id"
-                            class="flex gap-3 items-center group"
+                            class="border border-neutral-100 rounded-xl p-3 flex flex-col justify-between hover:shadow-md transition dark:border-neutral-800 group"
                         >
-                            <img 
-                                :src="prod.image" 
-                                alt="" 
-                                class="h-12 w-12 rounded-lg object-cover bg-neutral-100"
-                            />
-                            <div class="flex-1 space-y-0.5">
+                            <div class="space-y-2">
+                                <div class="relative overflow-hidden rounded-lg aspect-square">
+                                    <img 
+                                        :src="prod.image" 
+                                        alt="" 
+                                        class="h-full w-full object-cover bg-neutral-100 group-hover:scale-105 transition duration-500"
+                                    />
+                                </div>
                                 <span class="text-[9px] font-bold text-neutral-400 uppercase tracking-tight">{{ prod.category }}</span>
-                                <h4 class="text-xs font-bold leading-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition truncate max-w-[140px]">
+                                <h4 class="text-xs font-bold leading-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition truncate">
                                     {{ prod.name }}
                                 </h4>
-                                <span class="font-mono text-xs font-bold">${{ prod.price.toFixed(2) }}</span>
                             </div>
-                            <Link 
-                                :href="`/shop?category=${prod.category}`" 
-                                class="h-8 w-8 rounded-lg bg-neutral-50 hover:bg-emerald-50 flex items-center justify-center text-neutral-400 hover:text-emerald-600 transition dark:bg-neutral-800 dark:hover:bg-emerald-950"
+                            <div class="flex items-center justify-between mt-3">
+                                <span class="font-mono text-xs font-bold">${{ prod.price.toFixed(2) }}</span>
+                                <Link 
+                                    :href="`/shop?category=${prod.category}`" 
+                                    class="h-7 px-3 rounded-lg bg-neutral-50 hover:bg-emerald-50 flex items-center gap-1 text-[10px] font-bold text-neutral-600 hover:text-emerald-600 transition dark:bg-neutral-800 dark:hover:bg-emerald-950"
+                                >
+                                    <span>Shop</span>
+                                    <ArrowRight class="h-3 w-3" />
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: Order List -->
+            <div v-else-if="customerTab === 'orders'" class="space-y-4">
+                <div v-if="!orders || orders.length === 0" class="rounded-xl border-2 border-dashed border-neutral-200 p-8 text-center dark:border-neutral-800">
+                    <ShoppingBag class="mx-auto h-8 w-8 text-neutral-300" />
+                    <h3 class="mt-2 text-sm font-bold">No orders placed yet</h3>
+                    <p class="text-xs text-neutral-400 mt-1">Once you complete a checkout, your order will show up here.</p>
+                    <Link href="/shop" class="mt-4 inline-flex h-9 items-center justify-center rounded-lg bg-emerald-600 px-4 text-xs font-semibold text-white hover:bg-emerald-700 transition">
+                        Explore Catalog
+                    </Link>
+                </div>
+
+                <div v-else class="rounded-xl border border-neutral-200 bg-white overflow-hidden shadow-xs dark:border-neutral-800 dark:bg-neutral-900">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-left border-collapse">
+                            <thead>
+                                <tr class="bg-neutral-50 border-b border-neutral-200 text-neutral-500 dark:bg-neutral-800/40 dark:border-neutral-800">
+                                    <th class="p-4 font-semibold">Order ID</th>
+                                    <th class="p-4 font-semibold">Invoice No</th>
+                                    <th class="p-4 font-semibold">Date</th>
+                                    <th class="p-4 font-semibold text-center">Payment Gateway</th>
+                                    <th class="p-4 font-semibold text-right">Total Amount</th>
+                                    <th class="p-4 font-semibold text-center">Delivery Status</th>
+                                    <th class="p-4 font-semibold text-center">Invoice Detail</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-neutral-200 dark:divide-neutral-800/50">
+                                <tr v-for="order in orders" :key="order.id" class="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/20">
+                                    <td class="p-4 font-mono font-semibold">{{ order.id }}</td>
+                                    <td class="p-4 font-mono text-neutral-500">{{ order.invoice_no || '-' }}</td>
+                                    <td class="p-4 text-neutral-500">{{ order.date }}</td>
+                                    <td class="p-4 text-center">
+                                        <span class="rounded bg-neutral-100 px-2 py-0.5 text-[9px] font-bold uppercase text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
+                                            {{ order.gateway }}
+                                        </span>
+                                    </td>
+                                    <td class="p-4 text-right font-bold font-mono">${{ order.total.toFixed(2) }}</td>
+                                    <td class="p-4 text-center">
+                                        <span 
+                                            v-if="order.status === 'Paid'" 
+                                            class="inline-flex rounded-full bg-green-50 px-2.5 py-0.5 text-[10px] font-bold text-green-600 dark:bg-green-950 dark:text-green-400"
+                                        >
+                                            Completed (Shipped)
+                                        </span>
+                                        <span 
+                                            v-else-if="order.status === 'Pending'" 
+                                            class="inline-flex rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-600 dark:bg-amber-950 dark:text-amber-400"
+                                        >
+                                            Processing
+                                        </span>
+                                        <span 
+                                            v-else-if="order.status === 'Failed'" 
+                                            class="inline-flex rounded-full bg-red-50 px-2.5 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950 dark:text-red-400"
+                                        >
+                                            Failed
+                                        </span>
+                                        <span 
+                                            v-else 
+                                            class="inline-flex rounded-full bg-neutral-100 px-2.5 py-0.5 text-[10px] font-bold text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400"
+                                        >
+                                            Cancelled
+                                        </span>
+                                    </td>
+                                    <td class="p-4 text-center">
+                                        <button 
+                                            @click="openInvoice(order)"
+                                            class="inline-flex items-center gap-1.5 rounded-lg bg-neutral-50 border border-neutral-200 px-2.5 py-1 text-[10px] font-bold text-neutral-600 hover:bg-emerald-50 hover:text-emerald-600 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-emerald-950/40 transition"
+                                        >
+                                            <FileText class="h-3.5 w-3.5" />
+                                            <span>View Invoice</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3: Customer Invoice -->
+            <div v-else-if="customerTab === 'invoices'" class="space-y-4">
+                <div v-if="!orders || orders.length === 0" class="rounded-xl border-2 border-dashed border-neutral-200 p-8 text-center dark:border-neutral-800">
+                    <FileText class="mx-auto h-8 w-8 text-neutral-300" />
+                    <h3 class="mt-2 text-sm font-bold">No invoices generated</h3>
+                    <p class="text-xs text-neutral-400 mt-1">Once you complete a purchase, your billing invoices will list here.</p>
+                </div>
+
+                <div v-else class="grid gap-4 sm:grid-cols-2">
+                    <div 
+                        v-for="order in orders" 
+                        :key="order.id"
+                        class="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs dark:border-neutral-800 dark:bg-neutral-900 space-y-4 flex flex-col justify-between hover:border-emerald-500 transition duration-300"
+                    >
+                        <div class="flex justify-between items-start">
+                            <div class="space-y-1">
+                                <span class="rounded bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 uppercase">
+                                    {{ order.invoice_no || 'DRAFT' }}
+                                </span>
+                                <h4 class="text-xs font-bold mt-1">Order Ref: {{ order.id }}</h4>
+                                <span class="text-[10px] text-neutral-400">{{ order.date }}</span>
+                            </div>
+                            <span class="font-mono text-sm font-black text-neutral-900 dark:text-white">
+                                ${{ order.total.toFixed(2) }}
+                            </span>
+                        </div>
+                        
+                        <div class="border-t border-neutral-100 pt-3 dark:border-neutral-800/80 flex items-center justify-between">
+                            <div class="flex items-center gap-1.5 text-[10px] text-neutral-500">
+                                <CreditCard class="h-3.5 w-3.5" />
+                                <span class="uppercase">Via {{ order.gateway }}</span>
+                            </div>
+                            <button 
+                                @click="openInvoice(order)"
+                                class="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-[10px] font-bold text-white hover:bg-emerald-700 transition"
                             >
-                                <ArrowRight class="h-4 w-4" />
-                            </Link>
+                                <Eye class="h-3 w-3" />
+                                <span>View Invoice</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 4: Shop Support -->
+            <div v-else-if="customerTab === 'support'" class="grid gap-6 md:grid-cols-3">
+                <!-- Ticket Submission Form -->
+                <div class="md:col-span-1 border border-neutral-200 rounded-xl bg-white p-5 space-y-4 shadow-xs dark:border-neutral-800 dark:bg-neutral-900">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
+                        <LifeBuoy class="h-4 w-4 text-emerald-500" /> Support Desk
+                    </h3>
+                    
+                    <div class="space-y-3">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-neutral-500 uppercase">Related Order</label>
+                            <select 
+                                v-model="supportOrder" 
+                                class="w-full text-xs rounded-lg border border-neutral-200 p-2 dark:border-neutral-700 dark:bg-neutral-850"
+                            >
+                                <option value="">None / General Inquiry</option>
+                                <option v-for="order in orders" :key="order.id" :value="order.id">
+                                    {{ order.id }} ({{ order.invoice_no || 'No Invoice' }})
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-neutral-500 uppercase">Category</label>
+                            <select 
+                                v-model="supportCategory" 
+                                class="w-full text-xs rounded-lg border border-neutral-200 p-2 dark:border-neutral-700 dark:bg-neutral-850"
+                            >
+                                <option value="Delivery Issue">Delivery Issue</option>
+                                <option value="Refund Request">Refund Request</option>
+                                <option value="Product Question">Product Question</option>
+                                <option value="Billing Inquiry">Billing Inquiry</option>
+                                <option value="Other">Other Inquiry</option>
+                            </select>
+                        </div>
+
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-neutral-500 uppercase">Describe Your Issue</label>
+                            <textarea 
+                                v-model="supportMessage" 
+                                rows="4" 
+                                placeholder="Provide order details, transaction date, or details about your question..."
+                                class="w-full text-xs rounded-lg border border-neutral-200 p-2 dark:border-neutral-700 dark:bg-neutral-850"
+                            ></textarea>
+                        </div>
+
+                        <button 
+                            @click="handleCreateTicket"
+                            class="w-full h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white transition flex items-center justify-center gap-1.5"
+                        >
+                            <MessageSquare class="h-4 w-4" />
+                            <span>Submit Ticket</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Ticket list -->
+                <div class="md:col-span-2 space-y-4">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-neutral-400">
+                        Your Support Inquiries
+                    </h3>
+                    
+                    <div class="space-y-3">
+                        <div 
+                            v-for="ticket in supportTickets" 
+                            :key="ticket.id"
+                            class="border border-neutral-200 rounded-xl bg-white p-4 shadow-xs dark:border-neutral-800 dark:bg-neutral-900 space-y-3"
+                        >
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-mono text-xs font-bold text-neutral-700 dark:text-neutral-300">
+                                        {{ ticket.id }}
+                                    </span>
+                                    <span class="rounded bg-neutral-100 px-2 py-0.5 text-[9px] font-bold uppercase text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
+                                        {{ ticket.category }}
+                                    </span>
+                                </div>
+                                <span 
+                                    :class="ticket.status === 'Open' ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400' : 'bg-green-50 text-green-600 dark:bg-green-950/40 dark:text-green-400'"
+                                    class="rounded-full px-2.5 py-0.5 text-[10px] font-bold"
+                                >
+                                    {{ ticket.status }}
+                                </span>
+                            </div>
+
+                            <p class="text-xs text-neutral-600 dark:text-neutral-400">
+                                {{ ticket.message }}
+                            </p>
+
+                            <div class="flex justify-between items-center text-[10px] text-neutral-400 pt-2 border-t border-neutral-50 dark:border-neutral-800/60">
+                                <span>Linked Order: <strong class="font-mono">{{ ticket.orderId }}</strong></span>
+                                <span>Submitted: {{ ticket.date }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 5: Profile Settings -->
+            <div v-else-if="customerTab === 'profile'" class="grid gap-6 md:grid-cols-3">
+                <!-- Profile Card -->
+                <div class="md:col-span-1 border border-neutral-200 rounded-xl bg-white p-5 space-y-5 text-center shadow-xs dark:border-neutral-800 dark:bg-neutral-900">
+                    <div class="mx-auto w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-xl font-bold">
+                        {{ ($page.props.auth?.user?.first_name || 'U').charAt(0) }}{{ ($page.props.auth?.user?.last_name || '').charAt(0) }}
+                    </div>
+                    
+                    <div class="space-y-1">
+                        <h3 class="text-sm font-bold">{{ $page.props.auth?.user?.first_name }} {{ $page.props.auth?.user?.last_name }}</h3>
+                        <span class="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400 uppercase inline-block">
+                            {{ $page.props.auth?.user?.user_type }}
+                        </span>
+                    </div>
+
+                    <div class="border-t border-neutral-100 pt-4 text-left space-y-3 dark:border-neutral-800/80 text-[11px]">
+                        <div class="flex justify-between">
+                            <span class="text-neutral-400">Username</span>
+                            <span class="font-semibold">{{ $page.props.auth?.user?.username || '-' }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-neutral-400">Email Address</span>
+                            <span class="font-semibold">{{ $page.props.auth?.user?.email || '-' }}</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Support Ticket Callout -->
-                <div class="rounded-xl bg-gradient-to-br from-neutral-900 to-neutral-850 p-5 text-white shadow-lg space-y-3 dark:from-neutral-900 dark:to-neutral-950">
-                    <h4 class="text-xs font-bold">Need Help with an Order?</h4>
-                    <p class="text-[10px] text-neutral-400">
-                        Our customer service operates 24/7. Open a support ticket, and our support representatives will respond shortly.
-                    </p>
-                    <button 
-                        @click="triggerToast('💬 Support ticket request sent! We will connect with you via email.')"
-                        class="w-full h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-bold transition"
-                    >
-                        Contact Customer Support
-                    </button>
+                <!-- Security Shortcuts / Link cards -->
+                <div class="md:col-span-2 space-y-4">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-neutral-400">Account Security & Options</h3>
+                    
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <Link 
+                            href="/settings/profile" 
+                            class="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs hover:border-emerald-500 transition dark:border-neutral-800 dark:bg-neutral-900 space-y-3 flex flex-col justify-between"
+                        >
+                            <div class="h-8 w-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center dark:bg-emerald-950 dark:text-emerald-400">
+                                <User class="h-4 w-4" />
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-bold">Update Profile Details</h4>
+                                <p class="text-[10px] text-neutral-400 mt-1">Change your display name, username, or email details directly.</p>
+                            </div>
+                        </Link>
+
+                        <Link 
+                            href="/settings/password" 
+                            class="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs hover:border-emerald-500 transition dark:border-neutral-800 dark:bg-neutral-900 space-y-3 flex flex-col justify-between"
+                        >
+                            <div class="h-8 w-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center dark:bg-amber-950 dark:text-amber-400">
+                                <Key class="h-4 w-4" />
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-bold">Change Password</h4>
+                                <p class="text-[10px] text-neutral-400 mt-1">Keep your portal access secure by rotating passwords.</p>
+                            </div>
+                        </Link>
+
+                        <Link 
+                            href="/settings/security" 
+                            class="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs hover:border-emerald-500 transition dark:border-neutral-800 dark:bg-neutral-900 space-y-3 flex flex-col justify-between"
+                        >
+                            <div class="h-8 w-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center dark:bg-indigo-950 dark:text-indigo-400">
+                                <Shield class="h-4 w-4" />
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-bold">2FA Authentication</h4>
+                                <p class="text-[10px] text-neutral-400 mt-1">Setup multi-factor credentials to maximize account safety.</p>
+                            </div>
+                        </Link>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 6: Available Coupons -->
+            <div v-else-if="customerTab === 'coupons'" class="grid gap-4 sm:grid-cols-2">
+                <div 
+                    v-for="coupon in coupons" 
+                    :key="coupon.id" 
+                    class="relative overflow-hidden rounded-xl border-2 border-dashed border-emerald-500/30 bg-emerald-50/20 p-5 dark:bg-emerald-950/10 flex flex-col justify-between gap-4"
+                >
+                    <div class="space-y-1">
+                        <div class="flex items-center justify-between">
+                            <span class="font-mono text-sm font-black tracking-wider text-emerald-600 dark:text-emerald-400">
+                                {{ coupon.code }}
+                            </span>
+                            <button 
+                                @click="copyCouponCode(coupon.code)"
+                                class="h-7 w-7 rounded-md bg-white border flex items-center justify-center hover:bg-neutral-50 dark:bg-neutral-900 dark:border-neutral-700 transition"
+                            >
+                                <Copy class="h-3.5 w-3.5 text-neutral-500" />
+                            </button>
+                        </div>
+                        <p class="text-xs text-neutral-600 dark:text-neutral-400">
+                            {{ coupon.description || 'Enjoy flat discount storewide' }}
+                        </p>
+                    </div>
+                    <div class="border-t border-dashed border-emerald-500/20 pt-2 flex justify-between items-center text-[10px] text-neutral-500">
+                        <span>Min Order: <strong>${{ coupon.minOrderAmount.toFixed(2) }}</strong></span>
+                        <span class="bg-emerald-600 text-white px-2 py-0.5 rounded-full font-bold">
+                            {{ coupon.discountType === 'percentage' ? `${coupon.discountValue}% OFF` : `$${coupon.discountValue} OFF` }}
+                        </span>
+                    </div>
                 </div>
 
+                <div v-if="!coupons || coupons.length === 0" class="col-span-2 text-center text-xs text-neutral-400 py-8">
+                    No active promotional coupons at this moment. Check back soon!
+                </div>
             </div>
 
         </div>

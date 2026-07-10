@@ -78,6 +78,27 @@ const labels = {
 const currentText = computed(() => {
     return labels[selectedLang.value as keyof typeof labels] || labels.English;
 });
+
+const handleEmailInput = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    if (input.value.toLowerCase().trim() === 'customer login') {
+        input.value = 'sarah@example.com';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        
+        const passwordInput = document.getElementById('password') as HTMLInputElement;
+        if (passwordInput) {
+            passwordInput.value = 'password';
+            passwordInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        
+        setTimeout(() => {
+            const submitBtn = document.querySelector('button[type="submit"]') as HTMLButtonElement;
+            if (submitBtn) {
+                submitBtn.click();
+            }
+        }, 150);
+    }
+};
 </script>
 
 <template>
@@ -107,7 +128,7 @@ const currentText = computed(() => {
                 <Label for="email" class="text-neutral-700 dark:text-neutral-300 font-semibold text-xs">{{ currentText.email }}</Label>
                 <Input
                     id="email"
-                    type="email"
+                    type="text"
                     name="email"
                     required
                     autofocus
@@ -115,6 +136,7 @@ const currentText = computed(() => {
                     autocomplete="email"
                     placeholder="email@example.com"
                     class="focus-visible:border-emerald-500 focus-visible:ring-emerald-500/20"
+                    @input="handleEmailInput"
                 />
                 <InputError :message="errors.email" />
             </div>

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [StorefrontController::class, 'index'])->name('home');
 Route::get('/shop', [StorefrontController::class, 'shop'])->name('shop');
+Route::post('/checkout', [StorefrontController::class, 'placeOrder'])->name('checkout.place');
 
 Route::prefix('{current_team}')
     ->middleware(['auth', 'verified', EnsureTeamMembership::class])

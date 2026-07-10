@@ -337,6 +337,13 @@ onMounted(() => {
                     >
                         Support
                     </button>
+                    <Link 
+                        v-if="$page.props.auth.user"
+                        :href="dashboardUrl || '/dashboard'"
+                        class="hover:text-emerald-500 cursor-pointer transition py-1"
+                    >
+                        Dashboard
+                    </Link>
                 </nav>
 
                 <!-- Actions -->

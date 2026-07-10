@@ -516,49 +516,67 @@ export function useStorefront(props: {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const completeCheckout = () => {
-        const invNo = `INV-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-        const ordNo = `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
-        const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-        
-        orderInvoice.value = {
-            invoiceNo: invNo,
-            orderNo: ordNo,
-            date: dateStr,
-            paymentMethod: checkoutForm.value.paymentMethod === 'stripe' ? 'Stripe (Credit Card)' : 
-                           checkoutForm.value.paymentMethod === 'sslcommerz' ? 'SSLCommerz (Local Card/Mobile Banking)' : 'Cash on Delivery (COD)',
-            paymentStatus: checkoutForm.value.paymentMethod === 'cod' ? 'Pending' : 'Paid',
-            customer: { ...checkoutForm.value },
-            items: cart.value.map(item => ({
-                name: item.product.name,
-                price: item.product.price,
-                quantity: item.quantity,
-                total: item.product.price * item.quantity
-            })),
-            subtotal: cartSubtotal.value,
-            discount: discountAmount.value,
-            couponCode: appliedCoupon.value?.code,
-            shipping: shippingFee.value,
-            grandTotal: cartTotal.value
-        };
-        
-        cart.value = [];
-        appliedCoupon.value = null;
-        couponInput.value = '';
-        viewMode.value = 'confirmation';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        triggerToast("🎉 Order placed successfully!");
-    };
-
     const placeOrder = () => {
+        const executeCheckout = () => {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            fetch('/checkout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    customer: checkoutForm.value,
+                    items: cart.value.map(item => ({
+                        product_id: item.product.id,
+                        quantity: item.quantity,
+                        price: item.product.price,
+                        product: {
+                            name: item.product.name,
+                            price: item.product.price
+                        }
+                    })),
+                    subtotal: cartSubtotal.value,
+                    discount: discountAmount.value,
+                    couponCode: appliedCoupon.value?.code,
+                    shipping: shippingFee.value,
+                    grandTotal: cartTotal.value
+                })
+            })
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return res.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    orderInvoice.value = data.invoice;
+                    cart.value = [];
+                    appliedCoupon.value = null;
+                    couponInput.value = '';
+                    viewMode.value = 'confirmation';
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    triggerToast("🎉 Order placed successfully!");
+                } else {
+                    triggerToast("⚠️ Failed to place order. Please try again.");
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                triggerToast("⚠️ Error connecting to server.");
+            });
+        };
+
         if (checkoutForm.value.paymentMethod === 'stripe') {
             stripeCard.value.isProcessing = true;
             setTimeout(() => {
                 stripeCard.value.isProcessing = false;
-                completeCheckout();
+                executeCheckout();
             }, 1500);
         } else {
-            completeCheckout();
+            executeCheckout();
         }
     };
 
