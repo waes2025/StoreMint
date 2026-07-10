@@ -47,14 +47,16 @@ class StorefrontController extends Controller
             ->where('is_active', 1)
             ->get()
             ->map(function ($product) {
+                $qty = $product->currentStock();
+
                 return [
                     'id' => $product->id,
                     'name' => $product->name,
                     'slug' => $product->slug,
                     'price' => (float) $product->price,
                     'compare_at_price' => $product->compare_at_price ? (float) $product->compare_at_price : null,
-                    'stock_status' => $product->stock_status,
-                    'stock' => $product->stock_status === 'in_stock' ? 10 : 0, // Fallback stock qty
+                    'stock_status' => $qty > 0 ? 'in_stock' : 'out_of_stock',
+                    'stock' => $qty,
                     'image' => $product->image,
                     'short_description' => $product->short_description,
                     'description' => $product->description,
@@ -327,9 +329,9 @@ class StorefrontController extends Controller
                         ->where('variation_id', $variationId)
                         ->decrement('qty_available', $qty);
                         
-                    $totalStock = DB::table('variation_location_details')
-                        ->where('product_id', $productId)
-                        ->sum('qty_available');
+                    // Retrieve dynamic stock using the product model instance
+                    $prodModel = Product::find($productId);
+                    $totalStock = $prodModel ? $prodModel->currentStock() : 0;
                         
                     if ($totalStock <= 0) {
                         DB::table('products')

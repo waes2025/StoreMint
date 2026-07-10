@@ -153,14 +153,11 @@ class DashboardController extends Controller
             ->where('status', 'active')
             ->count();
 
-        // Products query with stock joining
+        // Products query with dynamic stock calculation from purchase_lines and transaction_sell_lines
         $products = Product::with(['category', 'brand'])
             ->get()
             ->map(function ($product) {
-                // Sum qty from variation_location_details
-                $qty = (int) DB::table('variation_location_details')
-                    ->where('product_id', $product->id)
-                    ->sum('qty_available');
+                $qty = $product->currentStock();
 
                 return [
                     'id' => $product->id,
@@ -168,7 +165,7 @@ class DashboardController extends Controller
                     'category' => $product->category ? $product->category->name : 'Uncategorized',
                     'price' => (float) $product->price,
                     'stock' => $qty,
-                    'status' => $qty === 0 ? 'Out of Stock' : ($qty <= 5 ? 'Low Stock' : 'In Stock'),
+                    'status' => $qty <= 0 ? 'Out of Stock' : ($qty <= 5 ? 'Low Stock' : 'In Stock'),
                 ];
             });
 
@@ -308,6 +305,56 @@ class DashboardController extends Controller
         // Check if there is a variation record
         $variation = DB::table('variations')->where('product_id', $product->id)->first();
         if ($variation) {
+            // Find or create a default purchase transaction to hold the stock
+            $purchaseTx = DB::table('transactions')
+                ->where('type', 'purchase')
+                ->where('ref_no', 'PUR-INIT')
+                ->first();
+
+            if (! $purchaseTx) {
+                $purchaseTxId = DB::table('transactions')->insertGetId([
+                    'business_id' => $product->business_id ?? 1,
+                    'location_id' => 1,
+                    'created_by' => $request->user()->id,
+                    'type' => 'purchase',
+                    'status' => 'received',
+                    'payment_status' => 'paid',
+                    'ref_no' => 'PUR-INIT',
+                    'invoice_no' => 'INV-PUR-INIT',
+                    'transaction_date' => now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            } else {
+                $purchaseTxId = $purchaseTx->id;
+            }
+
+            // Calculate total sold (excluding cancelled, draft, quotation transactions)
+            $sells = (float) DB::table('transaction_sell_lines')
+                ->join('transactions', 'transaction_sell_lines.transaction_id', '=', 'transactions.id')
+                ->where('transaction_sell_lines.product_id', $product->id)
+                ->whereNotIn('transactions.status', ['cancelled', 'draft', 'quotation'])
+                ->sum('transaction_sell_lines.quantity');
+
+            $requiredPurchaseQty = $newStock + $sells;
+
+            // Update or insert purchase line
+            DB::table('purchase_lines')->updateOrInsert(
+                [
+                    'transaction_id' => $purchaseTxId,
+                    'product_id' => $product->id,
+                    'variation_id' => $variation->id,
+                ],
+                [
+                    'quantity' => $requiredPurchaseQty,
+                    'purchase_price' => $variation->default_purchase_price ?? ($product->price * 0.6),
+                    'purchase_price_inc_tax' => $variation->sell_price_inc_tax ?? $product->price,
+                    'item_tax' => 0.00,
+                    'updated_at' => now(),
+                ]
+            );
+
+            // Also update the cached location detail
             DB::table('variation_location_details')
                 ->updateOrInsert(
                     [

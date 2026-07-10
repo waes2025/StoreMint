@@ -619,21 +619,7 @@ const filteredPayments = computed(() => {
                                 <td class="p-4 text-neutral-500">{{ product.category }}</td>
                                 <td class="p-4 text-center font-bold font-mono">${{ product.price.toFixed(2) }}</td>
                                 <td class="p-4 text-center">
-                                    <div class="flex items-center justify-center gap-1.5">
-                                        <button 
-                                            @click="updateProductStock(product.id, Math.max(0, product.stock - 1))"
-                                            class="h-6 w-6 rounded border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 flex items-center justify-center text-xs dark:border-neutral-800 dark:bg-neutral-800 dark:hover:bg-neutral-700"
-                                        >
-                                            -
-                                        </button>
-                                        <span class="w-8 font-mono font-bold">{{ product.stock }}</span>
-                                        <button 
-                                            @click="updateProductStock(product.id, product.stock + 1)"
-                                            class="h-6 w-6 rounded border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 flex items-center justify-center text-xs dark:border-neutral-800 dark:bg-neutral-800 dark:hover:bg-neutral-700"
-                                        >
-                                            +
-                                        </button>
-                                    </div>
+                                    <span class="font-mono font-bold text-neutral-800 dark:text-neutral-200">{{ product.stock }}</span>
                                 </td>
                                 <td class="p-4">
                                     <span 

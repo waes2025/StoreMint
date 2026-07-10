@@ -33,6 +33,7 @@ class DatabaseSeeder extends Seeder
         DB::table('users')->truncate();
         DB::table('currencies')->truncate();
         DB::table('transaction_sell_lines')->truncate();
+        DB::table('purchase_lines')->truncate();
         DB::table('transactions')->truncate();
 
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
@@ -255,6 +256,23 @@ class DatabaseSeeder extends Seeder
             ],
         ];
 
+        // Create initial purchase transaction
+        $initPurchaseId = DB::table('transactions')->insertGetId([
+            'business_id' => $businessId,
+            'location_id' => $locationId,
+            'created_by' => $userId,
+            'type' => 'purchase',
+            'status' => 'received',
+            'payment_status' => 'paid',
+            'invoice_no' => 'INV-PUR-INIT',
+            'ref_no' => 'PUR-INIT',
+            'transaction_date' => now()->subDays(10),
+            'total_before_tax' => 10000.00,
+            'final_total' => 10000.00,
+            'created_at' => now()->subDays(10),
+            'updated_at' => now()->subDays(10),
+        ]);
+
         foreach ($productsData as $index => $pData) {
             $sku = 'SKU-'.strtoupper(Str::random(6));
             $stockStatus = $pData['stock'] > 0 ? 'in_stock' : 'out_of_stock';
@@ -315,6 +333,19 @@ class DatabaseSeeder extends Seeder
                 'qty_available' => $pData['stock'],
                 'created_at' => now(),
                 'updated_at' => now(),
+            ]);
+
+            // Insert purchase line for initial stock
+            DB::table('purchase_lines')->insert([
+                'transaction_id' => $initPurchaseId,
+                'product_id' => $prodId,
+                'variation_id' => $varId,
+                'quantity' => $pData['stock'],
+                'purchase_price' => $pData['price'] * 0.6,
+                'purchase_price_inc_tax' => $pData['price'] * 0.6,
+                'item_tax' => 0.00,
+                'created_at' => now()->subDays(10),
+                'updated_at' => now()->subDays(10),
             ]);
         }
 
@@ -503,6 +534,11 @@ class DatabaseSeeder extends Seeder
                     'created_at' => $order['date'],
                     'updated_at' => $order['date'],
                 ]);
+
+                DB::table('variation_location_details')
+                    ->where('product_id', $linkItem['product_id'])
+                    ->where('variation_id', $linkItem['variation_id'])
+                    ->decrement('qty_available', $linkItem['qty']);
             }
 
             if ($order['coupon_id']) {
