@@ -1169,130 +1169,177 @@ const formatAnnouncementText = (text?: string, coupon?: string) => {
                 </div>
             </div>
 
-            <!-- ORDER CONFIRMATION & REDESIGNED INVOICE (Guidelines Section 3.4 / 3.5) -->
-            <div v-else-if="viewMode === 'confirmation' && orderInvoice" class="space-y-6 max-w-2xl mx-auto">
-                <div class="flex flex-col items-center justify-center text-center space-y-3 py-6">
-                    <div class="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
-                        <CheckCircle2 class="h-8 w-8" />
-                    </div>
-                    <h1 class="text-2xl font-extrabold tracking-tight">Order Placed Successfully!</h1>
-                    <p class="text-xs text-neutral-500 max-w-xs">Your payment has been cleared and your invoice was generated automatically.</p>
-                    
-                    <div class="flex gap-3 pt-2">
-                        <button 
-                            @click="handlePrint"
-                            class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-4 text-xs font-semibold hover:bg-neutral-50 transition dark:border-neutral-800 dark:bg-neutral-900"
-                        >
-                            <Download class="h-3.5 w-3.5" /> Download PDF Invoice
-                        </button>
-                        <button 
-                            @click="resetStorefront"
-                            class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-4 text-xs font-semibold text-white hover:bg-emerald-700 transition"
-                        >
-                            Back to Shop
-                        </button>
-                    </div>
+            <!-- ORDER CONFIRMATION & DOCUMENT INVOICE -->
+            <div v-else-if="viewMode === 'confirmation' && orderInvoice" class="space-y-4 max-w-2xl mx-auto">
+
+                <!-- Action Buttons -->
+                <div class="flex justify-end gap-2">
+                    <button 
+                        @click="handlePrint"
+                        class="inline-flex h-8 items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-3 text-xs font-semibold hover:bg-neutral-50 transition dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
+                    >
+                        <Printer class="h-3.5 w-3.5" /> Print Invoice
+                    </button>
+                    <button 
+                        @click="resetStorefront"
+                        class="inline-flex h-8 items-center gap-1.5 rounded-md bg-emerald-600 px-3 text-xs font-semibold text-white hover:bg-emerald-700 transition"
+                    >
+                        Back to Shop
+                    </button>
                 </div>
 
-                <!-- REDESIGNED HIGH FIDELITY INVOICE BLOCK (Guidelines Section 3.4) -->
-                <div class="rounded-xl border border-neutral-200 bg-white p-8 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 space-y-6">
-                    
-                    <!-- Invoice Header (FR-4.1) -->
-                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 border-b border-neutral-100 pb-6 dark:border-neutral-800">
-                        <div class="space-y-2">
-                            <!-- Brand -->
-                            <div class="flex items-center gap-1.5">
-                                <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-xs">
-                                    <Leaf class="h-4 w-4" />
-                                </div>
-                                <span class="text-md font-bold text-neutral-900 dark:text-white">StoreMint Inc.</span>
-                            </div>
-                            <p class="text-[10px] text-neutral-500 leading-tight">
-                                45 Design Grid Plaza, Level 6<br />
-                                Gulshan-2, Dhaka 1212<br />
-                                support@storemint.com
-                            </p>
+                <!-- DOCUMENT INVOICE -->
+                <div id="invoice-printable" class="rounded-xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-700 dark:bg-white print:shadow-none print:border-0">
+
+                    <!-- Company Header -->
+                    <div class="px-10 pt-8 pb-4 text-center border-b border-neutral-300 dark:border-neutral-600">
+                        <div class="text-3xl font-black tracking-tight text-neutral-900 uppercase" style="letter-spacing: 0.05em;">
+                            {{ $page.props.name ?? 'StoreMint' }}
                         </div>
-                        
-                        <!-- Metadata block (FR-4.2) -->
-                        <div class="sm:text-right space-y-1">
-                            <span class="inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
-                                {{ orderInvoice.paymentStatus }}
-                            </span>
-                            <h3 class="text-sm font-bold font-mono">{{ orderInvoice.invoiceNo }}</h3>
-                            <div class="text-[10px] text-neutral-500 space-y-0.5">
-                                <div>Order Number: <span class="font-mono">{{ orderInvoice.orderNo }}</span></div>
-                                <div>Date: {{ orderInvoice.date }}</div>
-                                <div>Payment: {{ orderInvoice.paymentMethod }}</div>
+                        <div class="mt-1 text-[11px] text-neutral-600">
+                            45 Design Grid Plaza, Gulshan-2, Dhaka-1212&nbsp;&nbsp;|&nbsp;&nbsp;
+                            Mobile: +880 1600 000 000&nbsp;&nbsp;|&nbsp;&nbsp;
+                            Email: support@storemint.com
+                        </div>
+                    </div>
+
+                    <!-- Invoice Title -->
+                    <div class="py-3 text-center">
+                        <span class="text-base font-semibold text-neutral-700 tracking-wide">Invoice</span>
+                    </div>
+
+                    <!-- Two-column Metadata -->
+                    <div class="px-10 pb-4 grid grid-cols-2 gap-x-6 text-[11px]">
+                        <!-- Left -->
+                        <div class="space-y-1">
+                            <div>
+                                <span class="font-semibold text-neutral-700">Invoice No.</span>
+                                <span class="ml-1 text-neutral-600 font-mono">{{ orderInvoice.invoiceNo }}</span>
+                            </div>
+                            <div>
+                                <div class="font-semibold text-neutral-700">Customer</div>
+                                <div class="text-neutral-600">{{ orderInvoice.customer.name }}</div>
+                            </div>
+                            <div>
+                                <span class="font-semibold text-neutral-700">Mobile</span>
+                                <span class="ml-1 text-neutral-600">{{ orderInvoice.customer.phone || '-' }}</span>
+                            </div>
+                            <div class="pt-2">
+                                <span class="text-neutral-500">Created by</span>
+                                <span class="ml-1 font-semibold text-neutral-700">{{ orderInvoice.customer.name }}</span>
+                            </div>
+                        </div>
+                        <!-- Right -->
+                        <div class="space-y-1 text-right">
+                            <div>
+                                <span class="font-semibold text-neutral-700">Date</span>
+                                <span class="ml-1 text-neutral-600">{{ orderInvoice.date }}</span>
+                            </div>
+                            <div>
+                                <span class="font-semibold text-neutral-700">Serve By</span>
+                                <span class="ml-1 text-neutral-600">-</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Customer & Shipping details block (FR-4.3) -->
-                    <div class="rounded-lg bg-neutral-50 p-4 dark:bg-neutral-800/40 grid gap-4 sm:grid-cols-2 text-xs">
-                        <div class="space-y-1">
-                            <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Billed To:</span>
-                            <div class="font-bold text-neutral-900 dark:text-white">{{ orderInvoice.customer.name }}</div>
-                            <div class="text-neutral-500">{{ orderInvoice.customer.email }}</div>
-                            <div class="text-neutral-500">{{ orderInvoice.customer.phone }}</div>
-                        </div>
-                        <div class="space-y-1">
-                            <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Shipment Details:</span>
-                            <div class="text-neutral-700 dark:text-neutral-300">{{ orderInvoice.customer.address }}</div>
-                            <div class="text-neutral-500">{{ orderInvoice.customer.city }} - {{ orderInvoice.customer.zip }}</div>
-                        </div>
-                    </div>
-
-                    <!-- Itemized table (FR-4.4) -->
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-xs text-left border-collapse">
+                    <!-- Items Table -->
+                    <div class="border-t border-b border-neutral-300 dark:border-neutral-600">
+                        <table class="w-full text-[11px]">
                             <thead>
-                                <tr class="border-b border-neutral-100 text-neutral-400 dark:border-neutral-800">
-                                    <th class="py-2.5 font-semibold">Product Description</th>
-                                    <th class="py-2.5 font-semibold text-center w-20">Unit Price</th>
-                                    <th class="py-2.5 font-semibold text-center w-16">Qty</th>
-                                    <th class="py-2.5 font-semibold text-right w-24">Total</th>
+                                <tr class="border-b border-neutral-200 dark:border-neutral-600 bg-neutral-50 dark:bg-neutral-100">
+                                    <th class="px-3 py-2 text-left font-bold text-neutral-700 w-7">#</th>
+                                    <th class="px-3 py-2 text-left font-bold text-neutral-700">Product</th>
+                                    <th class="px-3 py-2 text-center font-bold text-neutral-700 w-24">Quantity</th>
+                                    <th class="px-3 py-2 text-right font-bold text-neutral-700 w-24">Unit Price</th>
+                                    <th class="px-3 py-2 text-right font-bold text-neutral-700 w-20">Discount</th>
+                                    <th class="px-3 py-2 text-right font-bold text-neutral-700 w-24">Subtotal</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800/50">
-                                <tr v-for="item in orderInvoice.items" :key="item.name" class="text-neutral-800 dark:text-neutral-300">
-                                    <td class="py-3 font-semibold">{{ item.name }}</td>
-                                    <td class="py-3 text-center font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ item.price.toFixed(2) }}</td>
-                                    <td class="py-3 text-center font-mono">{{ item.quantity }}</td>
-                                    <td class="py-3 text-right font-bold font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ item.total.toFixed(2) }}</td>
+                            <tbody>
+                                <tr 
+                                    v-for="(item, index) in orderInvoice.items" 
+                                    :key="item.name"
+                                    class="border-b border-neutral-100 last:border-0"
+                                >
+                                    <td class="px-3 py-2.5 text-neutral-500">{{ index + 1 }}</td>
+                                    <td class="px-3 py-2.5 text-neutral-800 font-medium leading-snug">
+                                        {{ item.name }}
+                                        <span class="block text-[10px] text-neutral-400 font-normal">1 Pc(s)</span>
+                                    </td>
+                                    <td class="px-3 py-2.5 text-center text-neutral-700">{{ item.quantity }} Pc(s)</td>
+                                    <td class="px-3 py-2.5 text-right font-mono text-neutral-700">
+                                        {{ Number(item.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                                    </td>
+                                    <td class="px-3 py-2.5 text-right font-mono text-neutral-700">0.00</td>
+                                    <td class="px-3 py-2.5 text-right font-mono font-semibold text-neutral-800">
+                                        {{ Number(item.total).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
 
-                    <!-- Totals breakdown (FR-4.5) -->
-                    <div class="border-t border-neutral-100 pt-4 dark:border-neutral-800 flex justify-end">
-                        <div class="w-64 space-y-2 text-xs">
-                            <div class="flex justify-between text-neutral-500">
-                                <span>Subtotal:</span>
-                                <span class="font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ orderInvoice.subtotal.toFixed(2) }}</span>
+                    <!-- Bottom Summary -->
+                    <div class="px-10 py-5 grid grid-cols-2 gap-x-8 text-[11px]">
+                        <!-- Left: Payment rows -->
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between">
+                                <span class="font-semibold text-neutral-700">{{ orderInvoice.paymentMethod }}</span>
+                                <span class="font-mono text-neutral-700">
+                                    ৳ {{ Number(orderInvoice.grandTotal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                                </span>
                             </div>
-                            
-                            <div v-if="orderInvoice.discount > 0" class="flex justify-between text-emerald-600">
-                                <span>Discount ({{ orderInvoice.couponCode }}):</span>
-                                <span class="font-mono">- {{ $page.props.currency_symbol ?? '$' }}{{ orderInvoice.discount.toFixed(2) }}</span>
+                            <div class="text-neutral-500 text-[10px]">{{ orderInvoice.date }}</div>
+                            <div class="flex justify-between mt-2">
+                                <span class="font-bold text-neutral-800">Total Paid</span>
+                                <span class="font-mono font-bold text-neutral-800">
+                                    ৳ {{ Number(orderInvoice.grandTotal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                                </span>
                             </div>
+                            <div class="flex justify-between">
+                                <span class="font-bold text-neutral-800">Total Due</span>
+                                <span class="font-mono font-bold text-neutral-800">৳ 0.00</span>
+                            </div>
+                        </div>
 
-                            <div class="flex justify-between text-neutral-500">
-                                <span>Shipping Fee:</span>
-                                <span class="font-mono">{{ orderInvoice.shipping === 0 ? 'Free' : `${$page.props.currency_symbol ?? '$'}${orderInvoice.shipping.toFixed(2)}` }}</span>
+                        <!-- Right: Quantity & Net Total -->
+                        <div class="space-y-1.5 text-right border-l border-neutral-200 pl-8">
+                            <div class="flex justify-between">
+                                <span class="text-neutral-600">Total quantity</span>
+                                <span class="font-semibold text-neutral-800">
+                                    {{ orderInvoice.items.reduce((s, i) => s + i.quantity, 0) }}
+                                </span>
                             </div>
-
-                            <div class="flex justify-between border-t border-neutral-100 pt-2 text-sm font-bold text-neutral-900 dark:border-neutral-800 dark:text-white">
-                                <span>Grand Total:</span>
-                                <span class="font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ orderInvoice.grandTotal.toFixed(2) }}</span>
+                            <div class="flex justify-between">
+                                <span class="text-neutral-600">Total Items</span>
+                                <span class="font-semibold text-neutral-800">{{ orderInvoice.items.length }}</span>
+                            </div>
+                            <div v-if="orderInvoice.discount > 0" class="flex justify-between">
+                                <span class="text-neutral-600">Discount</span>
+                                <span class="font-mono font-semibold text-neutral-800">
+                                    ৳ {{ Number(orderInvoice.discount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                                </span>
+                            </div>
+                            <div class="flex justify-between border-t border-neutral-300 pt-1.5 mt-1">
+                                <span class="font-bold text-neutral-800">Net Total:</span>
+                                <span class="font-mono font-bold text-neutral-800">
+                                    ৳ {{ Number(orderInvoice.grandTotal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                                </span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Footer (FR-4.7) -->
-                    <div class="border-t border-neutral-100 pt-4 dark:border-neutral-800 text-center text-[10px] text-neutral-400">
-                        Thank you for shopping at StoreMint. This invoice is generated dynamically upon order payment approval. For support, mail support@storemint.com.
+                    <!-- QR Code -->
+                    <div class="pb-8 flex justify-center border-t border-neutral-200">
+                        <div class="pt-5 flex flex-col items-center gap-2">
+                            <img 
+                                :src="`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(orderInvoice.invoiceNo + '-' + orderInvoice.orderNo)}&size=100x100&margin=4`"
+                                alt="Invoice QR Code"
+                                class="h-24 w-24"
+                                loading="lazy"
+                            />
+                            <span class="text-[9px] text-neutral-400 font-mono">{{ orderInvoice.invoiceNo }}</span>
+                        </div>
                     </div>
                 </div>
             </div>

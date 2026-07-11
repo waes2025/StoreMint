@@ -1215,130 +1215,182 @@ onMounted(() => {
                 </div>
             </div>
 
-            <!-- ORDER CONFIRMATION & REDESIGNED INVOICE (Guidelines Section 3.4 / 3.5) -->
-            <div v-else-if="viewMode === 'confirmation' && orderInvoice" class="space-y-6 max-w-2xl mx-auto">
-                <div class="flex flex-col items-center justify-center text-center space-y-3 py-6">
-                    <div class="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
-                        <CheckCircle2 class="h-8 w-8" />
-                    </div>
-                    <h1 class="text-2xl font-extrabold tracking-tight">Order Placed Successfully!</h1>
-                    <p class="text-xs text-neutral-500 max-w-xs">Your payment has been cleared and your invoice was generated automatically.</p>
-                    
-                    <div class="flex gap-3 pt-2">
-                        <button 
-                            @click="handlePrint"
-                            class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-4 text-xs font-semibold hover:bg-neutral-50 transition dark:border-neutral-800 dark:bg-neutral-900"
-                        >
-                            <Download class="h-3.5 w-3.5" /> Download PDF Invoice
-                        </button>
-                        <button 
-                            @click="resetStorefront"
-                            class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-4 text-xs font-semibold text-white hover:bg-emerald-700 transition"
-                        >
-                            Back to Shop
-                        </button>
+            <!-- ORDER CONFIRMATION & PREMIUM INVOICE -->
+            <div v-else-if="viewMode === 'confirmation' && orderInvoice" class="space-y-6 max-w-3xl mx-auto">
+
+                <!-- Success Banner -->
+                <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700 p-8 text-white shadow-xl">
+                    <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(circle at 20% 80%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px); background-size: 30px 30px;"></div>
+                    <div class="relative flex flex-col sm:flex-row items-center justify-between gap-6">
+                        <div class="flex items-center gap-4">
+                            <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/20 ring-2 ring-white/30 backdrop-blur-sm">
+                                <CheckCircle2 class="h-7 w-7 text-white" />
+                            </div>
+                            <div>
+                                <h1 class="text-xl font-extrabold tracking-tight">Payment Confirmed!</h1>
+                                <p class="mt-0.5 text-sm text-emerald-100">Your order has been placed and invoice generated.</p>
+                                <div class="mt-2 flex items-center gap-2">
+                                    <span class="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">{{ orderInvoice.orderNo }}</span>
+                                    <span class="text-[10px] text-emerald-200">{{ orderInvoice.date }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex shrink-0 gap-2">
+                            <button 
+                                @click="handlePrint"
+                                class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white/15 px-4 text-xs font-semibold text-white ring-1 ring-white/30 backdrop-blur-sm hover:bg-white/25 transition"
+                            >
+                                <Download class="h-3.5 w-3.5" /> Export PDF
+                            </button>
+                            <button 
+                                @click="resetStorefront"
+                                class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white px-4 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition"
+                            >
+                                Back to Shop
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- REDESIGNED HIGH FIDELITY INVOICE BLOCK (Guidelines Section 3.4) -->
-                <div class="rounded-xl border border-neutral-200 bg-white p-8 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 space-y-6">
-                    
-                    <!-- Invoice Header (FR-4.1) -->
-                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 border-b border-neutral-100 pb-6 dark:border-neutral-800">
-                        <div class="space-y-2">
-                            <!-- Brand -->
-                            <div class="flex items-center gap-1.5">
-                                <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-xs">
-                                    <Leaf class="h-4 w-4" />
-                                </div>
-                                <span class="text-md font-bold text-neutral-900 dark:text-white">StoreMint Inc.</span>
+                <!-- PREMIUM INVOICE DOCUMENT -->
+                <div id="invoice-printable" class="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-900">
+
+                    <!-- Invoice Brand Header -->
+                    <div class="bg-gradient-to-r from-neutral-900 to-neutral-800 dark:from-neutral-950 dark:to-neutral-900 px-8 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 shadow-lg shadow-emerald-500/30">
+                                <Leaf class="h-5 w-5 text-white" />
                             </div>
-                            <p class="text-[10px] text-neutral-500 leading-tight">
-                                45 Design Grid Plaza, Level 6<br />
-                                Gulshan-2, Dhaka 1212<br />
-                                support@storemint.com
-                            </p>
+                            <div>
+                                <div class="text-base font-extrabold text-white tracking-tight">StoreMint Inc.</div>
+                                <div class="text-[10px] text-neutral-400">45 Design Grid Plaza, Gulshan-2 · Dhaka 1212</div>
+                            </div>
                         </div>
-                        
-                        <!-- Metadata block (FR-4.2) -->
-                        <div class="sm:text-right space-y-1">
-                            <span class="inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
+                        <div class="sm:text-right">
+                            <div class="text-2xl font-black tracking-widest text-white/10 dark:text-white/5 select-none" style="font-size: 2.5rem; line-height: 1; letter-spacing: 0.25em;">INVOICE</div>
+                            <div class="mt-1 text-xs font-bold font-mono text-emerald-400">{{ orderInvoice.invoiceNo }}</div>
+                            <div class="text-[10px] text-neutral-500">Issued: {{ orderInvoice.date }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Status Bar -->
+                    <div class="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 px-8 py-3 flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <span
+                                :class="orderInvoice.paymentStatus === 'Paid' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' : orderInvoice.paymentStatus === 'Pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400' : 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400'"
+                                class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider"
+                            >
+                                <span class="h-1.5 w-1.5 rounded-full" :class="orderInvoice.paymentStatus === 'Paid' ? 'bg-emerald-500' : orderInvoice.paymentStatus === 'Pending' ? 'bg-amber-500' : 'bg-red-500'"></span>
                                 {{ orderInvoice.paymentStatus }}
                             </span>
-                            <h3 class="text-sm font-bold font-mono">{{ orderInvoice.invoiceNo }}</h3>
-                            <div class="text-[10px] text-neutral-500 space-y-0.5">
-                                <div>Order Number: <span class="font-mono">{{ orderInvoice.orderNo }}</span></div>
-                                <div>Date: {{ orderInvoice.date }}</div>
-                                <div>Payment: {{ orderInvoice.paymentMethod }}</div>
+                            <span class="text-[10px] text-neutral-400 font-mono">Order: {{ orderInvoice.orderNo }}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] text-neutral-400">Paid via</span>
+                            <span class="rounded-md bg-neutral-200 dark:bg-neutral-700 px-2 py-0.5 text-[10px] font-bold text-neutral-700 dark:text-neutral-200 uppercase">{{ orderInvoice.paymentMethod }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Billing & Shipping Panels -->
+                    <div class="grid sm:grid-cols-2 border-b border-neutral-100 dark:border-neutral-800">
+                        <div class="px-8 py-5 space-y-2 sm:border-r border-neutral-100 dark:border-neutral-800">
+                            <span class="text-[9px] font-bold uppercase tracking-[0.15em] text-neutral-400">Bill To</span>
+                            <div class="text-sm font-bold text-neutral-900 dark:text-white">{{ orderInvoice.customer.name }}</div>
+                            <div class="space-y-0.5 text-xs text-neutral-500">
+                                <div class="flex items-center gap-1.5"><Mail class="h-3 w-3 shrink-0" />{{ orderInvoice.customer.email }}</div>
+                                <div class="flex items-center gap-1.5"><Phone class="h-3 w-3 shrink-0" />{{ orderInvoice.customer.phone }}</div>
+                            </div>
+                        </div>
+                        <div class="px-8 py-5 space-y-2">
+                            <span class="text-[9px] font-bold uppercase tracking-[0.15em] text-neutral-400">Ship To</span>
+                            <div class="text-sm font-bold text-neutral-900 dark:text-white">Delivery Address</div>
+                            <div class="space-y-0.5 text-xs text-neutral-500">
+                                <div>{{ orderInvoice.customer.address }}</div>
+                                <div>{{ orderInvoice.customer.city }}, {{ orderInvoice.customer.zip }}</div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Customer & Shipping details block (FR-4.3) -->
-                    <div class="rounded-lg bg-neutral-50 p-4 dark:bg-neutral-800/40 grid gap-4 sm:grid-cols-2 text-xs">
-                        <div class="space-y-1">
-                            <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Billed To:</span>
-                            <div class="font-bold text-neutral-900 dark:text-white">{{ orderInvoice.customer.name }}</div>
-                            <div class="text-neutral-500">{{ orderInvoice.customer.email }}</div>
-                            <div class="text-neutral-500">{{ orderInvoice.customer.phone }}</div>
-                        </div>
-                        <div class="space-y-1">
-                            <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Shipment Details:</span>
-                            <div class="text-neutral-700 dark:text-neutral-300">{{ orderInvoice.customer.address }}</div>
-                            <div class="text-neutral-500">{{ orderInvoice.customer.city }} - {{ orderInvoice.customer.zip }}</div>
-                        </div>
-                    </div>
-
-                    <!-- Itemized table (FR-4.4) -->
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-xs text-left border-collapse">
+                    <!-- Itemized Table -->
+                    <div class="px-8 py-6">
+                        <table class="w-full border-collapse text-xs">
                             <thead>
-                                <tr class="border-b border-neutral-100 text-neutral-400 dark:border-neutral-800">
-                                    <th class="py-2.5 font-semibold">Product Description</th>
-                                    <th class="py-2.5 font-semibold text-center w-20">Unit Price</th>
-                                    <th class="py-2.5 font-semibold text-center w-16">Qty</th>
-                                    <th class="py-2.5 font-semibold text-right w-24">Total</th>
+                                <tr class="bg-neutral-50 dark:bg-neutral-800 rounded-lg">
+                                    <th class="rounded-l-lg px-4 py-3 text-left font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-[9px]">#</th>
+                                    <th class="px-4 py-3 text-left font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-[9px]">Product</th>
+                                    <th class="px-4 py-3 text-center font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-[9px]">Unit Price</th>
+                                    <th class="px-4 py-3 text-center font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-[9px]">Qty</th>
+                                    <th class="rounded-r-lg px-4 py-3 text-right font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-[9px]">Line Total</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800/50">
-                                <tr v-for="item in orderInvoice.items" :key="item.name" class="text-neutral-800 dark:text-neutral-300">
-                                    <td class="py-3 font-semibold">{{ item.name }}</td>
-                                    <td class="py-3 text-center font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ item.price.toFixed(2) }}</td>
-                                    <td class="py-3 text-center font-mono">{{ item.quantity }}</td>
-                                    <td class="py-3 text-right font-bold font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ item.total.toFixed(2) }}</td>
+                            <tbody>
+                                <tr 
+                                    v-for="(item, index) in orderInvoice.items" 
+                                    :key="item.name"
+                                    :class="index % 2 === 0 ? '' : 'bg-neutral-50/60 dark:bg-neutral-800/30'"
+                                    class="border-b border-neutral-100 dark:border-neutral-800/60 last:border-0"
+                                >
+                                    <td class="px-4 py-3.5 font-mono text-neutral-400">{{ String(index + 1).padStart(2, '0') }}</td>
+                                    <td class="px-4 py-3.5">
+                                        <div class="font-semibold text-neutral-800 dark:text-neutral-200">{{ item.name }}</div>
+                                    </td>
+                                    <td class="px-4 py-3.5 text-center font-mono text-neutral-600 dark:text-neutral-400">{{ $page.props.currency_symbol ?? '$' }}{{ item.price.toFixed(2) }}</td>
+                                    <td class="px-4 py-3.5 text-center">
+                                        <span class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-neutral-100 dark:bg-neutral-800 font-bold font-mono text-neutral-700 dark:text-neutral-300">
+                                            {{ item.quantity }}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3.5 text-right font-bold font-mono text-neutral-900 dark:text-white">{{ $page.props.currency_symbol ?? '$' }}{{ item.total.toFixed(2) }}</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
 
-                    <!-- Totals breakdown (FR-4.5) -->
-                    <div class="border-t border-neutral-100 pt-4 dark:border-neutral-800 flex justify-end">
-                        <div class="w-64 space-y-2 text-xs">
-                            <div class="flex justify-between text-neutral-500">
-                                <span>Subtotal:</span>
-                                <span class="font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ orderInvoice.subtotal.toFixed(2) }}</span>
-                            </div>
-                            
-                            <div v-if="orderInvoice.discount > 0" class="flex justify-between text-emerald-600">
-                                <span>Discount ({{ orderInvoice.couponCode }}):</span>
-                                <span class="font-mono">- {{ $page.props.currency_symbol ?? '$' }}{{ orderInvoice.discount.toFixed(2) }}</span>
+                    <!-- Totals Breakdown -->
+                    <div class="border-t border-dashed border-neutral-200 dark:border-neutral-700 px-8 py-6 flex justify-end">
+                        <div class="w-72 space-y-2">
+                            <div class="flex justify-between text-xs text-neutral-500">
+                                <span>Subtotal</span>
+                                <span class="font-mono font-medium text-neutral-700 dark:text-neutral-300">{{ $page.props.currency_symbol ?? '$' }}{{ orderInvoice.subtotal.toFixed(2) }}</span>
                             </div>
 
-                            <div class="flex justify-between text-neutral-500">
-                                <span>Shipping Fee:</span>
-                                <span class="font-mono">{{ orderInvoice.shipping === 0 ? 'Free' : `${$page.props.currency_symbol ?? '$'}${orderInvoice.shipping.toFixed(2)}` }}</span>
+                            <div v-if="orderInvoice.discount > 0" class="flex justify-between text-xs">
+                                <span class="flex items-center gap-1.5 text-emerald-600">
+                                    <Tag class="h-3 w-3" /> Discount <span class="font-mono text-emerald-500">({{ orderInvoice.couponCode }})</span>
+                                </span>
+                                <span class="font-mono font-semibold text-emerald-600">− {{ $page.props.currency_symbol ?? '$' }}{{ orderInvoice.discount.toFixed(2) }}</span>
                             </div>
 
-                            <div class="flex justify-between border-t border-neutral-100 pt-2 text-sm font-bold text-neutral-900 dark:border-neutral-800 dark:text-white">
-                                <span>Grand Total:</span>
-                                <span class="font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ orderInvoice.grandTotal.toFixed(2) }}</span>
+                            <div class="flex justify-between text-xs text-neutral-500">
+                                <span class="flex items-center gap-1.5"><Truck class="h-3 w-3" /> Shipping</span>
+                                <span class="font-mono font-medium text-neutral-700 dark:text-neutral-300">
+                                    {{ orderInvoice.shipping === 0 ? 'Free' : `${$page.props.currency_symbol ?? '$'}${orderInvoice.shipping.toFixed(2)}` }}
+                                </span>
+                            </div>
+
+                            <!-- Grand Total -->
+                            <div class="mt-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 p-4 flex items-center justify-between">
+                                <span class="text-sm font-bold text-white">Grand Total</span>
+                                <span class="text-lg font-black font-mono text-white">{{ $page.props.currency_symbol ?? '$' }}{{ orderInvoice.grandTotal.toFixed(2) }}</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Footer (FR-4.7) -->
-                    <div class="border-t border-neutral-100 pt-4 dark:border-neutral-800 text-center text-[10px] text-neutral-400">
-                        Thank you for shopping at StoreMint. This invoice is generated dynamically upon order payment approval. For support, mail support@storemint.com.
+                    <!-- Invoice Footer -->
+                    <div class="border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/30 px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <div class="text-[10px] text-neutral-400 leading-relaxed max-w-sm">
+                            <span class="font-semibold text-neutral-500">StoreMint Inc.</span> · 45 Design Grid Plaza, Gulshan-2, Dhaka 1212<br />
+                            GST/VAT Reg: BD-2025-SMT-001 · support@storemint.com
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div 
+                                v-if="orderInvoice.paymentStatus === 'Paid'"
+                                class="flex flex-col items-center justify-center h-14 w-14 rounded-full border-2 border-emerald-500 text-emerald-600 dark:text-emerald-400 rotate-[-12deg] opacity-90"
+                            >
+                                <CheckCircle2 class="h-4 w-4" />
+                                <span class="text-[8px] font-black tracking-widest mt-0.5">PAID</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
