@@ -412,7 +412,7 @@ const formatAnnouncementText = (text?: string, coupon?: string) => {
                                         {{ coupon.code }}
                                     </span>
                                     <span class="text-xs text-neutral-500 dark:text-neutral-400">
-                                        {{ coupon.discountType === 'percentage' ? `${coupon.discountValue}% Off` : `$${coupon.discountValue} Flat Off` }}
+                                        {{ coupon.discountType === 'percentage' ? `${coupon.discountValue}% Off` : `${$page.props.currency_symbol ?? '$'}${coupon.discountValue} Flat Off` }}
                                     </span>
                                 </div>
                                 <p class="text-xs text-neutral-600 dark:text-neutral-400">{{ coupon.description }}</p>
@@ -538,7 +538,7 @@ const formatAnnouncementText = (text?: string, coupon?: string) => {
                                 </div>
 
                                 <div class="flex items-center justify-between pt-1">
-                                    <span class="font-mono text-sm font-extrabold text-neutral-900 dark:text-white">${{ product.price.toFixed(2) }}</span>
+                                    <span class="font-mono text-sm font-extrabold text-neutral-900 dark:text-white">{{ $page.props.currency_symbol ?? '$' }}{{ product.price.toFixed(2) }}</span>
                                     <button 
                                         @click="addToCart(product)"
                                         :disabled="product.stock === 0"
@@ -608,7 +608,7 @@ const formatAnnouncementText = (text?: string, coupon?: string) => {
                                 </div>
 
                                 <div class="flex items-center justify-between pt-1">
-                                    <span class="font-mono text-sm font-extrabold text-neutral-900 dark:text-white">${{ product.price.toFixed(2) }}</span>
+                                    <span class="font-mono text-sm font-extrabold text-neutral-900 dark:text-white">{{ $page.props.currency_symbol ?? '$' }}{{ product.price.toFixed(2) }}</span>
                                     <button 
                                         @click="addToCart(product)"
                                         :disabled="product.stock === 0"
@@ -724,8 +724,8 @@ const formatAnnouncementText = (text?: string, coupon?: string) => {
                         </div>
 
                         <div class="flex items-baseline gap-2 font-mono">
-                            <span class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">$299.00</span>
-                            <span class="text-sm text-neutral-400 line-through">$399.00</span>
+                            <span class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{{ $page.props.currency_symbol ?? '$' }}299.00</span>
+                            <span class="text-sm text-neutral-400 line-through">{{ $page.props.currency_symbol ?? '$' }}399.00</span>
                         </div>
 
                         <div>
@@ -767,7 +767,7 @@ const formatAnnouncementText = (text?: string, coupon?: string) => {
                                 </div>
 
                                 <div class="flex items-center justify-between pt-1">
-                                    <span class="font-mono text-sm font-extrabold text-neutral-900 dark:text-white">${{ product.price.toFixed(2) }}</span>
+                                    <span class="font-mono text-sm font-extrabold text-neutral-900 dark:text-white">{{ $page.props.currency_symbol ?? '$' }}{{ product.price.toFixed(2) }}</span>
                                     <button 
                                         @click="selectedProduct = product"
                                         class="rounded-lg bg-neutral-100 p-2 text-neutral-600 hover:bg-emerald-50 hover:text-white transition dark:bg-neutral-800 dark:text-neutral-400"
@@ -1123,9 +1123,9 @@ const formatAnnouncementText = (text?: string, coupon?: string) => {
                                     </div>
                                     <div class="flex-1 min-w-0">
                                         <h4 class="text-xs font-bold truncate">{{ item.product.name }}</h4>
-                                        <span class="text-[10px] text-neutral-500 font-mono">{{ item.quantity }} × ${{ item.product.price.toFixed(2) }}</span>
+                                        <span class="text-[10px] text-neutral-500 font-mono">{{ item.quantity }} × {{ $page.props.currency_symbol ?? '$' }}{{ item.product.price.toFixed(2) }}</span>
                                     </div>
-                                    <span class="text-xs font-bold font-mono ml-auto">${{ (item.product.price * item.quantity).toFixed(2) }}</span>
+                                    <span class="text-xs font-bold font-mono ml-auto">{{ $page.props.currency_symbol ?? '$' }}{{ (item.product.price * item.quantity).toFixed(2) }}</span>
                                 </div>
                             </div>
 
@@ -1133,22 +1133,22 @@ const formatAnnouncementText = (text?: string, coupon?: string) => {
                             <div class="border-t border-neutral-100 pt-4 dark:border-neutral-800 space-y-2 text-xs">
                                 <div class="flex justify-between text-neutral-600 dark:text-neutral-400">
                                     <span>Subtotal</span>
-                                    <span class="font-mono">${{ cartSubtotal.toFixed(2) }}</span>
+                                    <span class="font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ cartSubtotal.toFixed(2) }}</span>
                                 </div>
                                 
                                 <div v-if="appliedCoupon" class="flex justify-between text-emerald-600 dark:text-emerald-400">
                                     <span>Discount (Coupon: {{ appliedCoupon.code }})</span>
-                                    <span class="font-mono">- ${{ discountAmount.toFixed(2) }}</span>
+                                    <span class="font-mono">- {{ $page.props.currency_symbol ?? '$' }}{{ discountAmount.toFixed(2) }}</span>
                                 </div>
 
                                 <div class="flex justify-between text-neutral-600 dark:text-neutral-400">
                                     <span>Shipping</span>
-                                    <span class="font-mono">{{ shippingFee === 0 ? 'Free' : `$${shippingFee.toFixed(2)}` }}</span>
+                                    <span class="font-mono">{{ shippingFee === 0 ? 'Free' : `${$page.props.currency_symbol ?? '$'}${shippingFee.toFixed(2)}` }}</span>
                                 </div>
 
                                 <div class="flex justify-between border-t border-neutral-100 pt-3 text-sm font-bold text-neutral-900 dark:border-neutral-800 dark:text-white">
                                     <span>Grand Total</span>
-                                    <span class="font-mono text-base">${{ cartTotal.toFixed(2) }}</span>
+                                    <span class="font-mono text-base">{{ $page.props.currency_symbol ?? '$' }}{{ cartTotal.toFixed(2) }}</span>
                                 </div>
                             </div>
 
@@ -1257,9 +1257,9 @@ const formatAnnouncementText = (text?: string, coupon?: string) => {
                             <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800/50">
                                 <tr v-for="item in orderInvoice.items" :key="item.name" class="text-neutral-800 dark:text-neutral-300">
                                     <td class="py-3 font-semibold">{{ item.name }}</td>
-                                    <td class="py-3 text-center font-mono">${{ item.price.toFixed(2) }}</td>
+                                    <td class="py-3 text-center font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ item.price.toFixed(2) }}</td>
                                     <td class="py-3 text-center font-mono">{{ item.quantity }}</td>
-                                    <td class="py-3 text-right font-bold font-mono">${{ item.total.toFixed(2) }}</td>
+                                    <td class="py-3 text-right font-bold font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ item.total.toFixed(2) }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1270,22 +1270,22 @@ const formatAnnouncementText = (text?: string, coupon?: string) => {
                         <div class="w-64 space-y-2 text-xs">
                             <div class="flex justify-between text-neutral-500">
                                 <span>Subtotal:</span>
-                                <span class="font-mono">${{ orderInvoice.subtotal.toFixed(2) }}</span>
+                                <span class="font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ orderInvoice.subtotal.toFixed(2) }}</span>
                             </div>
                             
                             <div v-if="orderInvoice.discount > 0" class="flex justify-between text-emerald-600">
                                 <span>Discount ({{ orderInvoice.couponCode }}):</span>
-                                <span class="font-mono">- ${{ orderInvoice.discount.toFixed(2) }}</span>
+                                <span class="font-mono">- {{ $page.props.currency_symbol ?? '$' }}{{ orderInvoice.discount.toFixed(2) }}</span>
                             </div>
 
                             <div class="flex justify-between text-neutral-500">
                                 <span>Shipping Fee:</span>
-                                <span class="font-mono">{{ orderInvoice.shipping === 0 ? 'Free' : `$${orderInvoice.shipping.toFixed(2)}` }}</span>
+                                <span class="font-mono">{{ orderInvoice.shipping === 0 ? 'Free' : `${$page.props.currency_symbol ?? '$'}${orderInvoice.shipping.toFixed(2)}` }}</span>
                             </div>
 
                             <div class="flex justify-between border-t border-neutral-100 pt-2 text-sm font-bold text-neutral-900 dark:border-neutral-800 dark:text-white">
                                 <span>Grand Total:</span>
-                                <span class="font-mono">${{ orderInvoice.grandTotal.toFixed(2) }}</span>
+                                <span class="font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ orderInvoice.grandTotal.toFixed(2) }}</span>
                             </div>
                         </div>
                     </div>
@@ -1347,7 +1347,7 @@ const formatAnnouncementText = (text?: string, coupon?: string) => {
                                     <div class="flex-1 min-w-0 space-y-2">
                                         <div class="space-y-0.5">
                                             <h4 class="text-xs font-bold truncate pr-6">{{ item.product.name }}</h4>
-                                            <span class="text-[10px] text-neutral-400 font-mono">${{ item.product.price.toFixed(2) }} each</span>
+                                            <span class="text-[10px] text-neutral-400 font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ item.product.price.toFixed(2) }} each</span>
                                         </div>
 
                                         <!-- Quantity Actions -->
@@ -1368,7 +1368,7 @@ const formatAnnouncementText = (text?: string, coupon?: string) => {
                                                 </button>
                                             </div>
 
-                                            <span class="text-xs font-bold font-mono">${{ (item.product.price * item.quantity).toFixed(2) }}</span>
+                                            <span class="text-xs font-bold font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ (item.product.price * item.quantity).toFixed(2) }}</span>
                                         </div>
                                     </div>
 
@@ -1422,19 +1422,19 @@ const formatAnnouncementText = (text?: string, coupon?: string) => {
                                 <div class="space-y-2 border-t border-neutral-100 pt-4 dark:border-neutral-800 text-xs">
                                     <div class="flex justify-between text-neutral-500">
                                         <span>Subtotal</span>
-                                        <span class="font-mono">${{ cartSubtotal.toFixed(2) }}</span>
+                                        <span class="font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ cartSubtotal.toFixed(2) }}</span>
                                     </div>
                                     <div v-if="appliedCoupon" class="flex justify-between text-emerald-600">
                                         <span>Coupon Discount</span>
-                                        <span class="font-mono">- ${{ discountAmount.toFixed(2) }}</span>
+                                        <span class="font-mono">- {{ $page.props.currency_symbol ?? '$' }}{{ discountAmount.toFixed(2) }}</span>
                                     </div>
                                     <div class="flex justify-between text-neutral-500">
                                         <span>Shipping</span>
-                                        <span class="font-mono">{{ shippingFee === 0 ? 'Free' : `$${shippingFee.toFixed(2)}` }}</span>
+                                        <span class="font-mono">{{ shippingFee === 0 ? 'Free' : `${$page.props.currency_symbol ?? '$'}${shippingFee.toFixed(2)}` }}</span>
                                     </div>
                                     <div class="flex justify-between border-t border-neutral-200 pt-3 text-sm font-bold text-neutral-900 dark:border-neutral-800 dark:text-white">
                                         <span>Grand Total</span>
-                                        <span class="font-mono text-base">${{ cartTotal.toFixed(2) }}</span>
+                                        <span class="font-mono text-base">{{ $page.props.currency_symbol ?? '$' }}{{ cartTotal.toFixed(2) }}</span>
                                     </div>
                                 </div>
 
@@ -1500,10 +1500,10 @@ const formatAnnouncementText = (text?: string, coupon?: string) => {
                                         <!-- Price -->
                                         <div class="flex items-baseline gap-2">
                                             <span class="font-mono text-xl font-bold text-neutral-900 dark:text-white">
-                                                ${{ selectedProduct.price.toFixed(2) }}
+                                                {{ $page.props.currency_symbol ?? '$' }}{{ selectedProduct.price.toFixed(2) }}
                                             </span>
                                             <span v-if="selectedProduct.originalPrice" class="font-mono text-xs text-neutral-400 line-through">
-                                                ${{ selectedProduct.originalPrice.toFixed(2) }}
+                                                {{ $page.props.currency_symbol ?? '$' }}{{ selectedProduct.originalPrice.toFixed(2) }}
                                             </span>
                                         </div>
 

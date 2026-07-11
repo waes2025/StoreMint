@@ -30,6 +30,9 @@ class DatabaseSeeder extends Seeder
         DB::table('categories')->truncate();
         DB::table('business_locations')->truncate();
         DB::table('business')->truncate();
+        DB::table('team_invitations')->truncate();
+        DB::table('team_members')->truncate();
+        DB::table('teams')->truncate();
         DB::table('users')->truncate();
         DB::table('currencies')->truncate();
         DB::table('transaction_sell_lines')->truncate();
@@ -44,7 +47,7 @@ class DatabaseSeeder extends Seeder
             CurrenciesTableSeeder::class,
         ]);
 
-        $currencyId = DB::table('currencies')->where('code', 'USD')->value('id') ?? 2;
+        $currencyId = DB::table('currencies')->where('code', 'BDT')->value('id') ?? 134;
 
         // 2. Insert Default User (Owner)
         $userId = DB::table('users')->insertGetId([
@@ -72,6 +75,110 @@ class DatabaseSeeder extends Seeder
 
         // Link user to business
         DB::table('users')->where('id', $userId)->update(['business_id' => $businessId]);
+
+        // ── Teams ────────────────────────────────────────────────────────────────
+        // 1. Personal team (admin's own workspace)
+        $personalTeamId = DB::table('teams')->insertGetId([
+            'name'        => 'Waes Ahmed',
+            'slug'        => 'waes-ahmed',
+            'is_personal' => true,
+            'created_at'  => now(),
+            'updated_at'  => now(),
+        ]);
+
+        // 2. Primary shared store team
+        $storeTeamId = DB::table('teams')->insertGetId([
+            'name'        => 'StoreMint Store',
+            'slug'        => 'storemint-store',
+            'is_personal' => false,
+            'created_at'  => now(),
+            'updated_at'  => now(),
+        ]);
+
+        // 3. Secondary store team
+        $techTeamId = DB::table('teams')->insertGetId([
+            'name'        => 'Tech Gadgets BD',
+            'slug'        => 'tech-gadgets-bd',
+            'is_personal' => false,
+            'created_at'  => now()->subDays(5),
+            'updated_at'  => now()->subDays(5),
+        ]);
+
+        // 4. Operations team
+        $opsTeamId = DB::table('teams')->insertGetId([
+            'name'        => 'Operations',
+            'slug'        => 'operations',
+            'is_personal' => false,
+            'created_at'  => now()->subDays(3),
+            'updated_at'  => now()->subDays(3),
+        ]);
+
+        // Demo staff user: Alex Mercer (manager)
+        $staffUserId = DB::table('users')->insertGetId([
+            'first_name'  => 'Alex',
+            'last_name'   => 'Mercer',
+            'username'    => 'alex',
+            'email'       => 'alex@storemint.com',
+            'password'    => Hash::make('password'),
+            'user_type'   => 'user',
+            'business_id' => null, // will be set after business is created – updated below
+            'created_at'  => now(),
+            'updated_at'  => now(),
+        ]);
+
+        // Add admin as owner of all business teams
+        DB::table('team_members')->insert([
+            [
+                'team_id'    => $personalTeamId,
+                'user_id'    => $userId,
+                'role'       => 'owner',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'team_id'    => $storeTeamId,
+                'user_id'    => $userId,
+                'role'       => 'owner',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'team_id'    => $techTeamId,
+                'user_id'    => $userId,
+                'role'       => 'owner',
+                'created_at' => now()->subDays(5),
+                'updated_at' => now()->subDays(5),
+            ],
+            [
+                'team_id'    => $opsTeamId,
+                'user_id'    => $userId,
+                'role'       => 'owner',
+                'created_at' => now()->subDays(3),
+                'updated_at' => now()->subDays(3),
+            ],
+        ]);
+
+        // Add staff user as manager on StoreMint Store and Tech Gadgets BD
+        DB::table('team_members')->insert([
+            [
+                'team_id'    => $storeTeamId,
+                'user_id'    => $staffUserId,
+                'role'       => 'manager',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'team_id'    => $techTeamId,
+                'user_id'    => $staffUserId,
+                'role'       => 'editor',
+                'created_at' => now()->subDays(5),
+                'updated_at' => now()->subDays(5),
+            ],
+        ]);
+
+        // Set admin's active team to the primary store team
+        DB::table('users')->where('id', $userId)->update(['current_team_id' => $storeTeamId]);
+        DB::table('users')->where('id', $staffUserId)->update(['business_id' => $businessId, 'current_team_id' => $storeTeamId]);
 
         // 4. Insert Business Location
         $locationId = DB::table('business_locations')->insertGetId([
@@ -146,6 +253,15 @@ class DatabaseSeeder extends Seeder
             DB::table('user_contact_access')->insert([
                 'user_id' => $cUserId,
                 'contact_id' => $contactId,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // Add customer as a member of the store team
+            DB::table('team_members')->insert([
+                'team_id'    => $storeTeamId,
+                'user_id'    => $cUserId,
+                'role'       => 'member',
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -354,7 +470,7 @@ class DatabaseSeeder extends Seeder
         $coupon1 = DB::table('coupons')->insertGetId([
             'business_id' => $businessId,
             'code' => 'MINT50',
-            'description' => '50% off storewide on orders over $50!',
+            'description' => '50% off storewide on orders over ৳50!',
             'discount_type' => 'percentage',
             'discount_value' => 50.00,
             'max_discount_amount' => 100.00,
@@ -373,7 +489,7 @@ class DatabaseSeeder extends Seeder
         $coupon2 = DB::table('coupons')->insertGetId([
             'business_id' => $businessId,
             'code' => 'WELCOME10',
-            'description' => 'Flat $10 off on orders over $40!',
+            'description' => 'Flat ৳10 off on orders over ৳40!',
             'discount_type' => 'flat',
             'discount_value' => 10.00,
             'min_order_amount' => 40.00,

@@ -487,6 +487,10 @@ class DashboardController extends Controller
         abort_if(! $request->user()->isAdmin(), 403);
 
         $businessId = $request->user()->business_id ?? 1;
+        $currencySymbol = DB::table('currencies')
+            ->join('business', 'currencies.id', '=', 'business.currency_id')
+            ->where('business.id', $businessId)
+            ->value('symbol') ?? '$';
 
         $request->validate([
             'code' => "required|string|max:50|unique:coupons,code,NULL,id,business_id,{$businessId}",
@@ -503,7 +507,7 @@ class DashboardController extends Controller
             'code' => strtoupper($request->input('code')),
             'description' => $request->input('discountType') === 'percentage'
                 ? "{$request->input('discountValue')}% off storewide!"
-                : "Flat \${$request->input('discountValue')} off!",
+                : "Flat {$currencySymbol}{$request->input('discountValue')} off!",
             'discount_type' => $request->input('discountType'),
             'discount_value' => $request->input('discountValue'),
             'min_order_amount' => $request->input('minOrderAmount') ?? 0.00,
@@ -558,6 +562,10 @@ class DashboardController extends Controller
         abort_if(! $request->user()->isAdmin(), 403);
 
         $businessId = $request->user()->business_id ?? 1;
+        $currencySymbol = DB::table('currencies')
+            ->join('business', 'currencies.id', '=', 'business.currency_id')
+            ->where('business.id', $businessId)
+            ->value('symbol') ?? '$';
 
         $request->validate([
             'code' => "required|string|max:50|unique:coupons,code,{$coupon->id},id,business_id,{$businessId}",
@@ -573,7 +581,7 @@ class DashboardController extends Controller
             'code' => strtoupper($request->input('code')),
             'description' => $request->input('discountType') === 'percentage'
                 ? "{$request->input('discountValue')}% off storewide!"
-                : "Flat \${$request->input('discountValue')} off!",
+                : "Flat {$currencySymbol}{$request->input('discountValue')} off!",
             'discount_type' => $request->input('discountType'),
             'discount_value' => $request->input('discountValue'),
             'min_order_amount' => $request->input('minOrderAmount') ?? 0.00,

@@ -196,66 +196,121 @@ class StorefrontController extends Controller
     public function placeOrder(Request $request): \Illuminate\Http\JsonResponse
     {
         $user = $request->user();
-        
+
         $customer = $request->input('customer', []);
-        $items = $request->input('items', []);
+        $items    = $request->input('items', []);
         $subtotal = (float) $request->input('subtotal', 0);
         $discount = (float) $request->input('discount', 0);
         $couponCode = $request->input('couponCode');
-        $shipping = (float) $request->input('shipping', 0);
+        $shipping   = (float) $request->input('shipping', 0);
         $grandTotal = (float) $request->input('grandTotal', 0);
-        
+
         $paymentMethod = $customer['paymentMethod'] ?? 'cod';
         $paymentStatus = $paymentMethod === 'cod' ? 'due' : 'paid';
-        $orderStatus = $paymentMethod === 'cod' ? 'ordered' : 'completed';
-        
+        $orderStatus   = $paymentMethod === 'cod' ? 'ordered' : 'completed';
+
         $invNo = 'INV-2026-' . rand(1000, 9999);
         $refNo = 'ORD-' . rand(100000, 999999);
-        
+
         $contactId = null;
-        $userId = $user ? $user->id : 1; 
-        
+        $userId    = $user ? $user->id : 1;
+
         if ($user) {
             $contactId = DB::table('user_contact_access')
                 ->where('user_id', $user->id)
                 ->value('contact_id');
         }
-        
+
         if (!$contactId) {
             $email = $customer['email'] ?? ($user ? $user->email : 'guest@storemint.com');
-            $contact = DB::table('contacts')
-                ->where('email', $email)
-                ->first();
-                
-            if ($contact) {
-                $contactId = $contact->id;
+
+            // 1. Try to find an existing contact
+            $existingContact = DB::table('contacts')->where('email', $email)->first();
+
+            if ($existingContact) {
+                $contactId = $existingContact->id;
+
+                // If a user already exists for this contact, use them as created_by
+                if (!$user) {
+                    $linkedUserId = DB::table('user_contact_access')
+                        ->where('contact_id', $contactId)
+                        ->value('user_id');
+                    if ($linkedUserId) {
+                        $userId = $linkedUserId;
+                    }
+                }
             } else {
+                // 2. Brand-new guest – build name parts
                 $contactName = $customer['name'] ?? ($user ? trim($user->first_name . ' ' . $user->last_name) : 'Guest Customer');
-                $parts = explode(' ', $contactName, 2);
+                $parts     = explode(' ', $contactName, 2);
                 $firstName = $parts[0] ?? 'Guest';
-                $lastName = $parts[1] ?? 'Customer';
-                
+                $lastName  = $parts[1] ?? 'Customer';
+
+                // 2a. Create the contact record
                 $contactId = DB::table('contacts')->insertGetId([
                     'business_id' => 1,
-                    'type' => 'customer',
-                    'first_name' => $firstName,
-                    'last_name' => $lastName,
-                    'name' => $contactName,
-                    'email' => $email,
-                    'mobile' => $customer['phone'] ?? null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'type'        => 'customer',
+                    'first_name'  => $firstName,
+                    'last_name'   => $lastName,
+                    'name'        => $contactName,
+                    'email'       => $email,
+                    'mobile'      => $customer['phone'] ?? null,
+                    'created_at'  => now(),
+                    'updated_at'  => now(),
                 ]);
+
+                // 2b. Create a customer User account if this is a guest checkout
+                if (!$user) {
+                    // Derive a unique username from the email local-part
+                    $baseUsername = strtolower(preg_replace('/[^a-z0-9]/i', '', explode('@', $email)[0]));
+                    $username     = $baseUsername;
+                    $suffix       = 1;
+                    while (DB::table('users')->where('username', $username)->exists()) {
+                        $username = $baseUsername . $suffix++;
+                    }
+
+                    // Resolve the store team id (first non-personal team)
+                    $storeTeamId = DB::table('teams')
+                        ->where('is_personal', false)
+                        ->orderBy('id')
+                        ->value('id');
+
+                    $newUserId = DB::table('users')->insertGetId([
+                        'first_name'      => $firstName,
+                        'last_name'       => $lastName,
+                        'username'        => $username,
+                        'email'           => $email,
+                        'password'        => \Illuminate\Support\Facades\Hash::make('password'),
+                        'user_type'       => 'customer',
+                        'business_id'     => 1,
+                        'current_team_id' => $storeTeamId,
+                        'created_at'      => now(),
+                        'updated_at'      => now(),
+                    ]);
+
+                    // Add to store team as member
+                    if ($storeTeamId) {
+                        DB::table('team_members')->insertOrIgnore([
+                            'team_id'    => $storeTeamId,
+                            'user_id'    => $newUserId,
+                            'role'       => 'member',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+
+                    $userId = $newUserId;
+                }
             }
-            
-            if ($user) {
-                DB::table('user_contact_access')->insertOrIgnore([
-                    'user_id' => $user->id,
-                    'contact_id' => $contactId,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
+
+            // 3. Link contact <-> user in user_contact_access
+            $ownerUserId = $user ? $user->id : $userId;
+            DB::table('user_contact_access')->insertOrIgnore([
+                'user_id'    => $ownerUserId,
+                'contact_id' => $contactId,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
         }
         
         $couponId = null;

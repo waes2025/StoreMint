@@ -36,10 +36,17 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
+        
+        $businessId = $user?->business_id ?? 1;
+        $currencySymbol = \Illuminate\Support\Facades\DB::table('currencies')
+            ->join('business', 'currencies.id', '=', 'business.currency_id')
+            ->where('business.id', $businessId)
+            ->value('symbol') ?? '$';
 
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'currency_symbol' => $currencySymbol,
             'auth' => [
                 'user' => $user,
             ],

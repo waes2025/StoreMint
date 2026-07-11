@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 import { DbProduct, DbCoupon, Product, Coupon, CartItem, OrderInvoice } from '@/types/storefront';
 import { useAppearance } from '@/composables/useAppearance';
 
@@ -15,6 +16,9 @@ export function useStorefront(props: {
 }) {
     const { appearance, resolvedAppearance, updateAppearance } = useAppearance();
     const isDarkMode = computed(() => resolvedAppearance.value === 'dark');
+
+    const page = usePage();
+    const currencySymbol = computed(() => (page.props.currency_symbol as string) || '$');
 
     // State variables
     const searchQuery = ref('');
@@ -109,7 +113,7 @@ export function useStorefront(props: {
         return [
             {
                 code: 'MINT50',
-                description: '50% off for new shoppers (Max discount $100, min order $50)',
+                description: `50% off for new shoppers (Max discount ${currencySymbol.value}100, min order ${currencySymbol.value}50)`,
                 discountType: 'percentage',
                 discountValue: 50,
                 minOrderAmount: 50,
@@ -117,7 +121,7 @@ export function useStorefront(props: {
             },
             {
                 code: 'WELCOME10',
-                description: 'Flat $10 off (Min order $40)',
+                description: `Flat ${currencySymbol.value}10 off (Min order ${currencySymbol.value}40)`,
                 discountType: 'flat',
                 discountValue: 10,
                 minOrderAmount: 40
@@ -479,7 +483,7 @@ export function useStorefront(props: {
         }
         
         if (cartSubtotal.value < coupon.minOrderAmount) {
-            couponError.value = `Minimum order amount of $${coupon.minOrderAmount.toFixed(2)} required for this coupon.`;
+            couponError.value = `Minimum order amount of ${currencySymbol.value}${coupon.minOrderAmount.toFixed(2)} required for this coupon.`;
             return;
         }
         
@@ -501,7 +505,7 @@ export function useStorefront(props: {
         if (cartSubtotal.value < appliedCoupon.value.minOrderAmount) {
             const code = appliedCoupon.value.code;
             appliedCoupon.value = null;
-            couponError.value = `Coupon "${code}" was removed because order amount fell below $${activeCoupons.value.find(c => c.code === code)?.minOrderAmount}.`;
+            couponError.value = `Coupon "${code}" was removed because order amount fell below ${currencySymbol.value}${activeCoupons.value.find(c => c.code === code)?.minOrderAmount}.`;
         }
     };
 

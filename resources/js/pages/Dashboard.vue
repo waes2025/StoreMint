@@ -127,7 +127,19 @@ defineOptions({
 });
 
 // Current team slug for Admin actions
-const currentTeamSlug = computed(() => page.props.currentTeam?.slug);
+// Falls back to the first path segment from the URL (e.g. /{team}/dashboard) when the
+// currentTeam prop hasn't propagated yet, to avoid generating "/undefined/..." URLs.
+const currentTeamSlug = computed(() => {
+    const slug = page.props.currentTeam?.slug;
+    if (slug && typeof slug === 'string' && slug !== 'undefined') {
+        return slug;
+    }
+    // Extract team slug from current URL path: /{team}/dashboard/...
+    const segments = window.location.pathname.split('/').filter(Boolean);
+    // The first segment should be the team slug (not 'dashboard' itself)
+    const first = segments[0] || null;
+    return first && first !== 'dashboard' ? first : null;
+});
 
 // Toast Feedback System
 const toastMessage = ref('');
@@ -250,6 +262,10 @@ const formErrors = ref<ValidationErrors>({});
 // ADMIN ACTIONS
 const updateProductStock = (productId: number, newStock: number) => {
     if (newStock < 0) return;
+    if (!currentTeamSlug.value) {
+        triggerToast('⚠️ No team context found. Please refresh the page.');
+        return;
+    }
     router.post(`/${currentTeamSlug.value}/dashboard/products/${productId}/stock`, {
         stock: newStock
     }, {
@@ -259,6 +275,10 @@ const updateProductStock = (productId: number, newStock: number) => {
 };
 
 const shipOrder = (dbId: number) => {
+    if (!currentTeamSlug.value) {
+        triggerToast('⚠️ No team context found. Please refresh the page.');
+        return;
+    }
     router.post(`/${currentTeamSlug.value}/dashboard/orders/${dbId}/ship`, {}, {
         preserveScroll: true,
         onSuccess: () => triggerToast("🚚 Order marked as shipped!")
@@ -266,6 +286,10 @@ const shipOrder = (dbId: number) => {
 };
 
 const cancelOrder = (dbId: number) => {
+    if (!currentTeamSlug.value) {
+        triggerToast('⚠️ No team context found. Please refresh the page.');
+        return;
+    }
     router.post(`/${currentTeamSlug.value}/dashboard/orders/${dbId}/cancel`, {}, {
         preserveScroll: true,
         onSuccess: () => triggerToast("❌ Order cancelled.")
@@ -470,7 +494,7 @@ const filteredPayments = computed(() => {
                     <DollarSign class="h-4 w-4 text-emerald-500" />
                 </div>
                 <div class="my-2 space-y-1">
-                    <div class="font-mono text-2xl font-bold tracking-tight">${{ (stats.totalRevenue ?? 0).toFixed(2) }}</div>
+                    <div class="font-mono text-2xl font-bold tracking-tight">{{ $page.props.currency_symbol ?? '$' }}{{ (stats.totalRevenue ?? 0).toFixed(2) }}</div>
                     <div class="flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
                         <TrendingUp class="h-3 w-3" /> +14.2% from last week
                     </div>
@@ -617,7 +641,7 @@ const filteredPayments = computed(() => {
                                 <td class="p-4 font-mono text-neutral-400">#00{{ product.id }}</td>
                                 <td class="p-4 font-semibold">{{ product.name }}</td>
                                 <td class="p-4 text-neutral-500">{{ product.category }}</td>
-                                <td class="p-4 text-center font-bold font-mono">${{ product.price.toFixed(2) }}</td>
+                                <td class="p-4 text-center font-bold font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ product.price.toFixed(2) }}</td>
                                 <td class="p-4 text-center">
                                     <span class="font-mono font-bold text-neutral-800 dark:text-neutral-200">{{ product.stock }}</span>
                                 </td>
@@ -689,7 +713,7 @@ const filteredPayments = computed(() => {
                                         {{ order.gateway }}
                                     </span>
                                 </td>
-                                <td class="p-4 text-center font-bold font-mono">${{ order.total.toFixed(2) }}</td>
+                                <td class="p-4 text-center font-bold font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ order.total.toFixed(2) }}</td>
                                 <td class="p-4">
                                     <span 
                                         v-if="order.status === 'Paid'" 
@@ -790,9 +814,9 @@ const filteredPayments = computed(() => {
                                     {{ coupon.discountType }}
                                 </td>
                                 <td class="p-4 text-center font-bold font-mono">
-                                    {{ coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : `$${coupon.discountValue.toFixed(2)}` }}
+                                    {{ coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : `${$page.props.currency_symbol ?? '$'}${coupon.discountValue.toFixed(2)}` }}
                                 </td>
-                                <td class="p-4 text-center font-mono">${{ coupon.minOrderAmount.toFixed(2) }}</td>
+                                <td class="p-4 text-center font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ coupon.minOrderAmount.toFixed(2) }}</td>
                                 <td class="p-4 text-center font-mono">
                                     {{ coupon.usedCount ?? 0 }} / <span class="text-neutral-400">{{ coupon.usageLimit }}</span>
                                 </td>
@@ -861,7 +885,7 @@ const filteredPayments = computed(() => {
                                     class="h-10 rounded-lg border border-neutral-200 bg-white px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
                                 >
                                     <option value="percentage">Percentage (%)</option>
-                                    <option value="flat">Flat Amount ($)</option>
+                                    <option value="flat">Flat Amount ({{ $page.props.currency_symbol ?? '$' }})</option>
                                 </select>
                             </div>
                             <div class="flex flex-col gap-2">
@@ -877,7 +901,7 @@ const filteredPayments = computed(() => {
 
                         <div class="grid gap-4 sm:grid-cols-2">
                             <div class="flex flex-col gap-2">
-                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Min Order ($)</label>
+                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Min Order ({{ $page.props.currency_symbol ?? '$' }})</label>
                                 <input 
                                     v-model="newCoupon.minOrderAmount" 
                                     type="number" 
@@ -966,7 +990,7 @@ const filteredPayments = computed(() => {
                                     class="h-10 rounded-lg border border-neutral-200 bg-white px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
                                 >
                                     <option value="percentage">Percentage (%)</option>
-                                    <option value="flat">Flat Amount ($)</option>
+                                    <option value="flat">Flat Amount ({{ $page.props.currency_symbol ?? '$' }})</option>
                                 </select>
                             </div>
                             <div class="flex flex-col gap-2">
@@ -982,7 +1006,7 @@ const filteredPayments = computed(() => {
 
                         <div class="grid gap-4 sm:grid-cols-2">
                             <div class="flex flex-col gap-2">
-                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Min Order ($)</label>
+                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Min Order ({{ $page.props.currency_symbol ?? '$' }})</label>
                                 <input 
                                     v-model="editCoupon.minOrderAmount" 
                                     type="number" 
@@ -1083,7 +1107,7 @@ const filteredPayments = computed(() => {
                                         {{ payment.gateway || 'N/A' }}
                                     </span>
                                 </td>
-                                <td class="p-4 text-center font-bold font-mono">${{ payment.amount.toFixed(2) }}</td>
+                                <td class="p-4 text-center font-bold font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ payment.amount.toFixed(2) }}</td>
                                 <td class="p-4 text-neutral-500">{{ payment.paid_on }}</td>
                                 <td class="p-4">
                                     <span 
@@ -1144,7 +1168,7 @@ const filteredPayments = computed(() => {
             <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs dark:border-neutral-800 dark:bg-neutral-900 flex flex-col justify-between">
                 <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Saved with Coupons</span>
                 <div class="my-1 flex items-baseline gap-1.5">
-                    <span class="text-2xl font-black font-mono leading-none">${{ (stats.totalSaved ?? 0).toFixed(2) }}</span>
+                    <span class="text-2xl font-black font-mono leading-none">{{ $page.props.currency_symbol ?? '$' }}{{ (stats.totalSaved ?? 0).toFixed(2) }}</span>
                     <span class="text-[10px] text-neutral-400">saved</span>
                 </div>
                 <div class="text-[9px] text-indigo-600 dark:text-indigo-400 flex items-center gap-1 font-bold">
@@ -1290,7 +1314,7 @@ const filteredPayments = computed(() => {
                                 </h4>
                             </div>
                             <div class="flex items-center justify-between mt-3">
-                                <span class="font-mono text-xs font-bold">${{ prod.price.toFixed(2) }}</span>
+                                <span class="font-mono text-xs font-bold">{{ $page.props.currency_symbol ?? '$' }}{{ prod.price.toFixed(2) }}</span>
                                 <Link 
                                     :href="`/shop?category=${prod.category}`" 
                                     class="h-7 px-3 rounded-lg bg-neutral-50 hover:bg-emerald-50 flex items-center gap-1 text-[10px] font-bold text-neutral-600 hover:text-emerald-600 transition dark:bg-neutral-800 dark:hover:bg-emerald-950"
@@ -1339,7 +1363,7 @@ const filteredPayments = computed(() => {
                                             {{ order.gateway }}
                                         </span>
                                     </td>
-                                    <td class="p-4 text-right font-bold font-mono">${{ order.total.toFixed(2) }}</td>
+                                    <td class="p-4 text-right font-bold font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ order.total.toFixed(2) }}</td>
                                     <td class="p-4 text-center">
                                         <span 
                                             v-if="order.status === 'Paid'" 
@@ -1405,7 +1429,7 @@ const filteredPayments = computed(() => {
                                 <span class="text-[10px] text-neutral-400">{{ order.date }}</span>
                             </div>
                             <span class="font-mono text-sm font-black text-neutral-900 dark:text-white">
-                                ${{ order.total.toFixed(2) }}
+                                {{ $page.props.currency_symbol ?? '$' }}{{ order.total.toFixed(2) }}
                             </span>
                         </div>
                         
@@ -1622,9 +1646,9 @@ const filteredPayments = computed(() => {
                         </p>
                     </div>
                     <div class="border-t border-dashed border-emerald-500/20 pt-2 flex justify-between items-center text-[10px] text-neutral-500">
-                        <span>Min Order: <strong>${{ coupon.minOrderAmount.toFixed(2) }}</strong></span>
+                        <span>Min Order: <strong>{{ $page.props.currency_symbol ?? '$' }}{{ coupon.minOrderAmount.toFixed(2) }}</strong></span>
                         <span class="bg-emerald-600 text-white px-2 py-0.5 rounded-full font-bold">
-                            {{ coupon.discountType === 'percentage' ? `${coupon.discountValue}% OFF` : `$${coupon.discountValue} OFF` }}
+                            {{ coupon.discountType === 'percentage' ? `${coupon.discountValue}% OFF` : `${$page.props.currency_symbol ?? '$'}${coupon.discountValue} OFF` }}
                         </span>
                     </div>
                 </div>
@@ -1726,24 +1750,24 @@ const filteredPayments = computed(() => {
                 <div class="rounded-xl bg-neutral-50 p-4 dark:bg-neutral-800/40 space-y-2 text-xs print:bg-neutral-50/50">
                     <div class="flex justify-between">
                         <span class="text-neutral-500">Subtotal</span>
-                        <span class="font-mono font-semibold">${{ selectedInvoice.subtotal.toFixed(2) }}</span>
+                        <span class="font-mono font-semibold">{{ $page.props.currency_symbol ?? '$' }}{{ selectedInvoice.subtotal.toFixed(2) }}</span>
                     </div>
                     <div v-if="selectedInvoice.discount > 0" class="flex justify-between text-emerald-600 dark:text-emerald-400">
                         <span>Coupon Savings</span>
-                        <span class="font-mono font-bold">-${{ selectedInvoice.discount.toFixed(2) }}</span>
+                        <span class="font-mono font-bold">-{{ $page.props.currency_symbol ?? '$' }}{{ selectedInvoice.discount.toFixed(2) }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-neutral-500">Shipping & Handling</span>
-                        <span class="font-mono font-semibold">${{ selectedInvoice.shipping.toFixed(2) }}</span>
+                        <span class="font-mono font-semibold">{{ $page.props.currency_symbol ?? '$' }}{{ selectedInvoice.shipping.toFixed(2) }}</span>
                     </div>
                     <div v-if="selectedInvoice.tax > 0" class="flex justify-between">
                         <span class="text-neutral-500">Estimated Taxes</span>
-                        <span class="font-mono font-semibold">${{ selectedInvoice.tax.toFixed(2) }}</span>
+                        <span class="font-mono font-semibold">{{ $page.props.currency_symbol ?? '$' }}{{ selectedInvoice.tax.toFixed(2) }}</span>
                     </div>
                     <div class="border-t border-neutral-200 pt-2 flex justify-between items-baseline dark:border-neutral-700">
                         <span class="font-bold text-neutral-900 dark:text-white print:text-neutral-900">Grand Total</span>
                         <span class="font-mono text-base font-black text-emerald-600 dark:text-emerald-400">
-                            ${{ selectedInvoice.total.toFixed(2) }}
+                            {{ $page.props.currency_symbol ?? '$' }}{{ selectedInvoice.total.toFixed(2) }}
                         </span>
                     </div>
                 </div>
