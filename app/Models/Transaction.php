@@ -76,7 +76,7 @@ class Transaction extends Model
                     'contact_id' => $transaction->contact_id,
                     'created_by' => $transaction->created_by,
                     'type' => 'sell',
-                    'status' => 'completed',
+                    'status' => 'final',
                     'payment_status' => 'paid',
                     'invoice_no' => $invNo,
                     'ref_no' => $refNo,
