@@ -49,15 +49,20 @@ class Product extends Model
     /**
      * Calculate current stock dynamically from purchase_lines and transaction_sell_lines.
      */
-    public function currentStock(): int
+    public function currentStock(?int $locationId = null): int
     {
-        $purchased = (float) \Illuminate\Support\Facades\DB::table('purchase_lines')
+        $purchasedQuery = \Illuminate\Support\Facades\DB::table('purchase_lines')
             ->join('transactions', 'purchase_lines.transaction_id', '=', 'transactions.id')
             ->where('purchase_lines.product_id', $this->id)
-            ->whereNotIn('transactions.status', ['cancelled', 'draft', 'quotation'])
-            ->sum('purchase_lines.quantity');
+            ->whereNotIn('transactions.status', ['cancelled', 'draft', 'quotation']);
 
-        $sold = (float) \Illuminate\Support\Facades\DB::table('transaction_sell_lines')
+        if ($locationId) {
+            $purchasedQuery->where('transactions.location_id', $locationId);
+        }
+
+        $purchased = (float) $purchasedQuery->sum('purchase_lines.quantity');
+
+        $soldQuery = \Illuminate\Support\Facades\DB::table('transaction_sell_lines')
             ->join('transactions', 'transaction_sell_lines.transaction_id', '=', 'transactions.id')
             ->where('transaction_sell_lines.product_id', $this->id)
             ->where(function ($query) {
@@ -68,8 +73,13 @@ class Product extends Model
                     $q->whereIn('transactions.type', ['sales_order', 'sale_order'])
                       ->whereNotIn('transactions.status', ['cancelled', 'draft', 'quotation', 'completed']);
                 });
-            })
-            ->sum('transaction_sell_lines.quantity');
+            });
+
+        if ($locationId) {
+            $soldQuery->where('transactions.location_id', $locationId);
+        }
+
+        $sold = (float) $soldQuery->sum('transaction_sell_lines.quantity');
 
         return (int) ($purchased - $sold);
     }
@@ -77,8 +87,8 @@ class Product extends Model
     /**
      * Determine dynamic stock status.
      */
-    public function currentStockStatus(): string
+    public function currentStockStatus(?int $locationId = null): string
     {
-        return $this->currentStock() > 0 ? 'in_stock' : 'out_of_stock';
+        return $this->currentStock($locationId) > 0 ? 'in_stock' : 'out_of_stock';
     }
 }

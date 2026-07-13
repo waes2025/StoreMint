@@ -67,8 +67,12 @@ class DemoDataSeeder extends Seeder
             'updated_at'  => now(),
         ]);
 
+        $targetBusinessId = (int) config('ecommerce.business_id', 1);
+        $targetLocationId = (int) config('ecommerce.location_id', 1);
+
         // ── Business ──────────────────────────────────────────────────────────────
-        $businessId = DB::table('business')->insertGetId([
+        DB::table('business')->insert([
+            'id'                     => $targetBusinessId,
             'name'                   => 'StoreMint Demo',
             'currency_id'            => $bdtCurrencyId,
             'start_date'             => now()->subYear()->toDateString(),
@@ -77,6 +81,8 @@ class DemoDataSeeder extends Seeder
             'created_at'             => now(),
             'updated_at'             => now(),
         ]);
+
+        $businessId = $targetBusinessId;
 
         // Update user with real business_id
         DB::table('users')->where('id', $userId)->update(['business_id' => $businessId]);
@@ -101,7 +107,8 @@ class DemoDataSeeder extends Seeder
         ]);
 
         // ── Business Location ─────────────────────────────────────────────────────
-        $locationId = DB::table('business_locations')->insertGetId([
+        DB::table('business_locations')->insert([
+            'id'                => $targetLocationId,
             'business_id'       => $businessId,
             'name'              => 'Main Store',
             'country'           => 'Bangladesh',
@@ -115,6 +122,8 @@ class DemoDataSeeder extends Seeder
             'created_at'        => now(),
             'updated_at'        => now(),
         ]);
+
+        $locationId = $targetLocationId;
 
         // ── Extra Teams ───────────────────────────────────────────────────────────
         $techTeamId = DB::table('teams')->insertGetId([
@@ -903,6 +912,7 @@ class DemoDataSeeder extends Seeder
                 DB::table('variation_location_details')
                     ->where('product_id', $linkItem['product_id'])
                     ->where('variation_id', $linkItem['variation_id'])
+                    ->where('location_id', $locationId)
                     ->decrement('qty_available', $linkItem['qty']);
             }
 

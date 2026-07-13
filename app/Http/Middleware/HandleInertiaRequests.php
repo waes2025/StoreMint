@@ -37,7 +37,10 @@ class HandleInertiaRequests extends Middleware
     {
         $user = $request->user();
         
-        $businessId = $user?->business_id ?? 1;
+        $businessId = $request->input('business_id') 
+            ?: session('storefront_business_id') 
+            ?: ($user?->business_id ?? config('ecommerce.business_id', 1));
+
         $currencySymbol = \Illuminate\Support\Facades\DB::table('currencies')
             ->join('business', 'currencies.id', '=', 'business.currency_id')
             ->where('business.id', $businessId)
@@ -53,8 +56,9 @@ class HandleInertiaRequests extends Middleware
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'currentTeam' => fn () => $user?->currentTeam ? $user->toUserTeam($user->currentTeam) : null,
             'teams' => fn () => $user?->toUserTeams(includeCurrent: true) ?? [],
-            'promo_coupon' => function () {
+            'promo_coupon' => function () use ($businessId) {
                 $coupon = \Illuminate\Support\Facades\DB::table('coupons')
+                    ->where('business_id', $businessId)
                     ->where('status', 'active')
                     ->where(function ($query) {
                         $query->whereNull('expires_at')

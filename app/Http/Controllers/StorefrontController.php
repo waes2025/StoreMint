@@ -23,6 +23,13 @@ class StorefrontController extends Controller
             return redirect()->route('customer.dashboard');
         }
 
+        if ($request->has('business_id')) {
+            session(['storefront_business_id' => (int) $request->input('business_id')]);
+        }
+        if ($request->has('location_id')) {
+            session(['storefront_location_id' => (int) $request->input('location_id')]);
+        }
+
         return Inertia::render('Welcome', $this->getStorefrontData());
     }
 
@@ -35,6 +42,13 @@ class StorefrontController extends Controller
             return redirect()->route('customer.dashboard');
         }
 
+        if ($request->has('business_id')) {
+            session(['storefront_business_id' => (int) $request->input('business_id')]);
+        }
+        if ($request->has('location_id')) {
+            session(['storefront_location_id' => (int) $request->input('location_id')]);
+        }
+
         return Inertia::render('Shop', $this->getStorefrontData());
     }
 
@@ -43,11 +57,15 @@ class StorefrontController extends Controller
      */
     private function getStorefrontData(): array
     {
+        $businessId = (int) (request()->input('business_id') ?: session('storefront_business_id') ?: config('ecommerce.business_id', 1));
+        $locationId = (int) (request()->input('location_id') ?: session('storefront_location_id') ?: config('ecommerce.location_id', 1));
+
         $products = Product::with(['category', 'brand'])
+            ->where('business_id', $businessId)
             ->where('is_active', 1)
             ->get()
-            ->map(function ($product) {
-                $qty = $product->currentStock();
+            ->map(function ($product) use ($locationId) {
+                $qty = $product->currentStock($locationId);
 
                 return [
                     'id' => $product->id,
@@ -67,17 +85,21 @@ class StorefrontController extends Controller
                 ];
             });
 
-        $categories = Category::where('is_active', 1)
+        $categories = Category::where('business_id', $businessId)
+            ->where('is_active', 1)
             ->pluck('name')
             ->toArray();
 
         // Ensure "All" is not saved in DB but is returned for frontend tabs
         array_unshift($categories, 'All');
 
-        $brands = Brand::pluck('name')->toArray();
+        $brands = Brand::where('business_id', $businessId)
+            ->pluck('name')
+            ->toArray();
         array_unshift($brands, 'All');
 
-        $coupons = Coupon::where('status', 'active')
+        $coupons = Coupon::where('business_id', $businessId)
+            ->where('status', 'active')
             ->where(function ($query) {
                 $query->whereNull('expires_at')
                     ->orWhere('expires_at', '>', now());
@@ -205,6 +227,12 @@ class StorefrontController extends Controller
     {
         $user = $request->user();
 
+        $businessId = (int) ($request->input('business_id') ?: session('storefront_business_id') ?: config('ecommerce.business_id', 1));
+        $locationId = (int) ($request->input('location_id') ?: session('storefront_location_id') ?: config('ecommerce.location_id', 1));
+
+        $business = DB::table('business')->where('id', $businessId)->first();
+        $ownerId = $business ? $business->owner_id : 1;
+
         $customer = $request->input('customer', []);
         $items    = $request->input('items', []);
         $subtotal = (float) $request->input('subtotal', 0);
@@ -221,7 +249,7 @@ class StorefrontController extends Controller
         $refNo = 'ORD-' . rand(100000, 999999);
 
         $contactId = null;
-        $userId    = $user ? $user->id : 1;
+        $userId    = $user ? $user->id : $ownerId;
 
         if ($user) {
             $contactId = DB::table('user_contact_access')
@@ -233,7 +261,10 @@ class StorefrontController extends Controller
             $email = $customer['email'] ?? ($user ? $user->email : 'guest@storemint.com');
 
             // 1. Try to find an existing contact
-            $existingContact = DB::table('contacts')->where('email', $email)->first();
+            $existingContact = DB::table('contacts')
+                ->where('business_id', $businessId)
+                ->where('email', $email)
+                ->first();
 
             if ($existingContact) {
                 $contactId = $existingContact->id;
@@ -256,7 +287,7 @@ class StorefrontController extends Controller
 
                 // 2a. Create the contact record
                 $contactId = DB::table('contacts')->insertGetId([
-                    'business_id' => 1,
+                    'business_id' => $businessId,
                     'type'        => 'customer',
                     'first_name'  => $firstName,
                     'last_name'   => $lastName,
@@ -290,7 +321,7 @@ class StorefrontController extends Controller
                         'email'           => $email,
                         'password'        => \Illuminate\Support\Facades\Hash::make('password'),
                         'user_type'       => 'customer',
-                        'business_id'     => 1,
+                        'business_id'     => $businessId,
                         'current_team_id' => $storeTeamId,
                         'created_at'      => now(),
                         'updated_at'      => now(),
@@ -323,12 +354,15 @@ class StorefrontController extends Controller
         
         $couponId = null;
         if ($couponCode) {
-            $couponId = DB::table('coupons')->where('code', $couponCode)->value('id');
+            $couponId = DB::table('coupons')
+                ->where('business_id', $businessId)
+                ->where('code', $couponCode)
+                ->value('id');
         }
         
         $transId = DB::table('transactions')->insertGetId([
-            'business_id' => 1,
-            'location_id' => 1,
+            'business_id' => $businessId,
+            'location_id' => $locationId,
             'contact_id' => $contactId,
             'created_by' => $userId,
             'type' => 'sales_order',
@@ -352,7 +386,7 @@ class StorefrontController extends Controller
             $paymentType = \App\Models\TransactionPayment::determinePaymentType($grandTotal);
             DB::table('transaction_payments')->insert([
                 'transaction_id' => $transId,
-                'business_id' => 1,
+                'business_id' => $businessId,
                 'amount' => $grandTotal,
                 'method' => 'online',
                 'payment_type' => $paymentType,
@@ -390,11 +424,12 @@ class StorefrontController extends Controller
                     DB::table('variation_location_details')
                         ->where('product_id', $productId)
                         ->where('variation_id', $variationId)
+                        ->where('location_id', $locationId)
                         ->decrement('qty_available', $qty);
                         
                     // Retrieve dynamic stock using the product model instance
                     $prodModel = Product::find($productId);
-                    $totalStock = $prodModel ? $prodModel->currentStock() : 0;
+                    $totalStock = $prodModel ? $prodModel->currentStock($locationId) : 0;
                         
                     if ($totalStock <= 0) {
                         DB::table('products')
