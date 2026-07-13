@@ -13,23 +13,21 @@ class Product extends Model
 
     protected $fillable = [
         'name',
-        'slug',
         'business_id',
         'category_id',
-        'price',
-        'compare_at_price',
-        'stock_status',
-        'short_description',
-        'description',
         'image',
         'is_featured',
-        'is_best_seller',
         'is_active',
         'sku',
         'type',
         'enable_stock',
         'created_by',
     ];
+
+    public function variations()
+    {
+        return $this->hasMany(Variation::class);
+    }
 
     public function category(): BelongsTo
     {

@@ -60,26 +60,27 @@ class StorefrontController extends Controller
         $businessId = (int) (request()->input('business_id') ?: session('storefront_business_id') ?: config('ecommerce.business_id', 1));
         $locationId = (int) (request()->input('location_id') ?: session('storefront_location_id') ?: config('ecommerce.location_id', 1));
 
-        $products = Product::with(['category', 'brand'])
+        $products = Product::with(['category', 'brand', 'variations'])
             ->where('business_id', $businessId)
             ->where('is_active', 1)
             ->get()
             ->map(function ($product) use ($locationId) {
                 $qty = $product->currentStock($locationId);
+                $variation = $product->variations->first();
 
                 return [
                     'id' => $product->id,
                     'name' => $product->name,
-                    'slug' => $product->slug,
-                    'price' => (float) $product->price,
-                    'compare_at_price' => $product->compare_at_price ? (float) $product->compare_at_price : null,
+                    'slug' => $variation ? $variation->slug : null,
+                    'price' => $variation ? (float) $variation->default_sell_price : 0.0,
+                    'compare_at_price' => ($variation && $variation->compare_at_price) ? (float) $variation->compare_at_price : null,
                     'stock_status' => $qty > 0 ? 'in_stock' : 'out_of_stock',
                     'stock' => $qty,
                     'image' => $product->image,
-                    'short_description' => $product->short_description,
-                    'description' => $product->description,
+                    'short_description' => $variation ? $variation->short_description : null,
+                    'description' => $variation ? $variation->description : null,
                     'is_featured' => (bool) $product->is_featured,
-                    'is_best_seller' => (bool) $product->is_best_seller,
+                    'is_best_seller' => $variation ? (bool) $variation->is_best_seller : false,
                     'category' => $product->category ? $product->category->name : 'Electronics',
                     'brand' => $product->brand ? $product->brand->name : null,
                 ];
@@ -426,16 +427,6 @@ class StorefrontController extends Controller
                         ->where('variation_id', $variationId)
                         ->where('location_id', $locationId)
                         ->decrement('qty_available', $qty);
-                        
-                    // Retrieve dynamic stock using the product model instance
-                    $prodModel = Product::find($productId);
-                    $totalStock = $prodModel ? $prodModel->currentStock($locationId) : 0;
-                        
-                    if ($totalStock <= 0) {
-                        DB::table('products')
-                            ->where('id', $productId)
-                            ->update(['stock_status' => 'out_of_stock']);
-                    }
                 }
             }
         }

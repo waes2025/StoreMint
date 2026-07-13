@@ -54,16 +54,9 @@ return new class extends Migration
                 $table->integer('is_no_print')->default(0);
 
                 // Storefront ECOM extra fields
-                $table->string('slug', 191)->nullable()->unique();
-                $table->decimal('price', 20, 2)->default(0.00);
-                $table->decimal('compare_at_price', 20, 2)->nullable();
-                $table->string('stock_status', 50)->default('in_stock');
-                $table->boolean('is_best_seller')->default(false);
                 $table->boolean('is_featured')->default(false);
                 $table->boolean('is_active')->default(true);
                 $table->integer('sold_count')->default(0);
-                $table->text('short_description')->nullable();
-                $table->text('description')->nullable();
 
                 $table->timestamps();
                 $table->softDeletes();
@@ -76,12 +69,7 @@ return new class extends Migration
             });
         }
 
-        // Ensure description column exists on products table
-        Schema::table('products', function (Blueprint $table) {
-            if (! Schema::hasColumn('products', 'description')) {
-                $table->text('description')->nullable()->after('product_description');
-            }
-        });
+        
     }
 
     /**

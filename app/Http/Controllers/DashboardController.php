@@ -82,19 +82,22 @@ class DashboardController extends Controller
                 ]);
 
             // Featured/Recommended Products for customer dashboard
-            $recommendedProducts = Product::query()
+            $recommendedProducts = Product::with('variations')
                 ->where('is_active', 1)
                 ->latest()
                 ->take(4)
                 ->get()
-                ->map(fn ($p) => [
-                    'id' => $p->id,
-                    'name' => $p->name,
-                    'slug' => $p->slug,
-                    'price' => (float) $p->price,
-                    'image' => $p->image,
-                    'category' => $p->category ? $p->category->name : 'Uncategorized',
-                ]);
+                ->map(function ($p) {
+                    $variation = $p->variations->first();
+                    return [
+                        'id' => $p->id,
+                        'name' => $p->name,
+                        'slug' => $variation ? $variation->slug : null,
+                        'price' => $variation ? (float) $variation->default_sell_price : 0.0,
+                        'image' => $p->image,
+                        'category' => $p->category ? $p->category->name : 'Uncategorized',
+                    ];
+                });
 
             return Inertia::render('Dashboard', [
                 'role' => 'customer',
@@ -154,16 +157,17 @@ class DashboardController extends Controller
             ->count();
 
         // Products query with dynamic stock calculation from purchase_lines and transaction_sell_lines
-        $products = Product::with(['category', 'brand'])
+        $products = Product::with(['category', 'brand', 'variations'])
             ->get()
             ->map(function ($product) {
                 $qty = $product->currentStock();
+                $variation = $product->variations->first();
 
                 return [
                     'id' => $product->id,
                     'name' => $product->name,
                     'category' => $product->category ? $product->category->name : 'Uncategorized',
-                    'price' => (float) $product->price,
+                    'price' => $variation ? (float) $variation->default_sell_price : 0.0,
                     'stock' => $qty,
                     'status' => $qty <= 0 ? 'Out of Stock' : ($qty <= 5 ? 'Low Stock' : 'In Stock'),
                 ];
@@ -376,10 +380,7 @@ class DashboardController extends Controller
                 );
         }
 
-        // Update product stock status
-        $product->update([
-            'stock_status' => $newStock > 0 ? 'in_stock' : 'out_of_stock',
-        ]);
+        // stock_status is now calculated dynamically from current stock status
 
         return back()->with('toast', [
             'type' => 'success',

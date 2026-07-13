@@ -528,21 +528,14 @@ class DemoDataSeeder extends Seeder
 
         foreach ($productsData as $pData) {
             $sku         = 'SKU-'.strtoupper(Str::random(6));
-            $stockStatus = $pData['stock'] > 0 ? 'in_stock' : 'out_of_stock';
 
             $prodId = DB::table('products')->insertGetId([
                 'name'              => $pData['name'],
-                'slug'              => $pData['slug'],
                 'business_id'       => $businessId,
                 'category_id'       => $categoryMap[$pData['category']] ?? $categoryId,
                 'brand_id'          => $insertedBrands[$pData['brand']] ?? null,
-                'price'             => $pData['price'],
-                'compare_at_price'  => $pData['compare_at_price'],
-                'stock_status'      => $stockStatus,
-                'short_description' => $pData['short_description'],
                 'image'             => $pData['image'],
                 'is_featured'       => $pData['is_featured'],
-                'is_best_seller'    => $pData['is_best_seller'],
                 'is_active'         => true,
                 'sku'               => $sku,
                 'type'              => 'single',
@@ -570,6 +563,11 @@ class DemoDataSeeder extends Seeder
                 'profit_percent'        => 40.00,
                 'default_sell_price'    => $pData['price'],
                 'sell_price_inc_tax'    => $pData['price'],
+                'slug'                  => $pData['slug'],
+                'compare_at_price'      => $pData['compare_at_price'],
+                'short_description'     => $pData['short_description'],
+                'is_best_seller'        => $pData['is_best_seller'],
+                'description'           => $pData['short_description'],
                 'created_at'            => now(),
                 'updated_at'            => now(),
             ]);
@@ -833,19 +831,22 @@ class DemoDataSeeder extends Seeder
             $itemsToLink = [];
 
             foreach ($order['items'] as $itemSpec) {
-                $prod = DB::table('products')->where('slug', $itemSpec['slug'])->first();
+                $var = DB::table('variations')->where('slug', $itemSpec['slug'])->first();
+                if (! $var) {
+                    continue;
+                }
+                $prod = DB::table('products')->where('id', $var->product_id)->first();
                 if (! $prod) {
                     continue;
                 }
 
-                $subtotal += $prod->price * $itemSpec['qty'];
-                $var       = DB::table('variations')->where('product_id', $prod->id)->first();
+                $subtotal += $var->default_sell_price * $itemSpec['qty'];
 
                 $itemsToLink[] = [
                     'product_id'   => $prod->id,
                     'variation_id' => $var->id,
                     'qty'          => $itemSpec['qty'],
-                    'price'        => $prod->price,
+                    'price'        => $var->default_sell_price,
                 ];
             }
 

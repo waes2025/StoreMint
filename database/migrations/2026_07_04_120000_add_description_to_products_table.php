@@ -11,11 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-            if (! Schema::hasColumn('products', 'description')) {
-                $table->text('description')->nullable()->after('product_description');
-            }
-        });
+        // No-op: description moved to variations table
     }
 
     /**
@@ -23,10 +19,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-            if (Schema::hasColumn('products', 'description')) {
-                $table->dropColumn('description');
-            }
-        });
+        // No-op
     }
 };
