@@ -141,6 +141,13 @@ class StorefrontController extends Controller
             ];
         }
 
+        // Hero slides (admin-managed) stored in `system` table under key 'hero_slides'
+        $heroSetting = \Illuminate\Support\Facades\DB::table('system')->where('key', 'hero_slides')->first();
+        $heroSlides = [];
+        if ($heroSetting) {
+            $heroSlides = json_decode($heroSetting->value, true) ?: [];
+        }
+
         return [
             'dbProducts' => $products,
             'dbCategories' => $categories,
@@ -148,6 +155,7 @@ class StorefrontController extends Controller
             'dbCoupons' => $coupons,
             'gateways' => $gateways,
             'announcement' => $announcement,
+            'heroSlides' => $heroSlides,
         ];
     }
 

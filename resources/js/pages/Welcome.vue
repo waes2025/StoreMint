@@ -233,14 +233,9 @@ const formatAnnouncementText = (text?: string, coupon?: string) => {
                 </div>
                 
                 <template v-if="$page.props.auth.user">
-                    <Link 
-                        v-if="dashboardUrl"
-                        :href="dashboardUrl"
-                        class="flex items-center gap-1 rounded bg-white px-2 py-1 text-[11px] text-emerald-900 hover:bg-neutral-100 transition"
-                    >
-                        <LayoutGrid class="h-3 w-3" />
-                        <span>Go to Admin Dashboard</span>
-                    </Link>
+                    <span v-if="dashboardUrl" class="text-[11px] text-emerald-100 font-medium">
+                        Hello, {{ $page.props.auth.user.first_name }}
+                    </span>
                     <span v-else class="text-[11px] text-emerald-100 font-medium">
                         Hello, {{ $page.props.auth.user.first_name }}
                     </span>

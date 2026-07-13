@@ -61,7 +61,7 @@ class DemoDataSeeder extends Seeder
             'username'    => 'waes',
             'email'       => 'waes@storemint.com',
             'password'    => Hash::make('password'),
-            'user_type'   => 'owner',
+            'user_type'   => 'user',
             'business_id' => null,
             'created_at'  => now(),
             'updated_at'  => now(),
@@ -95,7 +95,7 @@ class DemoDataSeeder extends Seeder
         DB::table('team_members')->insert([
             'team_id'    => $storeTeamId,
             'user_id'    => $userId,
-            'role'       => 'owner',
+            'role'       => 'admin',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -138,14 +138,14 @@ class DemoDataSeeder extends Seeder
             [
                 'team_id'    => $techTeamId,
                 'user_id'    => $userId,
-                'role'       => 'owner',
+                'role'       => 'admin',
                 'created_at' => now()->subDays(5),
                 'updated_at' => now()->subDays(5),
             ],
             [
                 'team_id'    => $opsTeamId,
                 'user_id'    => $userId,
-                'role'       => 'owner',
+                'role'       => 'admin',
                 'created_at' => now()->subDays(3),
                 'updated_at' => now()->subDays(3),
             ],
@@ -168,7 +168,7 @@ class DemoDataSeeder extends Seeder
             [
                 'team_id'    => $storeTeamId,
                 'user_id'    => $staffUserId,
-                'role'       => 'manager',
+                'role'       => 'admin',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],

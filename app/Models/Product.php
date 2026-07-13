@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Concerns\BelongsToBusinessContext;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Product extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, BelongsToBusinessContext;
 
     protected $fillable = [
         'name',
@@ -38,6 +39,11 @@ class Product extends Model
     public function brand(): BelongsTo
     {
         return $this->belongsTo(Brand::class);
+    }
+
+    public function business(): BelongsTo
+    {
+        return $this->belongsTo(Business::class);
     }
 
     /**

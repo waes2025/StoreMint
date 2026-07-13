@@ -35,6 +35,16 @@ class Transaction extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function business(): BelongsTo
+    {
+        return $this->belongsTo(Business::class, 'business_id');
+    }
+
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(BusinessLocation::class, 'location_id');
+    }
+
     public function coupon(): BelongsTo
     {
         return $this->belongsTo(Coupon::class);

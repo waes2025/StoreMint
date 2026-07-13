@@ -33,6 +33,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('settings/gateways', [GatewaysController::class, 'edit'])->name('gateways.edit');
     Route::patch('settings/gateways', [GatewaysController::class, 'update'])->name('gateways.update');
 
+    // Hero slides managed by admin
+    Route::get('settings/hero-slides', [\App\Http\Controllers\Settings\HeroSlidesController::class, 'edit'])->name('settings.hero-slides.edit');
+    Route::patch('settings/hero-slides', [\App\Http\Controllers\Settings\HeroSlidesController::class, 'update'])->name('settings.hero-slides.update');
+
     Route::get('settings/teams', [TeamController::class, 'index'])->name('teams.index');
     Route::post('settings/teams', [TeamController::class, 'store'])->name('teams.store');
 
