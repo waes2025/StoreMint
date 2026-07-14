@@ -55,7 +55,7 @@ return new class extends Migration
 
                 // Storefront ECOM extra fields
                 $table->boolean('is_featured')->default(false);
-                $table->boolean('is_active')->default(true);
+                $table->boolean('is_allow_ecom')->default(false)->comment('Active for direct own E-commerce platform permission.');
                 $table->integer('sold_count')->default(0);
 
                 $table->timestamps();

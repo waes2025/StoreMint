@@ -157,11 +157,25 @@ return new class extends Migration
                 if (! Schema::hasColumn('business', 'essentials_settings')) {
                     $table->text('essentials_settings')->nullable();
                 }
-
-                if (! Schema::hasColumn('business', 'woocommerce_settings')) {
-                    $table->text('woocommerce_settings')->nullable();
+                if (! Schema::hasColumn('business', 'woocommerce_api_settings')) {
+                    $table->text('woocommerce_api_settings')->nullable();
                 }
-
+                if (! Schema::hasColumn('business', 'woocommerce_skipped_orders')) {
+                    $table->text('woocommerce_skipped_orders')->nullable();
+                }
+                if (! Schema::hasColumn('business', 'woocommerce_wh_oc_secret')) {
+                    $table->string('woocommerce_wh_oc_secret')->nullable();
+                }
+                if (! Schema::hasColumn('business', 'woocommerce_wh_ou_secret')) {
+                    $table->string('woocommerce_wh_ou_secret')->nullable();
+                }
+                if (! Schema::hasColumn('business', 'woocommerce_wh_od_secret')) {
+                    $table->string('woocommerce_wh_od_secret')->nullable();
+                }
+                if (! Schema::hasColumn('business', 'woocommerce_wh_or_secret')) {
+                    $table->string('woocommerce_wh_or_secret')->nullable();
+                }
+                
                 if (! Schema::hasColumn('business', 'weighing_scale_setting')) {
                     $table->text('weighing_scale_setting')->nullable();
                 }

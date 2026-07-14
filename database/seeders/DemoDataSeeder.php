@@ -288,7 +288,7 @@ class DemoDataSeeder extends Seeder
             'business_id' => $businessId,
             'short_code'  => 'TECH',
             'created_by'  => $userId,
-            'is_active'   => true,
+            'is_allow_ecom'   => true,
             'created_at'  => now(),
             'updated_at'  => now(),
         ]);
@@ -298,7 +298,7 @@ class DemoDataSeeder extends Seeder
             'business_id' => $businessId,
             'short_code'  => 'FASH',
             'created_by'  => $userId,
-            'is_active'   => true,
+            'is_allow_ecom'   => true,
             'created_at'  => now(),
             'updated_at'  => now(),
         ]);
@@ -308,7 +308,7 @@ class DemoDataSeeder extends Seeder
             'business_id' => $businessId,
             'short_code'  => 'HOME',
             'created_by'  => $userId,
-            'is_active'   => true,
+            'is_allow_ecom'   => true,
             'created_at'  => now(),
             'updated_at'  => now(),
         ]);
@@ -334,6 +334,7 @@ class DemoDataSeeder extends Seeder
                 'slug'        => $b['slug'],
                 'business_id' => $businessId,
                 'created_by'  => $userId,
+                'is_allow_ecom'   => true,
                 'created_at'  => now(),
                 'updated_at'  => now(),
             ]);
@@ -536,7 +537,7 @@ class DemoDataSeeder extends Seeder
                 'brand_id'          => $insertedBrands[$pData['brand']] ?? null,
                 'image'             => $pData['image'],
                 'is_featured'       => $pData['is_featured'],
-                'is_active'         => true,
+                'is_allow_ecom'         => true,
                 'sku'               => $sku,
                 'type'              => 'single',
                 'enable_stock'      => 1,
@@ -565,11 +566,28 @@ class DemoDataSeeder extends Seeder
                 'sell_price_inc_tax'    => $pData['price'],
                 'slug'                  => $pData['slug'],
                 'compare_at_price'      => $pData['compare_at_price'],
-                'short_description'     => $pData['short_description'],
                 'is_best_seller'        => $pData['is_best_seller'],
-                'description'           => $pData['short_description'],
                 'created_at'            => now(),
                 'updated_at'            => now(),
+            ]);
+
+            DB::table('product_details')->insert([
+                [
+                    'product_id'   => $prodId,
+                    'variation_id' => $varId,
+                    'key'          => 'short_description',
+                    'value'        => $pData['short_description'],
+                    'created_at'   => now(),
+                    'updated_at'   => now(),
+                ],
+                [
+                    'product_id'   => $prodId,
+                    'variation_id' => $varId,
+                    'key'          => 'description',
+                    'value'        => $pData['short_description'],
+                    'created_at'   => now(),
+                    'updated_at'   => now(),
+                ]
             ]);
 
             DB::table('variation_location_details')->insert([

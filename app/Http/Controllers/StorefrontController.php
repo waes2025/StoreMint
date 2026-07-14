@@ -62,7 +62,7 @@ class StorefrontController extends Controller
 
         $products = Product::with(['category', 'brand', 'variations'])
             ->where('business_id', $businessId)
-            ->where('is_active', 1)
+            ->where('is_allow_ecom', 1)
             ->get()
             ->map(function ($product) use ($locationId) {
                 $qty = $product->currentStock($locationId);
@@ -87,7 +87,7 @@ class StorefrontController extends Controller
             });
 
         $categories = Category::where('business_id', $businessId)
-            ->where('is_active', 1)
+            ->where('is_allow_ecom', 1)
             ->pluck('name')
             ->toArray();
 

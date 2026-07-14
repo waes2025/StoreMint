@@ -17,7 +17,7 @@ class Product extends Model
         'category_id',
         'image',
         'is_featured',
-        'is_active',
+        'is_allow_ecom',
         'sku',
         'type',
         'enable_stock',

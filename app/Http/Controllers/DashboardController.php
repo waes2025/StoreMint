@@ -83,7 +83,7 @@ class DashboardController extends Controller
 
             // Featured/Recommended Products for customer dashboard
             $recommendedProducts = Product::with('variations')
-                ->where('is_active', 1)
+                ->where('is_allow_ecom', 1)
                 ->latest()
                 ->take(4)
                 ->get()

@@ -59,8 +59,8 @@ return new class extends Migration
                     $table->integer('sort_order')->default(0);
                 }
 
-                if (! Schema::hasColumn('categories', 'is_active')) {
-                    $table->boolean('is_active')->default(true);
+                if (! Schema::hasColumn('categories', 'is_allow_ecom')) {
+                    $table->boolean('is_allow_ecom')->default(false);
                 }
 
                 $table->softDeletes();

@@ -90,6 +90,10 @@ return new class extends Migration
                     $table->string('zip_code', 20)->nullable();
                 }
 
+                if (! Schema::hasColumn('contacts', 'dob')) {
+                    $table->date('dob')->nullable();
+                }
+
                 if (! Schema::hasColumn('contacts', 'mobile')) {
                     $table->string('mobile', 191);
                 }
@@ -164,8 +168,45 @@ return new class extends Migration
                     $table->string('shipping_country', 191)->nullable();
                 }
 
+                // Custom Shipping
                 if (! Schema::hasColumn('contacts', 'shipping_zip_code')) {
                     $table->string('shipping_zip_code', 20)->nullable();
+                }
+
+                if (! Schema::hasColumn('contacts', 'shipping_custom_field_details')) {
+                    $table->longText('shipping_custom_field_details')->nullable();
+                }
+
+                if (! Schema::hasColumn('contacts', 'is_export')) {
+                    $table->boolean('is_export')->default(false);
+                }
+
+                if (! Schema::hasColumn('contacts', 'export_custom_field_1')) {
+                    $table->string('export_custom_field_1')->nullable();
+                }
+
+                if (! Schema::hasColumn('contacts', 'export_custom_field_2')) {
+                    $table->string('export_custom_field_2')->nullable();
+                }
+
+                if (! Schema::hasColumn('contacts', 'export_custom_field_3')) {
+                    $table->string('export_custom_field_3')->nullable();
+                }
+
+                if (! Schema::hasColumn('contacts', 'export_custom_field_4')) {
+                    $table->string('export_custom_field_4')->nullable();
+                }
+
+                if (! Schema::hasColumn('contacts', 'export_custom_field_5')) {
+                    $table->string('export_custom_field_5')->nullable();
+                }
+
+                if (! Schema::hasColumn('contacts', 'export_custom_field_6')) {
+                    $table->string('export_custom_field_6')->nullable();
+                }
+
+                if (! Schema::hasColumn('contacts', 'position')) {
+                    $table->string('position')->nullable();
                 }
 
                 // CRM

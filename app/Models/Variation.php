@@ -10,6 +10,8 @@ class Variation extends Model
 {
     use SoftDeletes;
 
+    protected $with = ['details'];
+
     protected $fillable = [
         'name',
         'product_id',
@@ -25,14 +27,36 @@ class Variation extends Model
         'pcs_per_box',
         'combo_variations',
         'compare_at_price',
-        'short_description',
         'is_best_seller',
-        'description',
         'slug',
+    ];
+
+    protected $appends = [
+        'short_description',
+        'description',
     ];
 
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function details()
+    {
+        return $this->hasMany(ProductDetail::class);
+    }
+
+    public function getShortDescriptionAttribute()
+    {
+        // Check if relation is loaded, otherwise query or load it
+        $detail = $this->details->firstWhere('key', 'short_description');
+        return $detail ? $detail->value : null;
+    }
+
+    public function getDescriptionAttribute()
+    {
+        // Check if relation is loaded, otherwise query or load it
+        $detail = $this->details->firstWhere('key', 'description');
+        return $detail ? $detail->value : null;
     }
 }

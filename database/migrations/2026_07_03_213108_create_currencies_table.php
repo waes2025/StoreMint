@@ -38,6 +38,8 @@ return new class extends Migration
                 if (! Schema::hasColumn('currencies', 'decimal_separator')) {
                     $table->string('decimal_separator', 10)->nullable();
                 }
+
+                $table->timestamps();
             });
         }
     }
