@@ -15,7 +15,7 @@ class RequireBusinessContext
      */
     public function handle(Request $request, Closure $next)
     {
-        if (!hasCurrentBusiness() || !hasCurrentLocation()) {
+        if (! hasCurrentBusiness() || ! hasCurrentLocation()) {
             return response()->json([
                 'error' => 'Business and location context must be selected',
                 'available_businesses' => availableBusinesses(),

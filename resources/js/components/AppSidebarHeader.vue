@@ -30,11 +30,17 @@ onClickOutside(langDropdownRef, () => {
 
 <template>
     <header
-        class="flex h-16 shrink-0 items-center justify-between border-b border-emerald-500/20 bg-emerald-900 px-6 text-white transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-4 dark:bg-emerald-950 shadow-sm"
-        style="--foreground: 0 0% 100%; --muted-foreground: 142.1 70.6% 85%; --border: 142.1 70.6% 30%;"
+        class="flex h-16 shrink-0 items-center justify-between border-b border-emerald-500/20 bg-emerald-900 px-6 text-white shadow-sm transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-4 dark:bg-emerald-950"
+        style="
+            --foreground: 0 0% 100%;
+            --muted-foreground: 142.1 70.6% 85%;
+            --border: 142.1 70.6% 30%;
+        "
     >
         <div class="flex items-center gap-2">
-            <SidebarTrigger class="-ml-1 text-emerald-100 hover:text-white hover:bg-emerald-850/50" />
+            <SidebarTrigger
+                class="hover:bg-emerald-850/50 -ml-1 text-emerald-100 hover:text-white"
+            />
             <template v-if="breadcrumbs && breadcrumbs.length > 0">
                 <Breadcrumbs :breadcrumbs="breadcrumbs" />
             </template>
@@ -45,51 +51,71 @@ onClickOutside(langDropdownRef, () => {
             <div class="relative" ref="langDropdownRef">
                 <button
                     @click="langOpen = !langOpen"
-                    class="flex items-center gap-1.5 rounded-lg bg-emerald-800 px-3 py-1.5 hover:bg-emerald-750 transition cursor-pointer text-xs text-white font-medium dark:bg-emerald-900 dark:hover:bg-emerald-850"
+                    class="hover:bg-emerald-750 dark:hover:bg-emerald-850 flex cursor-pointer items-center gap-1.5 rounded-lg bg-emerald-800 px-3 py-1.5 text-xs font-medium text-white transition dark:bg-emerald-900"
                 >
                     <Globe class="h-3.5 w-3.5 text-emerald-300" />
                     <span>{{ selectedLang }}</span>
                     <ChevronDown class="h-3 w-3 text-emerald-400" />
                 </button>
-                
+
                 <div
                     v-if="langOpen"
-                    class="absolute right-0 mt-1 w-28 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-1 shadow-md z-30"
+                    class="absolute right-0 z-30 mt-1 w-28 rounded-lg border border-neutral-200 bg-white p-1 shadow-md dark:border-neutral-800 dark:bg-neutral-900"
                 >
                     <button
                         v-for="lang in languages"
                         :key="lang"
-                        @click="selectedLang = lang; langOpen = false"
-                        class="flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-[11px] text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-850 cursor-pointer"
+                        @click="
+                            selectedLang = lang;
+                            langOpen = false;
+                        "
+                        class="dark:hover:bg-neutral-850 flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1 text-left text-[11px] text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300"
                     >
                         <span>{{ lang }}</span>
-                        <Check v-if="selectedLang === lang" class="h-2.5 w-2.5 text-emerald-500" />
+                        <Check
+                            v-if="selectedLang === lang"
+                            class="h-2.5 w-2.5 text-emerald-500"
+                        />
                     </button>
                 </div>
             </div>
 
             <!-- Theme Selector (Segmented Control) -->
-            <div class="flex items-center gap-0.5 rounded-lg bg-emerald-950 p-0.5 border border-emerald-500/20 shadow-xs dark:bg-neutral-900/60">
+            <div
+                class="flex items-center gap-0.5 rounded-lg border border-emerald-500/20 bg-emerald-950 p-0.5 shadow-xs dark:bg-neutral-900/60"
+            >
                 <button
                     @click="updateAppearance('light')"
-                    :class="appearance === 'light' ? 'bg-emerald-800 text-amber-300 shadow-xs dark:bg-emerald-900' : 'text-emerald-400/80 hover:text-emerald-350'"
-                    class="flex h-6 w-6 items-center justify-center rounded-md cursor-pointer transition duration-200"
+                    :class="
+                        appearance === 'light'
+                            ? 'bg-emerald-800 text-amber-300 shadow-xs dark:bg-emerald-900'
+                            : 'hover:text-emerald-350 text-emerald-400/80'
+                    "
+                    class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md transition duration-200"
                     title="Light Mode"
                 >
                     <Sun class="h-3.5 w-3.5" />
                 </button>
                 <button
                     @click="updateAppearance('system')"
-                    :class="appearance === 'system' ? 'bg-emerald-800 text-blue-300 shadow-xs dark:bg-emerald-900' : 'text-emerald-400/80 hover:text-emerald-350'"
-                    class="flex h-6 w-6 items-center justify-center rounded-md cursor-pointer transition duration-200"
+                    :class="
+                        appearance === 'system'
+                            ? 'bg-emerald-800 text-blue-300 shadow-xs dark:bg-emerald-900'
+                            : 'hover:text-emerald-350 text-emerald-400/80'
+                    "
+                    class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md transition duration-200"
                     title="System Mode"
                 >
                     <Monitor class="h-3.5 w-3.5" />
                 </button>
                 <button
                     @click="updateAppearance('dark')"
-                    :class="appearance === 'dark' ? 'bg-emerald-800 text-emerald-300 shadow-xs dark:bg-emerald-900' : 'text-emerald-400/80 hover:text-emerald-350'"
-                    class="flex h-6 w-6 items-center justify-center rounded-md cursor-pointer transition duration-200"
+                    :class="
+                        appearance === 'dark'
+                            ? 'bg-emerald-800 text-emerald-300 shadow-xs dark:bg-emerald-900'
+                            : 'hover:text-emerald-350 text-emerald-400/80'
+                    "
+                    class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md transition duration-200"
                     title="Dark Mode"
                 >
                     <Moon class="h-3.5 w-3.5" />

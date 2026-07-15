@@ -33,6 +33,8 @@ import type {
     TeamMember,
     TeamPermissions,
 } from '@/types';
+import { route } from '@/lib/route';
+
 
 type Props = {
     team: Team;
@@ -75,12 +77,14 @@ const pageTitle = computed(() =>
 );
 
 const updateMemberRole = (member: TeamMember, newRole: string) => {
-    router.visit(route('teams.members.update', [props.team.slug, member.id]).url, {
-        data: { role: newRole },
-        preserveScroll: true,
-    });
+    router.visit(
+        route('teams.members.update', [props.team.slug, member.id]).url,
+        {
+            data: { role: newRole },
+            preserveScroll: true,
+        },
+    );
 };
-
 
 const confirmRemoveMember = (member: TeamMember) => {
     memberToRemove.value = member;

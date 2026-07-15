@@ -32,6 +32,7 @@ class Business extends Model
         'print_receipt_on_invoice',
         'receipt_printer_type',
         'receipt_printer_ip',
+        'enabled_modules',
     ];
 
     protected $casts = [
@@ -39,6 +40,7 @@ class Business extends Model
         'is_active' => 'boolean',
         'enable_bnpl' => 'boolean',
         'print_receipt_on_invoice' => 'boolean',
+        'enabled_modules' => 'array',
     ];
 
     /**
@@ -71,5 +73,13 @@ class Business extends Model
     public function products(): HasMany
     {
         return $this->hasMany(Product::class, 'business_id');
+    }
+
+    /**
+     * Get all settings for this business
+     */
+    public function settings(): HasMany
+    {
+        return $this->hasMany(Setting::class, 'business_id');
     }
 }

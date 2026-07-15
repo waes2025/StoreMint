@@ -31,10 +31,36 @@ const sidebarNavItems = computed<NavItem[]>(() => {
     ];
 
     const userType = page.props.auth.user?.user_type;
+    const enabledModules = (page.props.enabled_modules as string[]) || [];
+    const isCartEnabled = enabledModules.includes('Cart');
+
     if (userType === 'admin' || userType === 'user') {
+        const moduleMenus = (page.props.module_menus as any[]) || [];
+        const settingsMenus = moduleMenus.filter(m => m.type === 'settings');
+        for (const menu of settingsMenus) {
+            try {
+                const resolvedHref = menu.route ? route(menu.route).url : menu.href;
+                items.push({
+                    title: menu.title,
+                    href: resolvedHref,
+                });
+            } catch (e) {
+                items.push({
+                    title: menu.title,
+                    href: menu.href || '#',
+                });
+            }
+        }
+
+        if (isCartEnabled) {
+            items.push({
+                title: 'Announcement',
+                href: route('announcement.edit').url,
+            });
+        }
         items.push({
-            title: 'Gateways',
-            href: route('gateways.edit').url,
+            title: 'Modules',
+            href: route('modules.edit').url,
         });
     }
 
@@ -42,7 +68,6 @@ const sidebarNavItems = computed<NavItem[]>(() => {
 });
 
 const { isCurrentOrParentUrl } = useCurrentUrl();
-
 </script>
 
 <template>

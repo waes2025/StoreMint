@@ -23,6 +23,7 @@ declare module '@inertiajs/core' {
             sidebarOpen: boolean;
             currentTeam: Team | null;
             teams: Team[];
+            enabled_modules: string[];
             [key: string]: unknown;
         };
     }
@@ -43,5 +44,3 @@ declare global {
         route: typeof route;
     }
 }
-
-

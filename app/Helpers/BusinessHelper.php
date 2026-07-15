@@ -2,20 +2,19 @@
 
 /**
  * Global helper functions for business and location selection
- * 
+ *
  * These functions provide convenient access to the BusinessContextService
  * for managing business and location context throughout the application.
  */
 
-use App\Services\BusinessContextService;
 use App\Models\Business;
 use App\Models\BusinessLocation;
+use App\Services\BusinessContextService;
+use Illuminate\Database\Eloquent\Collection;
 
-if (!function_exists('currentBusiness')) {
+if (! function_exists('currentBusiness')) {
     /**
      * Get the currently selected business
-     * 
-     * @return Business|null
      */
     function currentBusiness(): ?Business
     {
@@ -23,11 +22,9 @@ if (!function_exists('currentBusiness')) {
     }
 }
 
-if (!function_exists('currentBusinessId')) {
+if (! function_exists('currentBusinessId')) {
     /**
      * Get the currently selected business ID
-     * 
-     * @return int|null
      */
     function currentBusinessId(): ?int
     {
@@ -35,12 +32,9 @@ if (!function_exists('currentBusinessId')) {
     }
 }
 
-if (!function_exists('setCurrentBusiness')) {
+if (! function_exists('setCurrentBusiness')) {
     /**
      * Set the current business in session
-     * 
-     * @param Business|int $business
-     * @return Business
      */
     function setCurrentBusiness(Business|int $business): Business
     {
@@ -48,11 +42,9 @@ if (!function_exists('setCurrentBusiness')) {
     }
 }
 
-if (!function_exists('currentLocation')) {
+if (! function_exists('currentLocation')) {
     /**
      * Get the currently selected business location
-     * 
-     * @return BusinessLocation|null
      */
     function currentLocation(): ?BusinessLocation
     {
@@ -60,11 +52,9 @@ if (!function_exists('currentLocation')) {
     }
 }
 
-if (!function_exists('currentLocationId')) {
+if (! function_exists('currentLocationId')) {
     /**
      * Get the currently selected business location ID
-     * 
-     * @return int|null
      */
     function currentLocationId(): ?int
     {
@@ -72,13 +62,10 @@ if (!function_exists('currentLocationId')) {
     }
 }
 
-if (!function_exists('setCurrentLocation')) {
+if (! function_exists('setCurrentLocation')) {
     /**
      * Set the current business location in session
      * Must belong to the currently selected business
-     * 
-     * @param BusinessLocation|int $location
-     * @return BusinessLocation
      */
     function setCurrentLocation(BusinessLocation|int $location): BusinessLocation
     {
@@ -86,11 +73,11 @@ if (!function_exists('setCurrentLocation')) {
     }
 }
 
-if (!function_exists('availableBusinesses')) {
+if (! function_exists('availableBusinesses')) {
     /**
      * Get all businesses for the current user
-     * 
-     * @return \Illuminate\Database\Eloquent\Collection
+     *
+     * @return Collection
      */
     function availableBusinesses()
     {
@@ -98,11 +85,11 @@ if (!function_exists('availableBusinesses')) {
     }
 }
 
-if (!function_exists('availableLocations')) {
+if (! function_exists('availableLocations')) {
     /**
      * Get all locations for the currently selected business
-     * 
-     * @return \Illuminate\Database\Eloquent\Collection
+     *
+     * @return Collection
      */
     function availableLocations()
     {
@@ -110,11 +97,9 @@ if (!function_exists('availableLocations')) {
     }
 }
 
-if (!function_exists('hasCurrentBusiness')) {
+if (! function_exists('hasCurrentBusiness')) {
     /**
      * Check if business is currently selected
-     * 
-     * @return bool
      */
     function hasCurrentBusiness(): bool
     {
@@ -122,11 +107,9 @@ if (!function_exists('hasCurrentBusiness')) {
     }
 }
 
-if (!function_exists('hasCurrentLocation')) {
+if (! function_exists('hasCurrentLocation')) {
     /**
      * Check if location is currently selected
-     * 
-     * @return bool
      */
     function hasCurrentLocation(): bool
     {
@@ -134,11 +117,9 @@ if (!function_exists('hasCurrentLocation')) {
     }
 }
 
-if (!function_exists('clearBusinessContext')) {
+if (! function_exists('clearBusinessContext')) {
     /**
      * Clear all business context (business and location)
-     * 
-     * @return void
      */
     function clearBusinessContext(): void
     {
@@ -146,11 +127,9 @@ if (!function_exists('clearBusinessContext')) {
     }
 }
 
-if (!function_exists('businessContext')) {
+if (! function_exists('businessContext')) {
     /**
      * Get full business context data for use in views/API responses
-     * 
-     * @return array
      */
     function businessContext(): array
     {

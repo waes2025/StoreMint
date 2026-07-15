@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Settings;
 
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Services\BusinessContextService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class HeroSlidesController extends Controller
@@ -13,7 +15,11 @@ class HeroSlidesController extends Controller
      */
     public function edit(Request $request)
     {
-        $setting = \Illuminate\Support\Facades\DB::table('system')->where('key', 'hero_slides')->first();
+        $businessId = BusinessContextService::getCurrentBusinessId() ?: ($request->user()->business_id ?? 1);
+        $setting = DB::table('settings')
+            ->where('business_id', $businessId)
+            ->where('key', 'hero_slides')
+            ->first();
         $slides = [];
         if ($setting) {
             $slides = json_decode($setting->value, true) ?: [];
@@ -40,10 +46,11 @@ class HeroSlidesController extends Controller
 
         $slides = $data['slides'];
 
-        \Illuminate\Support\Facades\DB::table('system')
+        $businessId = BusinessContextService::getCurrentBusinessId() ?: ($request->user()->business_id ?? 1);
+        DB::table('settings')
             ->updateOrInsert(
-                ['key' => 'hero_slides'],
-                ['value' => json_encode($slides)]
+                ['business_id' => $businessId, 'key' => 'hero_slides'],
+                ['value' => json_encode($slides), 'updated_at' => now()]
             );
 
         return redirect()->back()->with('success', 'Hero slides updated.');

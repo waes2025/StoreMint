@@ -70,21 +70,15 @@ return new class extends Migration
                     $table->text('combo_variations')->nullable();
                 }
 
-                // Moved from products table
+                // Storefront ECOM extra fields
                 if (! Schema::hasColumn('variations', 'slug')) {
                     $table->string('slug', 191)->nullable()->unique();
                 }
                 if (! Schema::hasColumn('variations', 'compare_at_price')) {
                     $table->decimal('compare_at_price', 20, 2)->nullable();
                 }
-                if (! Schema::hasColumn('variations', 'short_description')) {
-                    $table->text('short_description')->nullable();
-                }
                 if (! Schema::hasColumn('variations', 'is_best_seller')) {
                     $table->boolean('is_best_seller')->default(false);
-                }
-                if (! Schema::hasColumn('variations', 'description')) {
-                    $table->text('description')->nullable();
                 }
 
                 $table->softDeletes();

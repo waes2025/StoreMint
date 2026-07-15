@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\Settings\AnnouncementController;
 use App\Http\Controllers\Settings\AppearanceController;
-use App\Http\Controllers\Settings\GatewaysController;
+use App\Http\Controllers\Settings\HeroSlidesController;
+use App\Http\Controllers\Settings\ModulesController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use App\Http\Controllers\Teams\TeamController;
@@ -28,14 +30,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('user-password.update');
 
     Route::get('settings/appearance', [AppearanceController::class, 'edit'])->name('appearance.edit');
-    Route::patch('settings/appearance', [AppearanceController::class, 'update'])->name('appearance.update');
 
-    Route::get('settings/gateways', [GatewaysController::class, 'edit'])->name('gateways.edit');
-    Route::patch('settings/gateways', [GatewaysController::class, 'update'])->name('gateways.update');
+    Route::get('settings/announcement', [AnnouncementController::class, 'edit'])->name('announcement.edit');
+    Route::patch('settings/announcement', [AnnouncementController::class, 'update'])->name('announcement.update');
 
     // Hero slides managed by admin
-    Route::get('settings/hero-slides', [\App\Http\Controllers\Settings\HeroSlidesController::class, 'edit'])->name('settings.hero-slides.edit');
-    Route::patch('settings/hero-slides', [\App\Http\Controllers\Settings\HeroSlidesController::class, 'update'])->name('settings.hero-slides.update');
+    Route::get('settings/hero-slides', [HeroSlidesController::class, 'edit'])->name('settings.hero-slides.edit');
+    Route::patch('settings/hero-slides', [HeroSlidesController::class, 'update'])->name('settings.hero-slides.update');
+
+    // Modules settings
+    Route::get('settings/modules', [ModulesController::class, 'edit'])->name('modules.edit');
+    Route::patch('settings/modules', [ModulesController::class, 'update'])->name('modules.update');
+    Route::post('settings/modules/install', [ModulesController::class, 'install'])->name('modules.install');
+    Route::post('settings/modules/upload', [ModulesController::class, 'upload'])->name('modules.upload');
+    Route::post('settings/modules/uninstall', [ModulesController::class, 'uninstall'])->name('modules.uninstall');
+    Route::post('settings/modules/enable', [ModulesController::class, 'enable'])->name('modules.enable');
+    Route::post('settings/modules/disable', [ModulesController::class, 'disable'])->name('modules.disable');
 
     Route::get('settings/teams', [TeamController::class, 'index'])->name('teams.index');
     Route::post('settings/teams', [TeamController::class, 'store'])->name('teams.store');

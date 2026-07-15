@@ -51,8 +51,8 @@ const labels = {
         password: 'Mot de passe',
         remember: 'Se souvenir de moi',
         loginBtn: 'Connexion',
-        noAccount: 'Vous n\'avez pas de compte ?',
-        register: 'S\'inscrire',
+        noAccount: "Vous n'avez pas de compte ?",
+        register: "S'inscrire",
         forgot: 'Mot de passe oublie ?',
     },
     German: {
@@ -72,7 +72,7 @@ const labels = {
         noAccount: 'অ্যাকাউন্ট নেই?',
         register: 'নিবন্ধন করুন',
         forgot: 'পাসওয়ার্ড ভুলে গেছেন?',
-    }
+    },
 };
 
 const currentText = computed(() => {
@@ -84,15 +84,19 @@ const handleEmailInput = (e: Event) => {
     if (input.value.toLowerCase().trim() === 'customer login') {
         input.value = 'sarah@example.com';
         input.dispatchEvent(new Event('input', { bubbles: true }));
-        
-        const passwordInput = document.getElementById('password') as HTMLInputElement;
+
+        const passwordInput = document.getElementById(
+            'password',
+        ) as HTMLInputElement;
         if (passwordInput) {
             passwordInput.value = 'password';
             passwordInput.dispatchEvent(new Event('input', { bubbles: true }));
         }
-        
+
         setTimeout(() => {
-            const submitBtn = document.querySelector('button[type="submit"]') as HTMLButtonElement;
+            const submitBtn = document.querySelector(
+                'button[type="submit"]',
+            ) as HTMLButtonElement;
             if (submitBtn) {
                 submitBtn.click();
             }
@@ -125,7 +129,11 @@ const handleEmailInput = (e: Event) => {
     >
         <div class="grid gap-6">
             <div class="grid gap-2">
-                <Label for="email" class="text-neutral-700 dark:text-neutral-300 font-semibold text-xs">{{ currentText.email }}</Label>
+                <Label
+                    for="email"
+                    class="text-xs font-semibold text-neutral-700 dark:text-neutral-300"
+                    >{{ currentText.email }}</Label
+                >
                 <Input
                     id="email"
                     type="text"
@@ -143,11 +151,15 @@ const handleEmailInput = (e: Event) => {
 
             <div class="grid gap-2">
                 <div class="flex items-center justify-between">
-                    <Label for="password" class="text-neutral-700 dark:text-neutral-300 font-semibold text-xs">{{ currentText.password }}</Label>
+                    <Label
+                        for="password"
+                        class="text-xs font-semibold text-neutral-700 dark:text-neutral-300"
+                        >{{ currentText.password }}</Label
+                    >
                     <Link
                         v-if="canResetPassword"
                         :href="route('password.request').url"
-                        class="text-xs font-semibold text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors"
+                        class="text-xs font-semibold text-emerald-600 transition-colors hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300"
                         :tabindex="5"
                     >
                         {{ currentText.forgot }}
@@ -166,12 +178,15 @@ const handleEmailInput = (e: Event) => {
             </div>
 
             <div class="flex items-center justify-between">
-                <Label for="remember" class="flex items-center space-x-3 text-neutral-600 dark:text-neutral-400 text-xs font-medium cursor-pointer select-none">
-                    <Checkbox 
-                        id="remember" 
-                        name="remember" 
-                        :tabindex="3" 
-                        class="data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 focus-visible:border-emerald-500 focus-visible:ring-emerald-500/20" 
+                <Label
+                    for="remember"
+                    class="flex cursor-pointer items-center space-x-3 text-xs font-medium text-neutral-600 select-none dark:text-neutral-400"
+                >
+                    <Checkbox
+                        id="remember"
+                        name="remember"
+                        :tabindex="3"
+                        class="focus-visible:border-emerald-500 focus-visible:ring-emerald-500/20 data-[state=checked]:border-emerald-600 data-[state=checked]:bg-emerald-600"
                     />
                     <span>{{ currentText.remember }}</span>
                 </Label>
@@ -179,7 +194,7 @@ const handleEmailInput = (e: Event) => {
 
             <Button
                 type="submit"
-                class="mt-4 w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/20 transition-all duration-300 border-none cursor-pointer"
+                class="mt-4 w-full cursor-pointer border-none bg-gradient-to-r from-emerald-600 to-teal-600 font-bold text-white shadow-md shadow-emerald-500/10 transition-all duration-300 hover:from-emerald-500 hover:to-teal-500 hover:shadow-emerald-500/20"
                 :tabindex="4"
                 :disabled="processing"
                 data-test="login-button"
@@ -191,9 +206,9 @@ const handleEmailInput = (e: Event) => {
 
         <div class="text-center text-xs text-neutral-500">
             {{ currentText.noAccount }}
-            <Link 
-                :href="route('register').url" 
-                class="font-semibold text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors underline decoration-emerald-500/30 hover:decoration-emerald-500 underline-offset-4"
+            <Link
+                :href="route('register').url"
+                class="font-semibold text-emerald-600 underline decoration-emerald-500/30 underline-offset-4 transition-colors hover:text-emerald-500 hover:decoration-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300"
             >
                 {{ currentText.register }}
             </Link>

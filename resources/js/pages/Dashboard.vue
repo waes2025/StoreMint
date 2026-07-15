@@ -2,27 +2,31 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import PendingInvitationsModal from '@/components/PendingInvitationsModal.vue';
-import { 
-    TrendingUp, 
-    TrendingDown, 
-    DollarSign, 
-    ShoppingBag, 
-    Tag, 
-    AlertTriangle, 
-    Search, 
-    Filter, 
-    Plus, 
-    Edit, 
-    Check, 
-    X, 
-    Percent, 
-    Calendar, 
-    ArrowUpRight, 
-    Activity, 
-    FileText, 
-    Settings, 
-    Users, 
-    CheckCircle2, 
+import CouponsManager from '../../../Modules/Cart/resources/assets/js/components/CouponsManager.vue';
+import OrdersManager from '../../../Modules/Cart/resources/assets/js/components/OrdersManager.vue';
+import CartManager from '../../../Modules/Cart/resources/assets/js/components/CartManager.vue';
+import PaymentsTable from '../../../Modules/Cart/resources/assets/js/components/PaymentsTable.vue';
+import {
+    TrendingUp,
+    TrendingDown,
+    DollarSign,
+    ShoppingBag,
+    Tag,
+    AlertTriangle,
+    Search,
+    Filter,
+    Plus,
+    Edit,
+    Check,
+    X,
+    Percent,
+    Calendar,
+    ArrowUpRight,
+    Activity,
+    FileText,
+    Settings,
+    Users,
+    CheckCircle2,
     Trash2,
     Eye,
     Package,
@@ -35,7 +39,11 @@ import {
     PercentCircle,
     Printer,
     LifeBuoy,
-    MessageSquare
+    MessageSquare,
+    Truck,
+    MapPin,
+    ClipboardList,
+    ExternalLink,
 } from '@lucide/vue';
 import type { DashboardInvitation, Team } from '@/types';
 
@@ -68,6 +76,12 @@ interface Props {
         gateway: string;
         status: string;
         payment_status?: string;
+        shipping_status?: string;
+        tracking_number?: string | null;
+        tracking_url?: string | null;
+        courier?: string | null;
+        shipped_at?: string | null;
+        delivered_at?: string | null;
         subtotal?: number;
         tax?: number;
         discount?: number;
@@ -107,6 +121,18 @@ interface Props {
         paid_on: string;
         status: string;
     }>;
+    carts?: Array<{
+        id: number;
+        customer: string;
+        items_count: number;
+        total: number;
+        last_active: string;
+        items: Array<{
+            product_name: string;
+            quantity: number;
+            price: number;
+        }>;
+    }>;
 }
 
 const props = defineProps<Props>();
@@ -114,13 +140,25 @@ const props = defineProps<Props>();
 const page = usePage();
 const authUser = computed(() => page.props.auth?.user);
 
+const isShipmentEnabled = computed(() => {
+    const enabledModules = (page.props.enabled_modules as string[]) || [];
+    return enabledModules.includes('Shipment');
+});
+
+const isCartEnabled = computed(() => {
+    const enabledModules = (page.props.enabled_modules as string[]) || [];
+    return enabledModules.includes('Cart');
+});
+
 // Breadcrumbs definition for layout
 defineOptions({
     layout: (props: { currentTeam?: Team | null }) => ({
         breadcrumbs: [
             {
                 title: 'Dashboard',
-                href: props.currentTeam ? `/${props.currentTeam.slug}/dashboard` : '/dashboard',
+                href: props.currentTeam
+                    ? `/${props.currentTeam.slug}/dashboard`
+                    : '/dashboard',
             },
         ],
     }),
@@ -157,13 +195,32 @@ const searchQuery = ref('');
 const filterStatus = ref('All');
 
 // TABS state
-const activeTab = ref<'overview' | 'products' | 'orders' | 'coupons' | 'payments'>('overview');
-const customerTab = ref<'home' | 'orders' | 'invoices' | 'support' | 'profile' | 'coupons'>('home');
+const activeTab = ref<
+    'overview' | 'products' | 'orders' | 'coupons' | 'payments' | 'carts'
+>('overview');
+const customerTab = ref<
+    'home' | 'orders' | 'invoices' | 'support' | 'profile' | 'coupons'
+>('home');
 
 // Support Desk tickets state
 const supportTickets = ref([
-    { id: 'TKT-8241', category: 'Delivery Issue', orderId: 'ORD-100201', message: 'The package has not arrived yet. Tracking says it is still in warehouse.', status: 'Open', date: 'Jul 08, 2026' },
-    { id: 'TKT-3912', category: 'Billing Inquiry', orderId: 'ORD-100202', message: 'Double charged for the order shipping. Please review.', status: 'Resolved', date: 'Jul 05, 2026' }
+    {
+        id: 'TKT-8241',
+        category: 'Delivery Issue',
+        orderId: 'ORD-100201',
+        message:
+            'The package has not arrived yet. Tracking says it is still in warehouse.',
+        status: 'Open',
+        date: 'Jul 08, 2026',
+    },
+    {
+        id: 'TKT-3912',
+        category: 'Billing Inquiry',
+        orderId: 'ORD-100202',
+        message: 'Double charged for the order shipping. Please review.',
+        status: 'Resolved',
+        date: 'Jul 05, 2026',
+    },
 ]);
 
 const supportCategory = ref('Delivery Issue');
@@ -175,31 +232,50 @@ const handleCreateTicket = () => {
         triggerToast('⚠️ Please write a message for your support ticket.');
         return;
     }
-    
+
     const newTktId = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
-    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-    
+    const today = new Date().toLocaleDateString('en-US', {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+    });
+
     supportTickets.value.unshift({
         id: newTktId,
         category: supportCategory.value,
         orderId: supportOrder.value || 'None',
         message: supportMessage.value,
         status: 'Open',
-        date: today
+        date: today,
     });
-    
-    supportMessage.value = '';
-    triggerToast(`💬 Support ticket ${newTktId} submitted! Our team will contact you shortly.`);
-};
 
+    supportMessage.value = '';
+    triggerToast(
+        `💬 Support ticket ${newTktId} submitted! Our team will contact you shortly.`,
+    );
+};
 
 // Synchronize tab and display a toast for coming soon modules
 const syncParams = () => {
     if (typeof window === 'undefined') return;
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get('tab');
-    if (tabParam && ['overview', 'products', 'orders', 'coupons', 'payments'].includes(tabParam)) {
-        activeTab.value = tabParam as any;
+    if (
+        tabParam &&
+        ['overview', 'products', 'orders', 'coupons', 'payments', 'carts'].includes(
+            tabParam,
+        )
+    ) {
+        if (
+            (tabParam === 'orders' ||
+                tabParam === 'coupons' ||
+                tabParam === 'carts') &&
+            !isCartEnabled.value
+        ) {
+            activeTab.value = 'overview';
+        } else {
+            activeTab.value = tabParam as any;
+        }
     }
     const featureParam = urlParams.get('feature');
     if (urlParams.get('tab') === 'coming_soon' && featureParam) {
@@ -225,7 +301,7 @@ const editCoupon = ref({
     minOrderAmount: 0,
     usageLimit: 100,
     expiresAt: '',
-    status: 'active' as 'active' | 'inactive'
+    status: 'active' as 'active' | 'inactive',
 });
 
 // Invoice View State
@@ -249,7 +325,7 @@ const newCoupon = ref({
     minOrderAmount: 0,
     usageLimit: 100,
     expiresAt: '',
-    status: 'active' as 'active' | 'inactive'
+    status: 'active' as 'active' | 'inactive',
 });
 
 interface ValidationErrors {
@@ -266,12 +342,17 @@ const updateProductStock = (productId: number, newStock: number) => {
         triggerToast('⚠️ No team context found. Please refresh the page.');
         return;
     }
-    router.post(`/${currentTeamSlug.value}/dashboard/products/${productId}/stock`, {
-        stock: newStock
-    }, {
-        preserveScroll: true,
-        onSuccess: () => triggerToast("📦 Stock level updated successfully!")
-    });
+    router.post(
+        `/${currentTeamSlug.value}/dashboard/products/${productId}/stock`,
+        {
+            stock: newStock,
+        },
+        {
+            preserveScroll: true,
+            onSuccess: () =>
+                triggerToast('📦 Stock level updated successfully!'),
+        },
+    );
 };
 
 const shipOrder = (dbId: number) => {
@@ -279,10 +360,14 @@ const shipOrder = (dbId: number) => {
         triggerToast('⚠️ No team context found. Please refresh the page.');
         return;
     }
-    router.post(`/${currentTeamSlug.value}/dashboard/orders/${dbId}/ship`, {}, {
-        preserveScroll: true,
-        onSuccess: () => triggerToast("🚚 Order marked as shipped!")
-    });
+    router.post(
+        `/${currentTeamSlug.value}/dashboard/orders/${dbId}/ship`,
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => triggerToast('🚚 Order marked as shipped!'),
+        },
+    );
 };
 
 const cancelOrder = (dbId: number) => {
@@ -290,60 +375,145 @@ const cancelOrder = (dbId: number) => {
         triggerToast('⚠️ No team context found. Please refresh the page.');
         return;
     }
-    router.post(`/${currentTeamSlug.value}/dashboard/orders/${dbId}/cancel`, {}, {
-        preserveScroll: true,
-        onSuccess: () => triggerToast("❌ Order cancelled.")
-    });
+    router.post(
+        `/${currentTeamSlug.value}/dashboard/orders/${dbId}/cancel`,
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => triggerToast('❌ Order cancelled.'),
+        },
+    );
 };
+
+// ── SHIPPING MODAL ─────────────────────────────────────────────────────────
+const showShippingModal = ref(false);
+const shippingOrder = ref<any | null>(null);
+const shippingForm = ref({
+    shipping_status: 'ordered' as string,
+    tracking_number: '',
+    tracking_url: '',
+    courier: '',
+});
+
+const shippingStatusOptions = [
+    { value: 'ordered', label: '📋 Ordered', color: 'text-blue-600' },
+    { value: 'packed', label: '📦 Packed', color: 'text-indigo-600' },
+    { value: 'shipped', label: '🚚 Shipped', color: 'text-amber-600' },
+    { value: 'delivered', label: '✅ Delivered', color: 'text-emerald-600' },
+    { value: 'cancelled', label: '❌ Cancelled', color: 'text-red-600' },
+];
+
+const openShippingModal = (order: any) => {
+    shippingOrder.value = order;
+    shippingForm.value = {
+        shipping_status: order.shipping_status || 'ordered',
+        tracking_number: order.tracking_number || '',
+        tracking_url: order.tracking_url || '',
+        courier: order.courier || '',
+    };
+    showShippingModal.value = true;
+};
+
+const closeShippingModal = () => {
+    showShippingModal.value = false;
+    shippingOrder.value = null;
+};
+
+const submitShipping = () => {
+    if (!currentTeamSlug.value || !shippingOrder.value?.db_id) return;
+    router.post(
+        `/${currentTeamSlug.value}/dashboard/orders/${shippingOrder.value.db_id}/shipping`,
+        { ...shippingForm.value },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                closeShippingModal();
+                triggerToast('🚚 Shipping status updated!');
+            },
+        },
+    );
+};
+
+// Shipping status helpers
+const shippingSteps = ['ordered', 'packed', 'shipped', 'delivered'];
+const shippingStepIndex = (status: string | undefined) =>
+    shippingSteps.indexOf(status || 'ordered');
+const shippingStatusLabel = (s: string | undefined) =>
+    ({
+        ordered: 'Order Placed',
+        packed: 'Packed',
+        shipped: 'Shipped',
+        delivered: 'Delivered',
+        cancelled: 'Cancelled',
+    })[s ?? 'ordered'] ?? s;
+const shippingStatusColor = (s: string | undefined) =>
+    ({
+        ordered:
+            'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400',
+        packed: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-400',
+        shipped:
+            'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400',
+        delivered:
+            'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400',
+        cancelled: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400',
+    })[s ?? 'ordered'] ?? 'bg-neutral-100 text-neutral-500';
+// ──────────────────────────────────────────────────────────────────────────
 
 const handleCreateCoupon = () => {
     formErrors.value = {};
     let hasError = false;
 
     if (!newCoupon.value.code.trim()) {
-        formErrors.value.code = "Coupon code is required.";
+        formErrors.value.code = 'Coupon code is required.';
         hasError = true;
     }
 
     if (newCoupon.value.discountValue <= 0) {
-        formErrors.value.discountValue = "Value must be positive.";
+        formErrors.value.discountValue = 'Value must be positive.';
         hasError = true;
-    } else if (newCoupon.value.discountType === 'percentage' && newCoupon.value.discountValue > 100) {
-        formErrors.value.discountValue = "Percentage cannot exceed 100%.";
+    } else if (
+        newCoupon.value.discountType === 'percentage' &&
+        newCoupon.value.discountValue > 100
+    ) {
+        formErrors.value.discountValue = 'Percentage cannot exceed 100%.';
         hasError = true;
     }
 
     if (newCoupon.value.minOrderAmount < 0) {
-        formErrors.value.minOrderAmount = "Minimum order cannot be negative.";
+        formErrors.value.minOrderAmount = 'Minimum order cannot be negative.';
         hasError = true;
     }
 
     if (hasError) return;
 
-    router.post(`/${currentTeamSlug.value}/dashboard/coupons`, {
-        code: newCoupon.value.code.trim().toUpperCase(),
-        discountType: newCoupon.value.discountType,
-        discountValue: newCoupon.value.discountValue,
-        minOrderAmount: newCoupon.value.minOrderAmount,
-        usageLimit: newCoupon.value.usageLimit,
-        expiresAt: newCoupon.value.expiresAt || null,
-        status: newCoupon.value.status
-    }, {
-        preserveScroll: true,
-        onSuccess: () => {
-            showCreateCouponModal.value = false;
-            newCoupon.value = {
-                code: '',
-                discountType: 'percentage',
-                discountValue: 10,
-                minOrderAmount: 0,
-                usageLimit: 100,
-                expiresAt: '',
-                status: 'active'
-            };
-            triggerToast("🎉 Coupon created successfully!");
-        }
-    });
+    router.post(
+        `/${currentTeamSlug.value}/dashboard/coupons`,
+        {
+            code: newCoupon.value.code.trim().toUpperCase(),
+            discountType: newCoupon.value.discountType,
+            discountValue: newCoupon.value.discountValue,
+            minOrderAmount: newCoupon.value.minOrderAmount,
+            usageLimit: newCoupon.value.usageLimit,
+            expiresAt: newCoupon.value.expiresAt || null,
+            status: newCoupon.value.status,
+        },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showCreateCouponModal.value = false;
+                newCoupon.value = {
+                    code: '',
+                    discountType: 'percentage',
+                    discountValue: 10,
+                    minOrderAmount: 0,
+                    usageLimit: 100,
+                    expiresAt: '',
+                    status: 'active',
+                };
+                triggerToast('🎉 Coupon created successfully!');
+            },
+        },
+    );
 };
 
 const openEditCouponModal = (coupon: any) => {
@@ -355,7 +525,7 @@ const openEditCouponModal = (coupon: any) => {
         minOrderAmount: coupon.minOrderAmount,
         usageLimit: coupon.usageLimit,
         expiresAt: coupon.expiresAt === 'Never' ? '' : coupon.expiresAt,
-        status: coupon.status
+        status: coupon.status,
     };
     formErrors.value = {};
     showEditCouponModal.value = true;
@@ -366,54 +536,65 @@ const handleUpdateCoupon = () => {
     let hasError = false;
 
     if (!editCoupon.value.code.trim()) {
-        formErrors.value.code = "Coupon code is required.";
+        formErrors.value.code = 'Coupon code is required.';
         hasError = true;
     }
 
     if (editCoupon.value.discountValue <= 0) {
-        formErrors.value.discountValue = "Value must be positive.";
+        formErrors.value.discountValue = 'Value must be positive.';
         hasError = true;
-    } else if (editCoupon.value.discountType === 'percentage' && editCoupon.value.discountValue > 100) {
-        formErrors.value.discountValue = "Percentage cannot exceed 100%.";
+    } else if (
+        editCoupon.value.discountType === 'percentage' &&
+        editCoupon.value.discountValue > 100
+    ) {
+        formErrors.value.discountValue = 'Percentage cannot exceed 100%.';
         hasError = true;
     }
 
     if (editCoupon.value.minOrderAmount < 0) {
-        formErrors.value.minOrderAmount = "Minimum order cannot be negative.";
+        formErrors.value.minOrderAmount = 'Minimum order cannot be negative.';
         hasError = true;
     }
 
     if (hasError) return;
 
-    router.put(`/${currentTeamSlug.value}/dashboard/coupons/${editingCouponId.value}`, {
-        code: editCoupon.value.code.trim().toUpperCase(),
-        discountType: editCoupon.value.discountType,
-        discountValue: editCoupon.value.discountValue,
-        minOrderAmount: editCoupon.value.minOrderAmount,
-        usageLimit: editCoupon.value.usageLimit,
-        expiresAt: editCoupon.value.expiresAt || null,
-        status: editCoupon.value.status
-    }, {
-        preserveScroll: true,
-        onSuccess: () => {
-            showEditCouponModal.value = false;
-            editingCouponId.value = null;
-            triggerToast("🎉 Coupon updated successfully!");
-        }
-    });
+    router.put(
+        `/${currentTeamSlug.value}/dashboard/coupons/${editingCouponId.value}`,
+        {
+            code: editCoupon.value.code.trim().toUpperCase(),
+            discountType: editCoupon.value.discountType,
+            discountValue: editCoupon.value.discountValue,
+            minOrderAmount: editCoupon.value.minOrderAmount,
+            usageLimit: editCoupon.value.usageLimit,
+            expiresAt: editCoupon.value.expiresAt || null,
+            status: editCoupon.value.status,
+        },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showEditCouponModal.value = false;
+                editingCouponId.value = null;
+                triggerToast('🎉 Coupon updated successfully!');
+            },
+        },
+    );
 };
 
 const toggleCouponStatus = (couponId: number) => {
-    router.post(`/${currentTeamSlug.value}/dashboard/coupons/${couponId}/toggle`, {}, {
-        preserveScroll: true,
-        onSuccess: () => triggerToast("🏷️ Coupon status updated!")
-    });
+    router.post(
+        `/${currentTeamSlug.value}/dashboard/coupons/${couponId}/toggle`,
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => triggerToast('🏷️ Coupon status updated!'),
+        },
+    );
 };
 
 const deleteCoupon = (couponId: number) => {
     router.delete(`/${currentTeamSlug.value}/dashboard/coupons/${couponId}`, {
         preserveScroll: true,
-        onSuccess: () => triggerToast("🗑️ Coupon removed.")
+        onSuccess: () => triggerToast('🗑️ Coupon removed.'),
     });
 };
 
@@ -426,53 +607,55 @@ const copyCouponCode = (code: string) => {
 // Filtered Lists for Admin
 const filteredProducts = computed(() => {
     const list = props.products || [];
-    return list.filter(p => {
-        const matchesCategory = filterStatus.value === 'All' || p.category === filterStatus.value;
-        const matchesSearch = p.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-                            p.category.toLowerCase().includes(searchQuery.value.toLowerCase());
+    return list.filter((p) => {
+        const matchesCategory =
+            filterStatus.value === 'All' || p.category === filterStatus.value;
+        const matchesSearch =
+            p.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+            p.category.toLowerCase().includes(searchQuery.value.toLowerCase());
         return matchesCategory && matchesSearch;
     });
 });
 
 const filteredOrders = computed(() => {
     const list = props.orders || [];
-    return list.filter(o => {
-        const matchesStatus = filterStatus.value === 'All' || o.status === filterStatus.value;
-        const matchesSearch = (o.customer || '').toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-                            o.id.toLowerCase().includes(searchQuery.value.toLowerCase());
+    return list.filter((o) => {
+        const matchesStatus =
+            filterStatus.value === 'All' || o.status === filterStatus.value;
+        const matchesSearch =
+            (o.customer || '')
+                .toLowerCase()
+                .includes(searchQuery.value.toLowerCase()) ||
+            o.id.toLowerCase().includes(searchQuery.value.toLowerCase());
         return matchesStatus && matchesSearch;
     });
 });
 
 const filteredCoupons = computed(() => {
     const list = props.coupons || [];
-    return list.filter(c => {
-        const matchesStatus = filterStatus.value === 'All' || 
-                             (filterStatus.value === 'Active' && c.status === 'active') ||
-                             (filterStatus.value === 'Inactive' && c.status === 'inactive');
-        const matchesSearch = c.code.toLowerCase().includes(searchQuery.value.toLowerCase());
+    return list.filter((c) => {
+        const matchesStatus =
+            filterStatus.value === 'All' ||
+            (filterStatus.value === 'Active' && c.status === 'active') ||
+            (filterStatus.value === 'Inactive' && c.status === 'inactive');
+        const matchesSearch = c.code
+            .toLowerCase()
+            .includes(searchQuery.value.toLowerCase());
         return matchesStatus && matchesSearch;
-    });
-});
-
-const filteredPayments = computed(() => {
-    const list = props.payments || [];
-    return list.filter(p => {
-        const matchesSearch = (p.customer || '').toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-                            (p.order_ref || '').toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-                            (p.gateway || '').toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-                            (p.method || '').toLowerCase().includes(searchQuery.value.toLowerCase());
-        return matchesSearch;
     });
 });
 </script>
 
 <template>
-    <Head :title="role === 'admin' ? 'Admin Dashboard' : 'Customer Dashboard'" />
+    <Head
+        :title="role === 'admin' ? 'Admin Dashboard' : 'Customer Dashboard'"
+    />
 
     <!-- 1. ADMIN DASHBOARD TEMPLATE -->
-    <div v-if="role === 'admin'" class="px-4 sm:px-6 lg:px-8 py-6 space-y-6 pb-12 text-neutral-800 dark:text-neutral-200 overflow-x-hidden">
-        
+    <div
+        v-if="role === 'admin'"
+        class="space-y-6 overflow-x-hidden px-4 py-6 pb-12 text-neutral-800 sm:px-6 lg:px-8 dark:text-neutral-200"
+    >
         <PendingInvitationsModal
             v-if="pendingInvitations && pendingInvitations.length > 0"
             :invitations="pendingInvitations"
@@ -480,186 +663,370 @@ const filteredPayments = computed(() => {
 
         <!-- Admin Header -->
         <div>
-            <h1 class="text-2xl font-extrabold tracking-tight">Admin Overview Dashboard</h1>
-            <p class="text-xs text-neutral-500">Monitor store sales, manage coupons, update stock, and audit payment gateways.</p>
+            <h1 class="text-2xl font-extrabold tracking-tight">
+                Admin Overview Dashboard
+            </h1>
+            <p class="text-xs text-neutral-500">
+                Monitor store sales, manage coupons, update stock, and audit
+                payment gateways.
+            </p>
         </div>
 
         <!-- 4-Column Stat Cards -->
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            
             <!-- Revenue widget -->
-            <div class="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs dark:border-neutral-800 dark:bg-neutral-900 flex flex-col justify-between">
+            <div
+                v-if="isCartEnabled"
+                class="flex flex-col justify-between rounded-xl border border-neutral-200 bg-white p-5 shadow-xs dark:border-neutral-800 dark:bg-neutral-900"
+            >
                 <div class="flex items-center justify-between text-neutral-400">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-neutral-500">Paid Revenue</span>
+                    <span
+                        class="text-xs font-semibold tracking-wider text-neutral-500 uppercase"
+                        >Paid Revenue</span
+                    >
                     <DollarSign class="h-4 w-4 text-emerald-500" />
                 </div>
                 <div class="my-2 space-y-1">
-                    <div class="font-mono text-2xl font-bold tracking-tight">{{ $page.props.currency_symbol ?? '$' }}{{ (stats.totalRevenue ?? 0).toFixed(2) }}</div>
-                    <div class="flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                    <div class="font-mono text-2xl font-bold tracking-tight">
+                        {{ $page.props.currency_symbol ?? '$'
+                        }}{{ (stats.totalRevenue ?? 0).toFixed(2) }}
+                    </div>
+                    <div
+                        class="flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400"
+                    >
                         <TrendingUp class="h-3 w-3" /> +14.2% from last week
                     </div>
                 </div>
-                <svg class="h-8 w-full text-emerald-500" viewBox="0 0 100 10" preserveAspectRatio="none">
-                    <path d="M0,8 L20,6 L40,9 L60,4 L80,7 L100,2" fill="none" stroke="currentColor" stroke-width="1.5" />
+                <svg
+                    class="h-8 w-full text-emerald-500"
+                    viewBox="0 0 100 10"
+                    preserveAspectRatio="none"
+                >
+                    <path
+                        d="M0,8 L20,6 L40,9 L60,4 L80,7 L100,2"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                    />
                 </svg>
             </div>
 
             <!-- Orders widget -->
-            <div class="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs dark:border-neutral-800 dark:bg-neutral-900 flex flex-col justify-between">
+            <div
+                v-if="isCartEnabled"
+                class="flex flex-col justify-between rounded-xl border border-neutral-200 bg-white p-5 shadow-xs dark:border-neutral-800 dark:bg-neutral-900"
+            >
                 <div class="flex items-center justify-between text-neutral-400">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-neutral-500">Pending Orders</span>
+                    <span
+                        class="text-xs font-semibold tracking-wider text-neutral-500 uppercase"
+                        >Pending Orders</span
+                    >
                     <ShoppingBag class="h-4 w-4 text-amber-500" />
                 </div>
                 <div class="my-2 space-y-1">
-                    <div class="font-mono text-2xl font-bold tracking-tight">{{ stats.pendingCount ?? 0 }}</div>
-                    <div class="text-[10px] font-medium text-neutral-400">Requires processing dispatch</div>
+                    <div class="font-mono text-2xl font-bold tracking-tight">
+                        {{ stats.pendingCount ?? 0 }}
+                    </div>
+                    <div class="text-[10px] font-medium text-neutral-400">
+                        Requires processing dispatch
+                    </div>
                 </div>
-                <div class="flex items-end gap-1 h-8 pt-2">
-                    <div class="bg-neutral-100 dark:bg-neutral-800 w-full h-3 rounded"></div>
-                    <div class="bg-neutral-100 dark:bg-neutral-800 w-full h-5 rounded"></div>
-                    <div class="bg-neutral-100 dark:bg-neutral-800 w-full h-2 rounded"></div>
-                    <div class="bg-amber-500 w-full h-7 rounded"></div>
+                <div class="flex h-8 items-end gap-1 pt-2">
+                    <div
+                        class="h-3 w-full rounded bg-neutral-100 dark:bg-neutral-800"
+                    ></div>
+                    <div
+                        class="h-5 w-full rounded bg-neutral-100 dark:bg-neutral-800"
+                    ></div>
+                    <div
+                        class="h-2 w-full rounded bg-neutral-100 dark:bg-neutral-800"
+                    ></div>
+                    <div class="h-7 w-full rounded bg-amber-500"></div>
                 </div>
             </div>
 
             <!-- Coupons widget -->
-            <div class="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs dark:border-neutral-800 dark:bg-neutral-900 flex flex-col justify-between">
+            <div
+                v-if="isCartEnabled"
+                class="flex flex-col justify-between rounded-xl border border-neutral-200 bg-white p-5 shadow-xs dark:border-neutral-800 dark:bg-neutral-900"
+            >
                 <div class="flex items-center justify-between text-neutral-400">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-neutral-500">Active Coupons</span>
+                    <span
+                        class="text-xs font-semibold tracking-wider text-neutral-500 uppercase"
+                        >Active Coupons</span
+                    >
                     <Tag class="h-4 w-4 text-indigo-500" />
                 </div>
                 <div class="my-2 space-y-1">
-                    <div class="font-mono text-2xl font-bold tracking-tight">{{ stats.activeCouponCount ?? 0 }}</div>
-                    <div class="text-[10px] text-neutral-400 flex items-center gap-1">
-                        <CheckCircle2 class="h-3 w-3 text-emerald-500" /> Active in checkout system
+                    <div class="font-mono text-2xl font-bold tracking-tight">
+                        {{ stats.activeCouponCount ?? 0 }}
+                    </div>
+                    <div
+                        class="flex items-center gap-1 text-[10px] text-neutral-400"
+                    >
+                        <CheckCircle2 class="h-3 w-3 text-emerald-500" /> Active
+                        in checkout system
                     </div>
                 </div>
-                <div class="text-[10px] font-mono text-neutral-400 border-t border-neutral-100 pt-2 dark:border-neutral-800">
+                <div
+                    class="border-t border-neutral-100 pt-2 font-mono text-[10px] text-neutral-400 dark:border-neutral-800"
+                >
                     Offers discounts storewide
                 </div>
             </div>
 
             <!-- Low Stock widget -->
-            <div class="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs dark:border-neutral-800 dark:bg-neutral-900 flex flex-col justify-between">
+            <div
+                class="flex flex-col justify-between rounded-xl border border-neutral-200 bg-white p-5 shadow-xs dark:border-neutral-800 dark:bg-neutral-900"
+            >
                 <div class="flex items-center justify-between text-neutral-400">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-neutral-500">Low Stock Alert</span>
+                    <span
+                        class="text-xs font-semibold tracking-wider text-neutral-500 uppercase"
+                        >Low Stock Alert</span
+                    >
                     <AlertTriangle class="h-4 w-4 text-red-500" />
                 </div>
                 <div class="my-2 space-y-1">
-                    <div class="font-mono text-2xl font-bold tracking-tight">{{ stats.lowStockCount ?? 0 }}</div>
-                    <div class="flex items-center gap-1 text-[10px] font-bold text-amber-500">
+                    <div class="font-mono text-2xl font-bold tracking-tight">
+                        {{ stats.lowStockCount ?? 0 }}
+                    </div>
+                    <div
+                        class="flex items-center gap-1 text-[10px] font-bold text-amber-500"
+                    >
                         Requires inventory replenishment
                     </div>
                 </div>
-                <div class="w-full bg-neutral-100 dark:bg-neutral-800 h-1 rounded-full">
-                    <div class="bg-red-500 h-1 rounded-full" style="width: 35%"></div>
+                <div
+                    class="h-1 w-full rounded-full bg-neutral-100 dark:bg-neutral-800"
+                >
+                    <div
+                        class="h-1 rounded-full bg-red-500"
+                        style="width: 35%"
+                    ></div>
                 </div>
             </div>
-
         </div>
 
         <!-- TAB Content -->
         <!-- 1. TAB: ANALYTICS OVERVIEW -->
-        <div v-if="activeTab === 'overview'" class="grid gap-6 lg:grid-cols-3">
-            <div class="lg:col-span-2 rounded-xl border border-neutral-200 bg-white p-6 shadow-xs dark:border-neutral-800 dark:bg-neutral-900 space-y-6">
-                <div class="flex items-center justify-between border-b border-neutral-100 pb-3 dark:border-neutral-800">
-                    <h3 class="text-base font-bold tracking-tight flex items-center gap-2">
-                        <Activity class="h-4 w-4 text-emerald-500" /> Monthly Revenue Analytics
-                    </h3>
-                    <span class="text-[10px] font-bold text-neutral-400">FY 2026</span>
+        <div v-if="activeTab === 'overview'" class="space-y-6">
+            <div v-if="isCartEnabled" class="grid gap-6 lg:grid-cols-3">
+                <div
+                    class="space-y-6 rounded-xl border border-neutral-200 bg-white p-6 shadow-xs lg:col-span-2 dark:border-neutral-800 dark:bg-neutral-900"
+                >
+                    <div
+                        class="flex items-center justify-between border-b border-neutral-100 pb-3 dark:border-neutral-800"
+                    >
+                        <h3
+                            class="flex items-center gap-2 text-base font-bold tracking-tight"
+                        >
+                            <Activity class="h-4 w-4 text-emerald-500" /> Monthly
+                            Revenue Analytics
+                        </h3>
+                        <span class="text-[10px] font-bold text-neutral-400"
+                            >FY 2026</span
+                        >
+                    </div>
+                    <div class="relative h-60 w-full pt-4">
+                        <svg
+                            class="h-full w-full overflow-visible"
+                            viewBox="0 0 100 50"
+                        >
+                            <line
+                                x1="0"
+                                y1="10"
+                                x2="100"
+                                y2="10"
+                                stroke="rgba(0,0,0,0.05)"
+                                stroke-width="0.5"
+                                class="dark:stroke-neutral-800"
+                            />
+                            <line
+                                x1="0"
+                                y1="20"
+                                x2="100"
+                                y2="20"
+                                stroke="rgba(0,0,0,0.05)"
+                                stroke-width="0.5"
+                                class="dark:stroke-neutral-800"
+                            />
+                            <line
+                                x1="0"
+                                y1="30"
+                                x2="100"
+                                y2="30"
+                                stroke="rgba(0,0,0,0.05)"
+                                stroke-width="0.5"
+                                class="dark:stroke-neutral-800"
+                            />
+                            <line
+                                x1="0"
+                                y1="40"
+                                x2="100"
+                                y2="40"
+                                stroke="rgba(0,0,0,0.05)"
+                                stroke-width="0.5"
+                                class="dark:stroke-neutral-800"
+                            />
+
+                            <text x="0" y="48" font-size="2" fill="#999">Jan</text>
+                            <text x="20" y="48" font-size="2" fill="#999">Mar</text>
+                            <text x="40" y="48" font-size="2" fill="#999">May</text>
+                            <text x="60" y="48" font-size="2" fill="#999">Jul</text>
+                            <text x="80" y="48" font-size="2" fill="#999">Sep</text>
+                            <text x="96" y="48" font-size="2" fill="#999">Nov</text>
+
+                            <path
+                                d="M0,45 L10,38 L20,41 L30,22 L40,25 L50,15 L60,18 L70,8 L80,12 L90,6 L100,2"
+                                fill="none"
+                                stroke="rgb(16,185,129)"
+                                stroke-width="1"
+                            />
+                            <path
+                                d="M0,45 L10,38 L20,41 L30,22 L40,25 L50,15 L60,18 L70,8 L80,12 L90,6 L100,2 L100,45 L0,45 Z"
+                                fill="rgba(16,185,129,0.08)"
+                            />
+                        </svg>
+                    </div>
                 </div>
-                <div class="relative h-60 w-full pt-4">
-                    <svg class="h-full w-full overflow-visible" viewBox="0 0 100 50">
-                        <line x1="0" y1="10" x2="100" y2="10" stroke="rgba(0,0,0,0.05)" stroke-width="0.5" class="dark:stroke-neutral-800" />
-                        <line x1="0" y1="20" x2="100" y2="20" stroke="rgba(0,0,0,0.05)" stroke-width="0.5" class="dark:stroke-neutral-800" />
-                        <line x1="0" y1="30" x2="100" y2="30" stroke="rgba(0,0,0,0.05)" stroke-width="0.5" class="dark:stroke-neutral-800" />
-                        <line x1="0" y1="40" x2="100" y2="40" stroke="rgba(0,0,0,0.05)" stroke-width="0.5" class="dark:stroke-neutral-800" />
-                        
-                        <text x="0" y="48" font-size="2" fill="#999">Jan</text>
-                        <text x="20" y="48" font-size="2" fill="#999">Mar</text>
-                        <text x="40" y="48" font-size="2" fill="#999">May</text>
-                        <text x="60" y="48" font-size="2" fill="#999">Jul</text>
-                        <text x="80" y="48" font-size="2" fill="#999">Sep</text>
-                        <text x="96" y="48" font-size="2" fill="#999">Nov</text>
-                        
-                        <path d="M0,45 L10,38 L20,41 L30,22 L40,25 L50,15 L60,18 L70,8 L80,12 L90,6 L100,2" fill="none" stroke="rgb(16,185,129)" stroke-width="1" />
-                        <path d="M0,45 L10,38 L20,41 L30,22 L40,25 L50,15 L60,18 L70,8 L80,12 L90,6 L100,2 L100,45 L0,45 Z" fill="rgba(16,185,129,0.08)" />
-                    </svg>
+
+                <!-- Activity Log -->
+                <div
+                    class="space-y-4 rounded-xl border border-neutral-200 bg-white p-6 shadow-xs dark:border-neutral-800 dark:bg-neutral-900"
+                >
+                    <h3
+                        class="border-b border-neutral-100 pb-3 text-base font-bold tracking-tight dark:border-neutral-800"
+                    >
+                        Recent Activity Logs
+                    </h3>
+                    <div
+                        class="max-h-[16.5rem] space-y-4 overflow-y-auto pr-2 text-xs"
+                    >
+                        <div
+                            class="flex gap-2.5"
+                            v-for="order in (orders || []).slice(0, 3)"
+                            :key="order.id"
+                        >
+                            <div
+                                class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
+                            >
+                                <Check class="h-3 w-3" />
+                            </div>
+                            <div class="space-y-0.5">
+                                <p class="font-semibold">
+                                    Order #{{ order.id }} - {{ order.status }}
+                                </p>
+                                <span class="text-[10px] text-neutral-400"
+                                    >{{ order.customer }} · {{ order.date }}</span
+                                >
+                            </div>
+                        </div>
+                        <div
+                            class="flex gap-2.5"
+                            v-if="!orders || orders.length === 0"
+                        >
+                            <span class="text-neutral-400"
+                                >No recent orders yet.</span
+                            >
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Activity Log -->
-            <div class="rounded-xl border border-neutral-200 bg-white p-6 shadow-xs dark:border-neutral-800 dark:bg-neutral-900 space-y-4">
-                <h3 class="text-base font-bold tracking-tight border-b border-neutral-100 pb-3 dark:border-neutral-800">Recent Activity Logs</h3>
-                <div class="space-y-4 max-h-[16.5rem] overflow-y-auto pr-2 text-xs">
-                    <div class="flex gap-2.5" v-for="order in (orders || []).slice(0, 3)" :key="order.id">
-                        <div class="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 shrink-0 dark:bg-emerald-950 dark:text-emerald-400">
-                            <Check class="h-3 w-3" />
-                        </div>
-                        <div class="space-y-0.5">
-                            <p class="font-semibold">Order #{{ order.id }} - {{ order.status }}</p>
-                            <span class="text-[10px] text-neutral-400">{{ order.customer }} · {{ order.date }}</span>
-                        </div>
-                    </div>
-                    <div class="flex gap-2.5" v-if="!orders || orders.length === 0">
-                        <span class="text-neutral-400">No recent orders yet.</span>
-                    </div>
-                </div>
+            <!-- When Cart is disabled, show Catalog Mode active placeholder -->
+            <div v-else class="rounded-xl border border-neutral-200 bg-white p-8 text-center shadow-xs dark:border-neutral-800 dark:bg-neutral-900">
+                <Package class="mx-auto h-12 w-12 text-emerald-600 dark:text-emerald-500" />
+                <h3 class="mt-4 text-base font-bold text-neutral-800 dark:text-neutral-100">Catalog Mode Active</h3>
+                <p class="mt-2 text-xs text-neutral-500 max-w-md mx-auto">
+                    The Cart module is currently disabled. Customers can browse products, but checkout, order placement, and discount coupons are deactivated.
+                </p>
             </div>
         </div>
 
         <!-- 2. TAB: PRODUCTS TABLE -->
         <div v-else-if="activeTab === 'products'" class="space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4 dark:border-neutral-800">
-                <div class="relative flex-1 max-w-sm">
-                    <Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-                    <input 
+            <div
+                class="flex flex-col justify-between gap-4 border-b border-neutral-100 pb-4 sm:flex-row sm:items-center dark:border-neutral-800"
+            >
+                <div class="relative max-w-sm flex-1">
+                    <Search
+                        class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-400"
+                    />
+                    <input
                         v-model="searchQuery"
-                        type="text" 
-                        placeholder="Search products..." 
-                        class="h-10 w-full rounded-lg border border-neutral-200 bg-white pl-10 pr-4 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-900"
+                        type="text"
+                        placeholder="Search products..."
+                        class="h-10 w-full rounded-lg border border-neutral-200 bg-white pr-4 pl-10 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-900"
                     />
                 </div>
             </div>
 
             <!-- Products Table -->
-            <div class="rounded-xl border border-neutral-200 bg-white overflow-hidden shadow-xs dark:border-neutral-800 dark:bg-neutral-900">
+            <div
+                class="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xs dark:border-neutral-800 dark:bg-neutral-900"
+            >
                 <div class="overflow-x-auto">
-                    <table class="w-full text-xs text-left border-collapse">
+                    <table class="w-full border-collapse text-left text-xs">
                         <thead>
-                            <tr class="bg-neutral-50 border-b border-neutral-200 text-neutral-500 dark:bg-neutral-800/40 dark:border-neutral-800">
-                                <th class="p-4 font-semibold w-16">ID</th>
+                            <tr
+                                class="border-b border-neutral-200 bg-neutral-50 text-neutral-500 dark:border-neutral-800 dark:bg-neutral-800/40"
+                            >
+                                <th class="w-16 p-4 font-semibold">ID</th>
                                 <th class="p-4 font-semibold">Product Name</th>
-                                <th class="p-4 font-semibold w-32">Category</th>
-                                <th class="p-4 font-semibold text-center w-28">Price</th>
-                                <th class="p-4 font-semibold text-center w-28">Stock Level</th>
-                                <th class="p-4 font-semibold w-28">Status</th>
+                                <th class="w-32 p-4 font-semibold">Category</th>
+                                <th class="w-28 p-4 text-center font-semibold">
+                                    Price
+                                </th>
+                                <th class="w-28 p-4 text-center font-semibold">
+                                    Stock Level
+                                </th>
+                                <th class="w-28 p-4 font-semibold">Status</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-neutral-200 dark:divide-neutral-800/50">
-                            <tr v-for="product in filteredProducts" :key="product.id" class="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/20">
-                                <td class="p-4 font-mono text-neutral-400">#00{{ product.id }}</td>
-                                <td class="p-4 font-semibold">{{ product.name }}</td>
-                                <td class="p-4 text-neutral-500">{{ product.category }}</td>
-                                <td class="p-4 text-center font-bold font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ product.price.toFixed(2) }}</td>
+                        <tbody
+                            class="divide-y divide-neutral-200 dark:divide-neutral-800/50"
+                        >
+                            <tr
+                                v-for="product in filteredProducts"
+                                :key="product.id"
+                                class="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/20"
+                            >
+                                <td class="p-4 font-mono text-neutral-400">
+                                    #00{{ product.id }}
+                                </td>
+                                <td class="p-4 font-semibold">
+                                    {{ product.name }}
+                                </td>
+                                <td class="p-4 text-neutral-500">
+                                    {{ product.category }}
+                                </td>
+                                <td class="p-4 text-center font-mono font-bold">
+                                    {{ $page.props.currency_symbol ?? '$'
+                                    }}{{ product.price.toFixed(2) }}
+                                </td>
                                 <td class="p-4 text-center">
-                                    <span class="font-mono font-bold text-neutral-800 dark:text-neutral-200">{{ product.stock }}</span>
+                                    <span
+                                        class="font-mono font-bold text-neutral-800 dark:text-neutral-200"
+                                        >{{ product.stock }}</span
+                                    >
                                 </td>
                                 <td class="p-4">
-                                    <span 
-                                        v-if="product.status === 'In Stock'" 
+                                    <span
+                                        v-if="product.status === 'In Stock'"
                                         class="inline-flex rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-bold text-green-600 dark:bg-green-950 dark:text-green-400"
                                     >
                                         In Stock
                                     </span>
-                                    <span 
-                                        v-else-if="product.status === 'Low Stock'" 
+                                    <span
+                                        v-else-if="
+                                            product.status === 'Low Stock'
+                                        "
                                         class="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:bg-amber-950 dark:text-amber-400"
                                     >
                                         Low Stock
                                     </span>
-                                    <span 
-                                        v-else 
+                                    <span
+                                        v-else
                                         class="inline-flex rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950 dark:text-red-400"
                                     >
                                         Out of Stock
@@ -673,516 +1040,269 @@ const filteredPayments = computed(() => {
         </div>
 
         <!-- 3. TAB: ORDERS TABLE -->
-        <div v-else-if="activeTab === 'orders'" class="space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4 dark:border-neutral-800">
-                <div class="relative flex-1 max-w-sm">
-                    <Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-                    <input 
-                        v-model="searchQuery"
-                        type="text" 
-                        placeholder="Search orders..." 
-                        class="h-10 w-full rounded-lg border border-neutral-200 bg-white pl-10 pr-4 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-900"
-                    />
-                </div>
-            </div>
-
-            <!-- Orders Table -->
-            <div class="rounded-xl border border-neutral-200 bg-white overflow-hidden shadow-xs dark:border-neutral-800 dark:bg-neutral-900">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-xs text-left border-collapse">
-                        <thead>
-                            <tr class="bg-neutral-50 border-b border-neutral-200 text-neutral-500 dark:bg-neutral-800/40 dark:border-neutral-800">
-                                <th class="p-4 font-semibold w-24">Order ID</th>
-                                <th class="p-4 font-semibold w-28">Invoice No</th>
-                                <th class="p-4 font-semibold">Customer</th>
-                                <th class="p-4 font-semibold w-28">Order Date</th>
-                                <th class="p-4 font-semibold text-center w-28">Gateway</th>
-                                <th class="p-4 font-semibold text-center w-24">Total</th>
-                                <th class="p-4 font-semibold w-24">Status</th>
-                                <th class="p-4 font-semibold text-center w-36">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-neutral-200 dark:divide-neutral-800/50">
-                            <tr v-for="order in filteredOrders" :key="order.id" class="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/20">
-                                <td class="p-4 font-mono font-semibold">{{ order.id }}</td>
-                                <td class="p-4 font-mono text-neutral-500">{{ order.invoice_no || '-' }}</td>
-                                <td class="p-4 font-semibold">{{ order.customer }}</td>
-                                <td class="p-4 text-neutral-500">{{ order.date }}</td>
-                                <td class="p-4 text-center">
-                                    <span class="rounded bg-neutral-100 px-2 py-0.5 text-[9px] font-bold uppercase text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
-                                        {{ order.gateway }}
-                                    </span>
-                                </td>
-                                <td class="p-4 text-center font-bold font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ order.total.toFixed(2) }}</td>
-                                <td class="p-4">
-                                    <span 
-                                        v-if="order.status === 'Paid'" 
-                                        class="inline-flex rounded-full bg-green-50 px-2.5 py-0.5 text-[10px] font-bold text-green-600 dark:bg-green-950 dark:text-green-400"
-                                    >
-                                        Paid
-                                    </span>
-                                    <span 
-                                        v-else-if="order.status === 'Pending'" 
-                                        class="inline-flex rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-600 dark:bg-amber-950 dark:text-amber-400"
-                                    >
-                                        Pending
-                                    </span>
-                                    <span 
-                                        v-else-if="order.status === 'Failed'" 
-                                        class="inline-flex rounded-full bg-red-50 px-2.5 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950 dark:text-red-400"
-                                    >
-                                        Failed
-                                    </span>
-                                    <span 
-                                        v-else 
-                                        class="inline-flex rounded-full bg-neutral-100 px-2.5 py-0.5 text-[10px] font-bold text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400"
-                                    >
-                                        Cancelled
-                                    </span>
-                                </td>
-                                <td class="p-4">
-                                    <div class="flex items-center justify-center gap-1.5">
-                                        <button 
-                                            v-if="order.status === 'Pending' && order.db_id"
-                                            @click="shipOrder(order.db_id)"
-                                            class="h-7 px-2.5 rounded bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition"
-                                        >
-                                            Ship & Pay
-                                        </button>
-                                        <button 
-                                            v-if="order.status === 'Pending' && order.db_id"
-                                            @click="cancelOrder(order.db_id)"
-                                            class="h-7 px-2.5 rounded bg-neutral-100 border hover:bg-red-50 hover:text-red-500 transition dark:bg-neutral-800 dark:border-neutral-700"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <span v-else class="text-[10px] text-neutral-400">Completed</span>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+        <div v-else-if="activeTab === 'orders' && isCartEnabled" class="space-y-4">
+            <OrdersManager
+                :orders="orders"
+                :currentTeamSlug="currentTeamSlug"
+                :isShipmentEnabled="isShipmentEnabled"
+            />
         </div>
 
         <!-- 4. TAB: COUPONS -->
-        <div v-else-if="activeTab === 'coupons'" class="space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4 dark:border-neutral-800">
-                <div class="relative flex-1 max-w-sm">
-                    <Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-                    <input 
-                        v-model="searchQuery"
-                        type="text" 
-                        placeholder="Search coupons..." 
-                        class="h-10 w-full rounded-lg border border-neutral-200 bg-white pl-10 pr-4 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-900"
-                    />
-                </div>
-                
-                <button 
-                    @click="showCreateCouponModal = true"
-                    class="h-10 rounded-lg bg-emerald-600 px-4 text-xs font-semibold text-white hover:bg-emerald-700 flex items-center gap-1.5 transition"
-                >
-                    <Plus class="h-4 w-4" /> Create Coupon
-                </button>
-            </div>
+        <div v-else-if="activeTab === 'coupons' && isCartEnabled" class="space-y-4">
+            <CouponsManager
+                :coupons="coupons"
+                :currentTeamSlug="currentTeamSlug"
+            />
+        </div>
 
-            <!-- Coupons Table -->
-            <div class="rounded-xl border border-neutral-200 bg-white overflow-hidden shadow-xs dark:border-neutral-800 dark:bg-neutral-900">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-xs text-left border-collapse">
-                        <thead>
-                            <tr class="bg-neutral-50 border-b border-neutral-200 text-neutral-500 dark:bg-neutral-800/40 dark:border-neutral-800">
-                                <th class="p-4 font-semibold">Code</th>
-                                <th class="p-4 font-semibold w-32 text-center">Type</th>
-                                <th class="p-4 font-semibold w-24 text-center">Discount Value</th>
-                                <th class="p-4 font-semibold w-28 text-center">Min Order</th>
-                                <th class="p-4 font-semibold w-32 text-center">Usages (Limit)</th>
-                                <th class="p-4 font-semibold w-28">Expires At</th>
-                                <th class="p-4 font-semibold w-24">Status</th>
-                                <th class="p-4 font-semibold text-center w-24">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-neutral-200 dark:divide-neutral-800/50">
-                            <tr v-for="coupon in filteredCoupons" :key="coupon.id" class="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/20">
-                                <td class="p-4">
-                                    <span class="rounded bg-neutral-100 px-2 py-1 font-mono font-bold text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
-                                        {{ coupon.code }}
-                                    </span>
-                                </td>
-                                <td class="p-4 text-center uppercase font-semibold text-neutral-500">
-                                    {{ coupon.discountType }}
-                                </td>
-                                <td class="p-4 text-center font-bold font-mono">
-                                    {{ coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : `${$page.props.currency_symbol ?? '$'}${coupon.discountValue.toFixed(2)}` }}
-                                </td>
-                                <td class="p-4 text-center font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ coupon.minOrderAmount.toFixed(2) }}</td>
-                                <td class="p-4 text-center font-mono">
-                                    {{ coupon.usedCount ?? 0 }} / <span class="text-neutral-400">{{ coupon.usageLimit }}</span>
-                                </td>
-                                <td class="p-4 text-neutral-500 font-mono">{{ coupon.expiresAt }}</td>
-                                <td class="p-4">
-                                    <button 
-                                        @click="toggleCouponStatus(coupon.id)"
-                                        :class="coupon.status === 'active' ? 'bg-green-50 text-green-600 dark:bg-green-950 dark:text-green-400' : 'bg-neutral-100 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-400'"
-                                        class="inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold transition hover:opacity-85"
-                                    >
-                                        {{ coupon.status === 'active' ? 'Active' : 'Inactive' }}
-                                    </button>
-                                </td>
-                                <td class="p-4">
-                                    <div class="flex items-center justify-center gap-1.5">
-                                        <button 
-                                            @click="openEditCouponModal(coupon)"
-                                            class="h-8 w-8 rounded-lg bg-neutral-100 text-neutral-400 hover:bg-emerald-50 hover:text-emerald-600 flex items-center justify-center transition dark:bg-neutral-800 dark:hover:bg-emerald-950"
-                                            title="Edit Coupon"
-                                        >
-                                            <Edit class="h-3.5 w-3.5" />
-                                        </button>
-                                        <button 
-                                            @click="deleteCoupon(coupon.id)"
-                                            class="h-8 w-8 rounded-lg bg-neutral-100 text-neutral-400 hover:bg-red-50 hover:text-red-500 flex items-center justify-center transition dark:bg-neutral-800 dark:hover:bg-red-950"
-                                            title="Delete Coupon"
-                                        >
-                                            <Trash2 class="h-3.5 w-3.5" />
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Create Coupon Dialog -->
-            <div v-if="showCreateCouponModal" class="fixed inset-0 z-50 overflow-hidden flex items-center justify-center">
-                <div @click="showCreateCouponModal = false" class="absolute inset-0 bg-neutral-950/40 backdrop-blur-xs"></div>
-                <div class="relative w-full max-w-md rounded-xl border border-neutral-200 bg-white p-6 shadow-2xl dark:border-neutral-800 dark:bg-neutral-900 space-y-4">
-                    <div class="flex items-center justify-between border-b border-neutral-100 pb-3 dark:border-neutral-800">
-                        <h3 class="text-base font-bold tracking-tight">Create Coupon Code</h3>
-                        <button @click="showCreateCouponModal = false" class="rounded p-1 text-neutral-400 hover:text-neutral-600 dark:hover:text-white">
-                            <X class="h-4 w-4" />
-                        </button>
-                    </div>
-
-                    <div class="space-y-4">
-                        <div class="flex flex-col gap-2">
-                            <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Coupon Code</label>
-                            <input 
-                                v-model="newCoupon.code" 
-                                type="text" 
-                                placeholder="e.g. MINT75"
-                                class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
-                            />
-                            <p v-if="formErrors.code" class="text-[10px] font-semibold text-red-500">{{ formErrors.code }}</p>
-                        </div>
-
-                        <div class="grid gap-4 sm:grid-cols-2">
-                            <div class="flex flex-col gap-2">
-                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Discount Type</label>
-                                <select 
-                                    v-model="newCoupon.discountType" 
-                                    class="h-10 rounded-lg border border-neutral-200 bg-white px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
-                                >
-                                    <option value="percentage">Percentage (%)</option>
-                                    <option value="flat">Flat Amount ({{ $page.props.currency_symbol ?? '$' }})</option>
-                                </select>
-                            </div>
-                            <div class="flex flex-col gap-2">
-                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Discount Value</label>
-                                <input 
-                                    v-model="newCoupon.discountValue" 
-                                    type="number" 
-                                    class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
-                                />
-                                <p v-if="formErrors.discountValue" class="text-[10px] font-semibold text-red-500">{{ formErrors.discountValue }}</p>
-                            </div>
-                        </div>
-
-                        <div class="grid gap-4 sm:grid-cols-2">
-                            <div class="flex flex-col gap-2">
-                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Min Order ({{ $page.props.currency_symbol ?? '$' }})</label>
-                                <input 
-                                    v-model="newCoupon.minOrderAmount" 
-                                    type="number" 
-                                    class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
-                                />
-                                <p v-if="formErrors.minOrderAmount" class="text-[10px] font-semibold text-red-500">{{ formErrors.minOrderAmount }}</p>
-                            </div>
-                            <div class="flex flex-col gap-2">
-                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Usage Limit</label>
-                                <input 
-                                    v-model="newCoupon.usageLimit" 
-                                    type="number" 
-                                    class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
-                                />
-                            </div>
-                        </div>
-
-                        <div class="grid gap-4 sm:grid-cols-2">
-                            <div class="flex flex-col gap-2">
-                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Expiry Date</label>
-                                <input 
-                                    v-model="newCoupon.expiresAt" 
-                                    type="date" 
-                                    class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
-                                />
-                            </div>
-                            <div class="flex flex-col gap-2">
-                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Active Status</label>
-                                <select 
-                                    v-model="newCoupon.status" 
-                                    class="h-10 rounded-lg border border-neutral-200 bg-white px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
-                                >
-                                    <option value="active">Active</option>
-                                    <option value="inactive">Inactive</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Actions -->
-                    <div class="flex justify-end gap-3 pt-3 border-t border-neutral-100 dark:border-neutral-800">
-                        <button 
-                            @click="showCreateCouponModal = false"
-                            class="h-9 px-4 rounded-lg border text-xs font-semibold hover:bg-neutral-50 dark:border-neutral-700"
-                        >
-                            Cancel
-                        </button>
-                        <button 
-                            @click="handleCreateCoupon"
-                            class="h-9 px-4 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition"
-                        >
-                            Create Coupon
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Edit Coupon Dialog -->
-            <div v-if="showEditCouponModal" class="fixed inset-0 z-50 overflow-hidden flex items-center justify-center">
-                <div @click="showEditCouponModal = false" class="absolute inset-0 bg-neutral-950/40 backdrop-blur-xs"></div>
-                <div class="relative w-full max-w-md rounded-xl border border-neutral-200 bg-white p-6 shadow-2xl dark:border-neutral-800 dark:bg-neutral-900 space-y-4">
-                    <div class="flex items-center justify-between border-b border-neutral-100 pb-3 dark:border-neutral-800">
-                        <h3 class="text-base font-bold tracking-tight">Edit Coupon Code</h3>
-                        <button @click="showEditCouponModal = false" class="rounded p-1 text-neutral-400 hover:text-neutral-600 dark:hover:text-white">
-                            <X class="h-4 w-4" />
-                        </button>
-                    </div>
-
-                    <div class="space-y-4">
-                        <div class="flex flex-col gap-2">
-                            <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Coupon Code</label>
-                            <input 
-                                v-model="editCoupon.code" 
-                                type="text" 
-                                placeholder="e.g. MINT75"
-                                class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
-                            />
-                            <p v-if="formErrors.code" class="text-[10px] font-semibold text-red-500">{{ formErrors.code }}</p>
-                        </div>
-
-                        <div class="grid gap-4 sm:grid-cols-2">
-                            <div class="flex flex-col gap-2">
-                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Discount Type</label>
-                                <select 
-                                    v-model="editCoupon.discountType" 
-                                    class="h-10 rounded-lg border border-neutral-200 bg-white px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
-                                >
-                                    <option value="percentage">Percentage (%)</option>
-                                    <option value="flat">Flat Amount ({{ $page.props.currency_symbol ?? '$' }})</option>
-                                </select>
-                            </div>
-                            <div class="flex flex-col gap-2">
-                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Discount Value</label>
-                                <input 
-                                    v-model="editCoupon.discountValue" 
-                                    type="number" 
-                                    class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
-                                />
-                                <p v-if="formErrors.discountValue" class="text-[10px] font-semibold text-red-500">{{ formErrors.discountValue }}</p>
-                            </div>
-                        </div>
-
-                        <div class="grid gap-4 sm:grid-cols-2">
-                            <div class="flex flex-col gap-2">
-                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Min Order ({{ $page.props.currency_symbol ?? '$' }})</label>
-                                <input 
-                                    v-model="editCoupon.minOrderAmount" 
-                                    type="number" 
-                                    class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
-                                />
-                                <p v-if="formErrors.minOrderAmount" class="text-[10px] font-semibold text-red-500">{{ formErrors.minOrderAmount }}</p>
-                            </div>
-                            <div class="flex flex-col gap-2">
-                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Usage Limit</label>
-                                <input 
-                                    v-model="editCoupon.usageLimit" 
-                                    type="number" 
-                                    class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
-                                />
-                            </div>
-                        </div>
-
-                        <div class="grid gap-4 sm:grid-cols-2">
-                            <div class="flex flex-col gap-2">
-                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Expiry Date</label>
-                                <input 
-                                    v-model="editCoupon.expiresAt" 
-                                    type="date" 
-                                    class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
-                                />
-                            </div>
-                            <div class="flex flex-col gap-2">
-                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Active Status</label>
-                                <select 
-                                    v-model="editCoupon.status" 
-                                    class="h-10 rounded-lg border border-neutral-200 bg-white px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
-                                >
-                                    <option value="active">Active</option>
-                                    <option value="inactive">Inactive</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Actions -->
-                    <div class="flex justify-end gap-3 pt-3 border-t border-neutral-100 dark:border-neutral-800">
-                        <button 
-                            @click="showEditCouponModal = false"
-                            class="h-9 px-4 rounded-lg border text-xs font-semibold hover:bg-neutral-50 dark:border-neutral-700"
-                        >
-                            Cancel
-                        </button>
-                        <button 
-                            @click="handleUpdateCoupon"
-                            class="h-9 px-4 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition"
-                        >
-                            Save Changes
-                        </button>
-                    </div>
-                </div>
-            </div>
-
+        <!-- 6. TAB: CARTS -->
+        <div v-else-if="activeTab === 'carts' && isCartEnabled" class="space-y-4">
+            <CartManager
+                :carts="carts"
+                :currentTeamSlug="currentTeamSlug"
+            />
         </div>
 
         <!-- 5. TAB: PAYMENTS TABLE -->
         <div v-else-if="activeTab === 'payments'" class="space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4 dark:border-neutral-800">
-                <div class="relative flex-1 max-w-sm">
-                    <Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-                    <input 
-                        v-model="searchQuery"
-                        type="text" 
-                        placeholder="Search payments..." 
-                        class="h-10 w-full rounded-lg border border-neutral-200 bg-white pl-10 pr-4 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-900"
-                    />
-                </div>
-            </div>
+            <PaymentsTable :payments="payments" />
+        </div>
+    </div>
 
-            <!-- Payments Table -->
-            <div class="rounded-xl border border-neutral-200 bg-white overflow-hidden shadow-xs dark:border-neutral-800 dark:bg-neutral-900">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-xs text-left border-collapse">
-                        <thead>
-                            <tr class="bg-neutral-50 border-b border-neutral-200 text-neutral-500 dark:bg-neutral-800/40 dark:border-neutral-800">
-                                <th class="p-4 font-semibold w-16">ID</th>
-                                <th class="p-4 font-semibold w-28">Order Ref</th>
-                                <th class="p-4 font-semibold">Customer</th>
-                                <th class="p-4 font-semibold w-32">Payment Method</th>
-                                <th class="p-4 font-semibold w-28 text-center">Gateway</th>
-                                <th class="p-4 font-semibold text-center w-28">Amount</th>
-                                <th class="p-4 font-semibold w-32">Paid On</th>
-                                <th class="p-4 font-semibold w-24">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-neutral-200 dark:divide-neutral-800/50">
-                            <tr v-for="payment in filteredPayments" :key="payment.id" class="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/20">
-                                <td class="p-4 font-mono text-neutral-400">#{{ payment.id }}</td>
-                                <td class="p-4 font-mono font-semibold">{{ payment.order_ref }}</td>
-                                <td class="p-4 font-semibold">{{ payment.customer }}</td>
-                                <td class="p-4 text-neutral-500 capitalize">{{ payment.method }}</td>
-                                <td class="p-4 text-center">
-                                    <span class="rounded bg-neutral-100 px-2 py-0.5 text-[9px] font-bold uppercase text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
-                                        {{ payment.gateway || 'N/A' }}
-                                    </span>
-                                </td>
-                                <td class="p-4 text-center font-bold font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ payment.amount.toFixed(2) }}</td>
-                                <td class="p-4 text-neutral-500">{{ payment.paid_on }}</td>
-                                <td class="p-4">
-                                    <span 
-                                        v-if="payment.status === 'Success'" 
-                                        class="inline-flex rounded-full bg-green-50 px-2.5 py-0.5 text-[10px] font-bold text-green-600 dark:bg-green-950 dark:text-green-400"
-                                    >
-                                        Success
-                                    </span>
-                                    <span 
-                                        v-else-if="payment.status === 'Failed'" 
-                                        class="inline-flex rounded-full bg-red-50 px-2.5 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950 dark:text-red-400"
-                                    >
-                                        Failed
-                                    </span>
-                                    <span 
-                                        v-else-if="payment.status === 'Cancelled'" 
-                                        class="inline-flex rounded-full bg-neutral-100 px-2.5 py-0.5 text-[10px] font-bold text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400"
-                                    >
-                                        Cancelled
-                                    </span>
-                                    <span 
-                                        v-else 
-                                        class="inline-flex rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-600 dark:bg-amber-950 dark:text-amber-400"
-                                    >
-                                        {{ payment.status }}
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr v-if="filteredPayments.length === 0">
-                                <td colspan="8" class="p-8 text-center text-neutral-400">
-                                    No payments found.
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+    <!-- ── SHIPPING MANAGEMENT MODAL ─────────────────────────────────────── -->
+    <Teleport to="body">
+        <div
+            v-if="showShippingModal"
+            class="fixed inset-0 z-50 flex items-center justify-center p-4"
+            @click.self="closeShippingModal"
+        >
+            <div
+                class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                @click="closeShippingModal"
+            />
+            <div
+                class="relative w-full max-w-md overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl dark:border-neutral-700 dark:bg-neutral-900"
+            >
+                <!-- Header -->
+                <div
+                    class="flex items-center justify-between border-b border-neutral-100 px-6 py-4 dark:border-neutral-800"
+                >
+                    <div class="flex items-center gap-2">
+                        <Truck class="h-4 w-4 text-emerald-600" />
+                        <h2
+                            class="text-sm font-bold text-neutral-800 dark:text-neutral-100"
+                        >
+                            Update Shipping
+                        </h2>
+                    </div>
+                    <button
+                        @click="closeShippingModal"
+                        class="rounded-lg p-1 transition hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                    >
+                        <X class="h-4 w-4 text-neutral-500" />
+                    </button>
+                </div>
+
+                <!-- Order ref -->
+                <div
+                    class="border-b border-neutral-100 bg-neutral-50 px-6 py-3 text-xs text-neutral-500 dark:border-neutral-800 dark:bg-neutral-800/50"
+                >
+                    Order
+                    <span
+                        class="font-mono font-bold text-neutral-700 dark:text-neutral-200"
+                        >{{ shippingOrder?.id }}</span
+                    >
+                </div>
+
+                <!-- Form -->
+                <div class="space-y-4 px-6 py-5">
+                    <!-- Status picker -->
+                    <div class="space-y-2">
+                        <label
+                            class="text-xs font-semibold text-neutral-600 dark:text-neutral-300"
+                            >Shipping Status</label
+                        >
+                        <div class="grid grid-cols-1 gap-2">
+                            <label
+                                v-for="opt in shippingStatusOptions"
+                                :key="opt.value"
+                                :class="[
+                                    'flex cursor-pointer items-center gap-3 rounded-xl border-2 px-4 py-2.5 transition',
+                                    shippingForm.shipping_status === opt.value
+                                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30'
+                                        : 'border-neutral-200 hover:border-neutral-300 dark:border-neutral-700',
+                                ]"
+                            >
+                                <input
+                                    type="radio"
+                                    :value="opt.value"
+                                    v-model="shippingForm.shipping_status"
+                                    class="sr-only"
+                                />
+                                <div
+                                    :class="[
+                                        'flex h-3 w-3 items-center justify-center rounded-full border-2',
+                                        shippingForm.shipping_status ===
+                                        opt.value
+                                            ? 'border-emerald-600'
+                                            : 'border-neutral-300',
+                                    ]"
+                                >
+                                    <div
+                                        v-if="
+                                            shippingForm.shipping_status ===
+                                            opt.value
+                                        "
+                                        class="h-1.5 w-1.5 rounded-full bg-emerald-600"
+                                    />
+                                </div>
+                                <span
+                                    :class="[
+                                        'text-xs font-semibold',
+                                        opt.color,
+                                    ]"
+                                    >{{ opt.label }}</span
+                                >
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Tracking fields — only shown for packed/shipped/delivered -->
+                    <template
+                        v-if="
+                            ['packed', 'shipped', 'delivered'].includes(
+                                shippingForm.shipping_status,
+                            )
+                        "
+                    >
+                        <div class="space-y-1">
+                            <label
+                                class="text-xs font-semibold text-neutral-600 dark:text-neutral-300"
+                                >Courier / Carrier</label
+                            >
+                            <input
+                                v-model="shippingForm.courier"
+                                type="text"
+                                placeholder="e.g. FedEx, DHL, Pathao"
+                                class="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs outline-none focus:border-emerald-500 dark:border-neutral-700 dark:bg-neutral-800"
+                            />
+                        </div>
+                        <div class="space-y-1">
+                            <label
+                                class="text-xs font-semibold text-neutral-600 dark:text-neutral-300"
+                                >Tracking Number</label
+                            >
+                            <input
+                                v-model="shippingForm.tracking_number"
+                                type="text"
+                                placeholder="e.g. 1Z999AA10123456784"
+                                class="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 font-mono text-xs outline-none focus:border-emerald-500 dark:border-neutral-700 dark:bg-neutral-800"
+                            />
+                        </div>
+                        <div class="space-y-1">
+                            <label
+                                class="text-xs font-semibold text-neutral-600 dark:text-neutral-300"
+                                >Tracking URL
+                                <span class="font-normal text-neutral-400"
+                                    >(optional)</span
+                                ></label
+                            >
+                            <input
+                                v-model="shippingForm.tracking_url"
+                                type="url"
+                                placeholder="https://track.courier.com/..."
+                                class="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs outline-none focus:border-emerald-500 dark:border-neutral-700 dark:bg-neutral-800"
+                            />
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Actions -->
+                <div
+                    class="flex items-center justify-end gap-2 border-t border-neutral-100 bg-neutral-50 px-6 py-4 dark:border-neutral-800 dark:bg-neutral-800/30"
+                >
+                    <button
+                        @click="closeShippingModal"
+                        class="h-9 rounded-lg border border-neutral-200 px-4 text-xs font-semibold text-neutral-600 transition hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        @click="submitShipping"
+                        class="flex h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-5 text-xs font-bold text-white transition hover:bg-emerald-700"
+                    >
+                        <Check class="h-3.5 w-3.5" /> Save Changes
+                    </button>
                 </div>
             </div>
         </div>
+    </Teleport>
+    <!-- ──────────────────────────────────────────────────────────────────── -->
 
-    </div>
-
-    <!-- 2. CUSTOMER DASHBOARD TEMPLATE -->
-    <div v-else class="px-4 sm:px-6 lg:px-8 py-6 space-y-6 pb-12 text-neutral-800 dark:text-neutral-200 overflow-x-hidden">
-        
+    <div
+        v-if="role === 'customer'"
+        class="space-y-6 overflow-x-hidden px-4 py-6 pb-12 text-neutral-800 sm:px-6 lg:px-8 dark:text-neutral-200"
+    >
         <!-- Customer Stats -->
-        <div class="grid gap-4 grid-cols-3">
-            <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs dark:border-neutral-800 dark:bg-neutral-900 flex flex-col justify-between">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Orders Placed</span>
+        <div class="grid grid-cols-3 gap-4">
+            <div
+                class="flex flex-col justify-between rounded-xl border border-neutral-200 bg-white p-4 shadow-xs dark:border-neutral-800 dark:bg-neutral-900"
+            >
+                <span
+                    class="text-[10px] font-bold tracking-wider text-neutral-400 uppercase"
+                    >Orders Placed</span
+                >
                 <div class="my-1 flex items-baseline gap-1.5">
-                    <span class="text-2xl font-black font-mono leading-none">{{ stats.totalOrders ?? 0 }}</span>
+                    <span class="font-mono text-2xl leading-none font-black">{{
+                        stats.totalOrders ?? 0
+                    }}</span>
                     <span class="text-[10px] text-neutral-400">total</span>
                 </div>
-                <div class="text-[9px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-bold">
+                <div
+                    class="flex items-center gap-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400"
+                >
                     <Package class="h-3 w-3" /> Fully tracked
                 </div>
             </div>
-            
-            <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs dark:border-neutral-800 dark:bg-neutral-900 flex flex-col justify-between">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Saved with Coupons</span>
+
+            <div
+                class="flex flex-col justify-between rounded-xl border border-neutral-200 bg-white p-4 shadow-xs dark:border-neutral-800 dark:bg-neutral-900"
+            >
+                <span
+                    class="text-[10px] font-bold tracking-wider text-neutral-400 uppercase"
+                    >Saved with Coupons</span
+                >
                 <div class="my-1 flex items-baseline gap-1.5">
-                    <span class="text-2xl font-black font-mono leading-none">{{ $page.props.currency_symbol ?? '$' }}{{ (stats.totalSaved ?? 0).toFixed(2) }}</span>
+                    <span class="font-mono text-2xl leading-none font-black"
+                        >{{ $page.props.currency_symbol ?? '$'
+                        }}{{ (stats.totalSaved ?? 0).toFixed(2) }}</span
+                    >
                     <span class="text-[10px] text-neutral-400">saved</span>
                 </div>
-                <div class="text-[9px] text-indigo-600 dark:text-indigo-400 flex items-center gap-1 font-bold">
+                <div
+                    class="flex items-center gap-1 text-[9px] font-bold text-indigo-600 dark:text-indigo-400"
+                >
                     <PercentCircle class="h-3 w-3" /> Best offers utilized
                 </div>
             </div>
 
-            <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs dark:border-neutral-800 dark:bg-neutral-900 flex flex-col justify-between">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Wishlist items</span>
+            <div
+                class="flex flex-col justify-between rounded-xl border border-neutral-200 bg-white p-4 shadow-xs dark:border-neutral-800 dark:bg-neutral-900"
+            >
+                <span
+                    class="text-[10px] font-bold tracking-wider text-neutral-400 uppercase"
+                    >Wishlist items</span
+                >
                 <div class="my-1 flex items-baseline gap-1.5">
-                    <span class="text-2xl font-black font-mono leading-none">{{ stats.wishlistCount ?? 0 }}</span>
+                    <span class="font-mono text-2xl leading-none font-black">{{
+                        stats.wishlistCount ?? 0
+                    }}</span>
                     <span class="text-[10px] text-neutral-400">items</span>
                 </div>
-                <div class="text-[9px] text-rose-600 dark:text-rose-400 flex items-center gap-1 font-bold">
+                <div
+                    class="flex items-center gap-1 text-[9px] font-bold text-rose-600 dark:text-rose-400"
+                >
                     <Heart class="h-3 w-3" /> Saved for later
                 </div>
             </div>
@@ -1190,48 +1310,76 @@ const filteredPayments = computed(() => {
 
         <!-- Main section layout -->
         <div class="space-y-6">
-            
             <!-- Customer Tabs Navigation -->
-            <div class="flex border-b border-neutral-200 dark:border-neutral-800 gap-6 overflow-x-auto pb-px">
-                <button 
+            <div
+                class="flex gap-6 overflow-x-auto border-b border-neutral-200 pb-px dark:border-neutral-800"
+            >
+                <button
                     @click="customerTab = 'home'"
-                    :class="customerTab === 'home' ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-neutral-400 hover:text-neutral-700'"
-                    class="pb-3 border-b-2 font-bold text-xs transition whitespace-nowrap"
+                    :class="
+                        customerTab === 'home'
+                            ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
+                            : 'border-transparent text-neutral-400 hover:text-neutral-700'
+                    "
+                    class="border-b-2 pb-3 text-xs font-bold whitespace-nowrap transition"
                 >
                     Home
                 </button>
-                <button 
+                <button
+                    v-if="isCartEnabled"
                     @click="customerTab = 'orders'"
-                    :class="customerTab === 'orders' ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-neutral-400 hover:text-neutral-700'"
-                    class="pb-3 border-b-2 font-bold text-xs transition whitespace-nowrap"
+                    :class="
+                        customerTab === 'orders'
+                            ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
+                            : 'border-transparent text-neutral-400 hover:text-neutral-700'
+                    "
+                    class="border-b-2 pb-3 text-xs font-bold whitespace-nowrap transition"
                 >
                     Order List
                 </button>
-                <button 
+                <button
+                    v-if="isCartEnabled"
                     @click="customerTab = 'invoices'"
-                    :class="customerTab === 'invoices' ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-neutral-400 hover:text-neutral-700'"
-                    class="pb-3 border-b-2 font-bold text-xs transition whitespace-nowrap"
+                    :class="
+                        customerTab === 'invoices'
+                            ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
+                            : 'border-transparent text-neutral-400 hover:text-neutral-700'
+                    "
+                    class="border-b-2 pb-3 text-xs font-bold whitespace-nowrap transition"
                 >
                     Customer Invoice
                 </button>
-                <button 
+                <button
                     @click="customerTab = 'support'"
-                    :class="customerTab === 'support' ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-neutral-400 hover:text-neutral-700'"
-                    class="pb-3 border-b-2 font-bold text-xs transition whitespace-nowrap"
+                    :class="
+                        customerTab === 'support'
+                            ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
+                            : 'border-transparent text-neutral-400 hover:text-neutral-700'
+                    "
+                    class="border-b-2 pb-3 text-xs font-bold whitespace-nowrap transition"
                 >
                     Shop Support
                 </button>
-                <button 
+                <button
                     @click="customerTab = 'profile'"
-                    :class="customerTab === 'profile' ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-neutral-400 hover:text-neutral-700'"
-                    class="pb-3 border-b-2 font-bold text-xs transition whitespace-nowrap"
+                    :class="
+                        customerTab === 'profile'
+                            ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
+                            : 'border-transparent text-neutral-400 hover:text-neutral-700'
+                    "
+                    class="border-b-2 pb-3 text-xs font-bold whitespace-nowrap transition"
                 >
                     Profile
                 </button>
-                <button 
+                <button
+                    v-if="isCartEnabled"
                     @click="customerTab = 'coupons'"
-                    :class="customerTab === 'coupons' ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-neutral-400 hover:text-neutral-700'"
-                    class="pb-3 border-b-2 font-bold text-xs transition whitespace-nowrap"
+                    :class="
+                        customerTab === 'coupons'
+                            ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
+                            : 'border-transparent text-neutral-400 hover:text-neutral-700'
+                    "
+                    class="border-b-2 pb-3 text-xs font-bold whitespace-nowrap transition"
                 >
                     Available Coupons
                 </button>
@@ -1240,84 +1388,125 @@ const filteredPayments = computed(() => {
             <!-- Tab 1: Home Overview -->
             <div v-if="customerTab === 'home'" class="space-y-6">
                 <!-- Welcome Hero Banner -->
-                <div class="rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white shadow-md relative overflow-hidden">
-                    <div class="absolute right-0 bottom-0 opacity-10 pointer-events-none transform translate-y-1/4 translate-x-1/4">
-                        <ShoppingBag class="w-64 h-64" />
+                <div
+                    class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white shadow-md"
+                >
+                    <div
+                        class="pointer-events-none absolute right-0 bottom-0 translate-x-1/4 translate-y-1/4 transform opacity-10"
+                    >
+                        <ShoppingBag class="h-64 w-64" />
                     </div>
                     <div class="relative z-10 space-y-2">
-                        <span class="bg-emerald-550/30 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">Customer Portal</span>
-                        <h2 class="text-2xl font-black">Hello, {{ authUser?.first_name || 'Valued Customer' }}!</h2>
-                        <p class="text-xs text-emerald-100 max-w-md">
-                            Welcome to your personal dashboard. Here you can track your shipments, view detailed invoices, manage your profile, and receive dedicated shop support.
+                        <span
+                            class="bg-emerald-550/30 rounded-full px-2.5 py-1 text-[10px] font-bold tracking-wider uppercase"
+                            >Customer Portal</span
+                        >
+                        <h2 class="text-2xl font-black">
+                            Hello,
+                            {{ authUser?.first_name || 'Valued Customer' }}!
+                        </h2>
+                        <p class="max-w-md text-xs text-emerald-100">
+                            Welcome to your personal dashboard. Here you can
+                            track your shipments, view detailed invoices, manage
+                            your profile, and receive dedicated shop support.
                         </p>
                     </div>
                 </div>
 
                 <!-- Quick Actions Grid -->
                 <div class="grid gap-4 sm:grid-cols-3">
-                    <button 
+                    <button
                         @click="customerTab = 'orders'"
-                        class="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs text-left hover:border-emerald-500 transition dark:border-neutral-800 dark:bg-neutral-900 group space-y-2"
+                        class="group space-y-2 rounded-xl border border-neutral-200 bg-white p-4 text-left shadow-xs transition hover:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-900"
                     >
-                        <div class="h-8 w-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center dark:bg-emerald-950 dark:text-emerald-400 group-hover:scale-110 transition duration-300">
+                        <div
+                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 transition duration-300 group-hover:scale-110 dark:bg-emerald-950 dark:text-emerald-400"
+                        >
                             <Package class="h-4 w-4" />
                         </div>
                         <h4 class="text-xs font-bold">Track Your Orders</h4>
-                        <p class="text-[10px] text-neutral-400">View shipping statuses and historical items purchased.</p>
+                        <p class="text-[10px] text-neutral-400">
+                            View shipping statuses and historical items
+                            purchased.
+                        </p>
                     </button>
 
-                    <button 
+                    <button
                         @click="customerTab = 'support'"
-                        class="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs text-left hover:border-emerald-500 transition dark:border-neutral-800 dark:bg-neutral-900 group space-y-2"
+                        class="group space-y-2 rounded-xl border border-neutral-200 bg-white p-4 text-left shadow-xs transition hover:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-900"
                     >
-                        <div class="h-8 w-8 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center dark:bg-teal-950 dark:text-teal-400 group-hover:scale-110 transition duration-300">
+                        <div
+                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-50 text-teal-600 transition duration-300 group-hover:scale-110 dark:bg-teal-950 dark:text-teal-400"
+                        >
                             <LifeBuoy class="h-4 w-4" />
                         </div>
                         <h4 class="text-xs font-bold">Shop Support</h4>
-                        <p class="text-[10px] text-neutral-400">Submit an inquiry or get assist on payment disputes.</p>
+                        <p class="text-[10px] text-neutral-400">
+                            Submit an inquiry or get assist on payment disputes.
+                        </p>
                     </button>
 
-                    <button 
+                    <button
                         @click="customerTab = 'profile'"
-                        class="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs text-left hover:border-emerald-500 transition dark:border-neutral-800 dark:bg-neutral-900 group space-y-2"
+                        class="group space-y-2 rounded-xl border border-neutral-200 bg-white p-4 text-left shadow-xs transition hover:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-900"
                     >
-                        <div class="h-8 w-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center dark:bg-indigo-950 dark:text-indigo-400 group-hover:scale-110 transition duration-300">
+                        <div
+                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 transition duration-300 group-hover:scale-110 dark:bg-indigo-950 dark:text-indigo-400"
+                        >
                             <User class="h-4 w-4" />
                         </div>
                         <h4 class="text-xs font-bold">Manage Profile</h4>
-                        <p class="text-[10px] text-neutral-400">Update security settings or switch associated contacts.</p>
+                        <p class="text-[10px] text-neutral-400">
+                            Update security settings or switch associated
+                            contacts.
+                        </p>
                     </button>
                 </div>
 
                 <!-- Recommended For You Section -->
-                <div class="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs dark:border-neutral-800 dark:bg-neutral-900 space-y-4">
-                    <h3 class="text-xs font-black uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
-                        <TrendingUp class="h-4 w-4 text-emerald-500" /> Recommended For You
+                <div
+                    class="space-y-4 rounded-xl border border-neutral-200 bg-white p-5 shadow-xs dark:border-neutral-800 dark:bg-neutral-900"
+                >
+                    <h3
+                        class="flex items-center gap-1.5 text-xs font-black tracking-wider text-neutral-400 uppercase"
+                    >
+                        <TrendingUp class="h-4 w-4 text-emerald-500" />
+                        Recommended For You
                     </h3>
                     <div class="grid gap-4 sm:grid-cols-3">
-                        <div 
-                            v-for="prod in recommendedProducts" 
+                        <div
+                            v-for="prod in recommendedProducts"
                             :key="prod.id"
-                            class="border border-neutral-100 rounded-xl p-3 flex flex-col justify-between hover:shadow-md transition dark:border-neutral-800 group"
+                            class="group flex flex-col justify-between rounded-xl border border-neutral-100 p-3 transition hover:shadow-md dark:border-neutral-800"
                         >
                             <div class="space-y-2">
-                                <div class="relative overflow-hidden rounded-lg aspect-square">
-                                    <img 
-                                        :src="prod.image" 
-                                        alt="" 
-                                        class="h-full w-full object-cover bg-neutral-100 group-hover:scale-105 transition duration-500"
+                                <div
+                                    class="relative aspect-square overflow-hidden rounded-lg"
+                                >
+                                    <img
+                                        :src="prod.image"
+                                        alt=""
+                                        class="h-full w-full bg-neutral-100 object-cover transition duration-500 group-hover:scale-105"
                                     />
                                 </div>
-                                <span class="text-[9px] font-bold text-neutral-400 uppercase tracking-tight">{{ prod.category }}</span>
-                                <h4 class="text-xs font-bold leading-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition truncate">
+                                <span
+                                    class="text-[9px] font-bold tracking-tight text-neutral-400 uppercase"
+                                    >{{ prod.category }}</span
+                                >
+                                <h4
+                                    class="truncate text-xs leading-tight font-bold transition group-hover:text-emerald-600 dark:group-hover:text-emerald-400"
+                                >
                                     {{ prod.name }}
                                 </h4>
                             </div>
-                            <div class="flex items-center justify-between mt-3">
-                                <span class="font-mono text-xs font-bold">{{ $page.props.currency_symbol ?? '$' }}{{ prod.price.toFixed(2) }}</span>
-                                <Link 
-                                    :href="`/shop?category=${prod.category}`" 
-                                    class="h-7 px-3 rounded-lg bg-neutral-50 hover:bg-emerald-50 flex items-center gap-1 text-[10px] font-bold text-neutral-600 hover:text-emerald-600 transition dark:bg-neutral-800 dark:hover:bg-emerald-950"
+                            <div class="mt-3 flex items-center justify-between">
+                                <span class="font-mono text-xs font-bold"
+                                    >{{ $page.props.currency_symbol ?? '$'
+                                    }}{{ prod.price.toFixed(2) }}</span
+                                >
+                                <Link
+                                    :href="`/shop?category=${prod.category}`"
+                                    class="flex h-7 items-center gap-1 rounded-lg bg-neutral-50 px-3 text-[10px] font-bold text-neutral-600 transition hover:bg-emerald-50 hover:text-emerald-600 dark:bg-neutral-800 dark:hover:bg-emerald-950"
                                 >
                                     <span>Shop</span>
                                     <ArrowRight class="h-3 w-3" />
@@ -1329,118 +1518,293 @@ const filteredPayments = computed(() => {
             </div>
 
             <!-- Tab 2: Order List -->
-            <div v-else-if="customerTab === 'orders'" class="space-y-4">
-                <div v-if="!orders || orders.length === 0" class="rounded-xl border-2 border-dashed border-neutral-200 p-8 text-center dark:border-neutral-800">
+            <div v-else-if="customerTab === 'orders' && isCartEnabled" class="space-y-4">
+                <div
+                    v-if="!orders || orders.length === 0"
+                    class="rounded-xl border-2 border-dashed border-neutral-200 p-8 text-center dark:border-neutral-800"
+                >
                     <ShoppingBag class="mx-auto h-8 w-8 text-neutral-300" />
                     <h3 class="mt-2 text-sm font-bold">No orders placed yet</h3>
-                    <p class="text-xs text-neutral-400 mt-1">Once you complete a checkout, your order will show up here.</p>
-                    <Link href="/shop" class="mt-4 inline-flex h-9 items-center justify-center rounded-lg bg-emerald-600 px-4 text-xs font-semibold text-white hover:bg-emerald-700 transition">
+                    <p class="mt-1 text-xs text-neutral-400">
+                        Once you complete a checkout, your order will show up
+                        here.
+                    </p>
+                    <Link
+                        href="/shop"
+                        class="mt-4 inline-flex h-9 items-center justify-center rounded-lg bg-emerald-600 px-4 text-xs font-semibold text-white transition hover:bg-emerald-700"
+                    >
                         Explore Catalog
                     </Link>
                 </div>
 
-                <div v-else class="rounded-xl border border-neutral-200 bg-white overflow-hidden shadow-xs dark:border-neutral-800 dark:bg-neutral-900">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-xs text-left border-collapse">
-                            <thead>
-                                <tr class="bg-neutral-50 border-b border-neutral-200 text-neutral-500 dark:bg-neutral-800/40 dark:border-neutral-800">
-                                    <th class="p-4 font-semibold">Order ID</th>
-                                    <th class="p-4 font-semibold">Invoice No</th>
-                                    <th class="p-4 font-semibold">Date</th>
-                                    <th class="p-4 font-semibold text-center">Payment Gateway</th>
-                                    <th class="p-4 font-semibold text-right">Total Amount</th>
-                                    <th class="p-4 font-semibold text-center">Delivery Status</th>
-                                    <th class="p-4 font-semibold text-center">Invoice Detail</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-neutral-200 dark:divide-neutral-800/50">
-                                <tr v-for="order in orders" :key="order.id" class="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/20">
-                                    <td class="p-4 font-mono font-semibold">{{ order.id }}</td>
-                                    <td class="p-4 font-mono text-neutral-500">{{ order.invoice_no || '-' }}</td>
-                                    <td class="p-4 text-neutral-500">{{ order.date }}</td>
-                                    <td class="p-4 text-center">
-                                        <span class="rounded bg-neutral-100 px-2 py-0.5 text-[9px] font-bold uppercase text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
-                                            {{ order.gateway }}
-                                        </span>
-                                    </td>
-                                    <td class="p-4 text-right font-bold font-mono">{{ $page.props.currency_symbol ?? '$' }}{{ order.total.toFixed(2) }}</td>
-                                    <td class="p-4 text-center">
-                                        <span 
-                                            v-if="order.status === 'Paid'" 
-                                            class="inline-flex rounded-full bg-green-50 px-2.5 py-0.5 text-[10px] font-bold text-green-600 dark:bg-green-950 dark:text-green-400"
+                <div v-else class="space-y-4">
+                    <div
+                        v-for="order in orders"
+                        :key="order.id"
+                        class="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs dark:border-neutral-800 dark:bg-neutral-900"
+                    >
+                        <!-- Order header row -->
+                        <div
+                            class="mb-4 flex flex-wrap items-start justify-between gap-3"
+                        >
+                            <div class="space-y-0.5">
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="font-mono text-sm font-bold text-neutral-800 dark:text-neutral-100"
+                                        >{{ order.id }}</span
+                                    >
+                                    <span
+                                        class="rounded bg-neutral-100 px-2 py-0.5 text-[9px] font-bold text-neutral-500 uppercase dark:bg-neutral-800"
+                                        >{{ order.gateway }}</span
+                                    >
+                                </div>
+                                <div class="text-[10px] text-neutral-400">
+                                    {{ order.invoice_no || '—' }} ·
+                                    {{ order.date }}
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-mono text-base font-bold"
+                                    >{{ $page.props.currency_symbol ?? '$'
+                                    }}{{ order.total.toFixed(2) }}</span
+                                >
+                                <span
+                                    v-if="isShipmentEnabled"
+                                    :class="[
+                                        'inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold',
+                                        shippingStatusColor(
+                                            order.shipping_status,
+                                        ),
+                                    ]"
+                                >
+                                    {{
+                                        shippingStatusLabel(
+                                            order.shipping_status,
+                                        )
+                                    }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Cancelled state -->
+                        <div
+                            v-if="order.shipping_status === 'cancelled'"
+                            class="flex items-center gap-2 rounded-lg bg-red-50 px-4 py-3 text-xs text-red-600 dark:bg-red-950/30 dark:text-red-400"
+                        >
+                            <X class="h-4 w-4 shrink-0" />
+                            <span class="font-semibold"
+                                >This order has been cancelled.</span
+                            >
+                        </div>
+
+                        <!-- Shipping Progress Stepper -->
+                        <div v-else-if="isShipmentEnabled" class="space-y-4">
+                            <div class="flex items-center gap-0">
+                                <template
+                                    v-for="(step, idx) in shippingSteps"
+                                    :key="step"
+                                >
+                                    <!-- Step circle -->
+                                    <div
+                                        class="relative z-10 flex flex-col items-center gap-1"
+                                    >
+                                        <div
+                                            :class="[
+                                                'flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all duration-300',
+                                                shippingStepIndex(
+                                                    order.shipping_status,
+                                                ) >= idx
+                                                    ? 'border-emerald-600 bg-emerald-600 text-white shadow-md shadow-emerald-500/30'
+                                                    : 'border-neutral-200 bg-white text-neutral-300 dark:border-neutral-700 dark:bg-neutral-900',
+                                            ]"
                                         >
-                                            Completed (Shipped)
-                                        </span>
-                                        <span 
-                                            v-else-if="order.status === 'Pending'" 
-                                            class="inline-flex rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-600 dark:bg-amber-950 dark:text-amber-400"
+                                            <Check
+                                                v-if="
+                                                    shippingStepIndex(
+                                                        order.shipping_status,
+                                                    ) > idx
+                                                "
+                                                class="h-4 w-4"
+                                            />
+                                            <span
+                                                v-else
+                                                class="text-[10px] font-bold"
+                                                >{{ idx + 1 }}</span
+                                            >
+                                        </div>
+                                        <span
+                                            :class="[
+                                                'text-[9px] font-semibold tracking-tight whitespace-nowrap',
+                                                shippingStepIndex(
+                                                    order.shipping_status,
+                                                ) >= idx
+                                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                                    : 'text-neutral-400',
+                                            ]"
+                                            >{{
+                                                shippingStatusLabel(step)
+                                            }}</span
                                         >
-                                            Processing
-                                        </span>
-                                        <span 
-                                            v-else-if="order.status === 'Failed'" 
-                                            class="inline-flex rounded-full bg-red-50 px-2.5 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950 dark:text-red-400"
+                                    </div>
+                                    <!-- Connector line -->
+                                    <div
+                                        v-if="idx < shippingSteps.length - 1"
+                                        :class="[
+                                            'mx-1 mb-4 h-0.5 flex-1 rounded transition-all duration-300',
+                                            shippingStepIndex(
+                                                order.shipping_status,
+                                            ) > idx
+                                                ? 'bg-emerald-500'
+                                                : 'bg-neutral-200 dark:bg-neutral-700',
+                                        ]"
+                                    />
+                                </template>
+                            </div>
+
+                            <!-- Tracking info -->
+                            <div
+                                v-if="isShipmentEnabled && (order.tracking_number || order.courier)"
+                                class="space-y-2 rounded-lg border border-neutral-100 bg-neutral-50 px-4 py-3 dark:border-neutral-700 dark:bg-neutral-800/50"
+                            >
+                                <div class="flex items-center gap-2 text-xs">
+                                    <Truck
+                                        class="h-3.5 w-3.5 shrink-0 text-emerald-600"
+                                    />
+                                    <span
+                                        class="font-semibold text-neutral-700 dark:text-neutral-300"
+                                        >Shipment Details</span
+                                    >
+                                </div>
+                                <div
+                                    class="grid grid-cols-2 gap-x-6 gap-y-1 text-[11px]"
+                                >
+                                    <div v-if="order.courier">
+                                        <span class="text-neutral-400"
+                                            >Courier</span
                                         >
-                                            Failed
-                                        </span>
-                                        <span 
-                                            v-else 
-                                            class="inline-flex rounded-full bg-neutral-100 px-2.5 py-0.5 text-[10px] font-bold text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400"
+                                        <p
+                                            class="font-semibold text-neutral-700 dark:text-neutral-200"
                                         >
-                                            Cancelled
-                                        </span>
-                                    </td>
-                                    <td class="p-4 text-center">
-                                        <button 
-                                            @click="openInvoice(order)"
-                                            class="inline-flex items-center gap-1.5 rounded-lg bg-neutral-50 border border-neutral-200 px-2.5 py-1 text-[10px] font-bold text-neutral-600 hover:bg-emerald-50 hover:text-emerald-600 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-emerald-950/40 transition"
+                                            {{ order.courier }}
+                                        </p>
+                                    </div>
+                                    <div v-if="order.tracking_number">
+                                        <span class="text-neutral-400"
+                                            >Tracking No.</span
                                         >
-                                            <FileText class="h-3.5 w-3.5" />
-                                            <span>View Invoice</span>
-                                        </button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                                        <p
+                                            class="font-mono font-bold text-neutral-700 dark:text-neutral-200"
+                                        >
+                                            {{ order.tracking_number }}
+                                        </p>
+                                    </div>
+                                    <div v-if="order.shipped_at">
+                                        <span class="text-neutral-400"
+                                            >Shipped On</span
+                                        >
+                                        <p
+                                            class="font-semibold text-neutral-700 dark:text-neutral-200"
+                                        >
+                                            {{ order.shipped_at }}
+                                        </p>
+                                    </div>
+                                    <div v-if="order.delivered_at">
+                                        <span class="text-neutral-400"
+                                            >Delivered On</span
+                                        >
+                                        <p
+                                            class="font-semibold text-emerald-600"
+                                        >
+                                            {{ order.delivered_at }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <a
+                                    v-if="order.tracking_url"
+                                    :href="order.tracking_url"
+                                    target="_blank"
+                                    rel="noopener"
+                                    class="mt-1 inline-flex h-7 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-[10px] font-bold text-white transition hover:bg-emerald-700"
+                                >
+                                    <ExternalLink class="h-3 w-3" /> Track
+                                    Package
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Footer actions -->
+                        <div
+                            class="mt-4 flex items-center justify-end border-t border-neutral-100 pt-3 dark:border-neutral-800"
+                        >
+                            <button
+                                @click="openInvoice(order)"
+                                class="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-[10px] font-bold text-neutral-600 transition hover:bg-emerald-50 hover:text-emerald-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-emerald-950/40"
+                            >
+                                <FileText class="h-3.5 w-3.5" /> View Invoice
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Tab 3: Customer Invoice -->
-            <div v-else-if="customerTab === 'invoices'" class="space-y-4">
-                <div v-if="!orders || orders.length === 0" class="rounded-xl border-2 border-dashed border-neutral-200 p-8 text-center dark:border-neutral-800">
+            <div v-else-if="customerTab === 'invoices' && isCartEnabled" class="space-y-4">
+                <div
+                    v-if="!orders || orders.length === 0"
+                    class="rounded-xl border-2 border-dashed border-neutral-200 p-8 text-center dark:border-neutral-800"
+                >
                     <FileText class="mx-auto h-8 w-8 text-neutral-300" />
-                    <h3 class="mt-2 text-sm font-bold">No invoices generated</h3>
-                    <p class="text-xs text-neutral-400 mt-1">Once you complete a purchase, your billing invoices will list here.</p>
+                    <h3 class="mt-2 text-sm font-bold">
+                        No invoices generated
+                    </h3>
+                    <p class="mt-1 text-xs text-neutral-400">
+                        Once you complete a purchase, your billing invoices will
+                        list here.
+                    </p>
                 </div>
 
                 <div v-else class="grid gap-4 sm:grid-cols-2">
-                    <div 
-                        v-for="order in orders" 
+                    <div
+                        v-for="order in orders"
                         :key="order.id"
-                        class="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs dark:border-neutral-800 dark:bg-neutral-900 space-y-4 flex flex-col justify-between hover:border-emerald-500 transition duration-300"
+                        class="flex flex-col justify-between space-y-4 rounded-xl border border-neutral-200 bg-white p-5 shadow-xs transition duration-300 hover:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-900"
                     >
-                        <div class="flex justify-between items-start">
+                        <div class="flex items-start justify-between">
                             <div class="space-y-1">
-                                <span class="rounded bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 uppercase">
+                                <span
+                                    class="rounded bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-600 uppercase dark:bg-emerald-950/40 dark:text-emerald-400"
+                                >
                                     {{ order.invoice_no || 'DRAFT' }}
                                 </span>
-                                <h4 class="text-xs font-bold mt-1">Order Ref: {{ order.id }}</h4>
-                                <span class="text-[10px] text-neutral-400">{{ order.date }}</span>
+                                <h4 class="mt-1 text-xs font-bold">
+                                    Order Ref: {{ order.id }}
+                                </h4>
+                                <span class="text-[10px] text-neutral-400">{{
+                                    order.date
+                                }}</span>
                             </div>
-                            <span class="font-mono text-sm font-black text-neutral-900 dark:text-white">
-                                {{ $page.props.currency_symbol ?? '$' }}{{ order.total.toFixed(2) }}
+                            <span
+                                class="font-mono text-sm font-black text-neutral-900 dark:text-white"
+                            >
+                                {{ $page.props.currency_symbol ?? '$'
+                                }}{{ order.total.toFixed(2) }}
                             </span>
                         </div>
-                        
-                        <div class="border-t border-neutral-100 pt-3 dark:border-neutral-800/80 flex items-center justify-between">
-                            <div class="flex items-center gap-1.5 text-[10px] text-neutral-500">
+
+                        <div
+                            class="flex items-center justify-between border-t border-neutral-100 pt-3 dark:border-neutral-800/80"
+                        >
+                            <div
+                                class="flex items-center gap-1.5 text-[10px] text-neutral-500"
+                            >
                                 <CreditCard class="h-3.5 w-3.5" />
-                                <span class="uppercase">Via {{ order.gateway }}</span>
+                                <span class="uppercase"
+                                    >Via {{ order.gateway }}</span
+                                >
                             </div>
-                            <button 
+                            <button
                                 @click="openInvoice(order)"
-                                class="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-[10px] font-bold text-white hover:bg-emerald-700 transition"
+                                class="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-[10px] font-bold text-white transition hover:bg-emerald-700"
                             >
                                 <Eye class="h-3 w-3" />
                                 <span>View Invoice</span>
@@ -1451,54 +1815,85 @@ const filteredPayments = computed(() => {
             </div>
 
             <!-- Tab 4: Shop Support -->
-            <div v-else-if="customerTab === 'support'" class="grid gap-6 md:grid-cols-3">
+            <div
+                v-else-if="customerTab === 'support'"
+                class="grid gap-6 md:grid-cols-3"
+            >
                 <!-- Ticket Submission Form -->
-                <div class="md:col-span-1 border border-neutral-200 rounded-xl bg-white p-5 space-y-4 shadow-xs dark:border-neutral-800 dark:bg-neutral-900">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
-                        <LifeBuoy class="h-4 w-4 text-emerald-500" /> Support Desk
+                <div
+                    class="space-y-4 rounded-xl border border-neutral-200 bg-white p-5 shadow-xs md:col-span-1 dark:border-neutral-800 dark:bg-neutral-900"
+                >
+                    <h3
+                        class="flex items-center gap-1.5 text-xs font-bold tracking-wider text-neutral-400 uppercase"
+                    >
+                        <LifeBuoy class="h-4 w-4 text-emerald-500" /> Support
+                        Desk
                     </h3>
-                    
+
                     <div class="space-y-3">
                         <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-neutral-500 uppercase">Related Order</label>
-                            <select 
-                                v-model="supportOrder" 
-                                class="w-full text-xs rounded-lg border border-neutral-200 p-2 dark:border-neutral-700 dark:bg-neutral-850"
+                            <label
+                                class="text-[10px] font-bold text-neutral-500 uppercase"
+                                >Related Order</label
+                            >
+                            <select
+                                v-model="supportOrder"
+                                class="dark:bg-neutral-850 w-full rounded-lg border border-neutral-200 p-2 text-xs dark:border-neutral-700"
                             >
                                 <option value="">None / General Inquiry</option>
-                                <option v-for="order in orders" :key="order.id" :value="order.id">
-                                    {{ order.id }} ({{ order.invoice_no || 'No Invoice' }})
+                                <option
+                                    v-for="order in orders"
+                                    :key="order.id"
+                                    :value="order.id"
+                                >
+                                    {{ order.id }} ({{
+                                        order.invoice_no || 'No Invoice'
+                                    }})
                                 </option>
                             </select>
                         </div>
 
                         <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-neutral-500 uppercase">Category</label>
-                            <select 
-                                v-model="supportCategory" 
-                                class="w-full text-xs rounded-lg border border-neutral-200 p-2 dark:border-neutral-700 dark:bg-neutral-850"
+                            <label
+                                class="text-[10px] font-bold text-neutral-500 uppercase"
+                                >Category</label
                             >
-                                <option value="Delivery Issue">Delivery Issue</option>
-                                <option value="Refund Request">Refund Request</option>
-                                <option value="Product Question">Product Question</option>
-                                <option value="Billing Inquiry">Billing Inquiry</option>
+                            <select
+                                v-model="supportCategory"
+                                class="dark:bg-neutral-850 w-full rounded-lg border border-neutral-200 p-2 text-xs dark:border-neutral-700"
+                            >
+                                <option value="Delivery Issue">
+                                    Delivery Issue
+                                </option>
+                                <option value="Refund Request">
+                                    Refund Request
+                                </option>
+                                <option value="Product Question">
+                                    Product Question
+                                </option>
+                                <option value="Billing Inquiry">
+                                    Billing Inquiry
+                                </option>
                                 <option value="Other">Other Inquiry</option>
                             </select>
                         </div>
 
                         <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-neutral-500 uppercase">Describe Your Issue</label>
-                            <textarea 
-                                v-model="supportMessage" 
-                                rows="4" 
+                            <label
+                                class="text-[10px] font-bold text-neutral-500 uppercase"
+                                >Describe Your Issue</label
+                            >
+                            <textarea
+                                v-model="supportMessage"
+                                rows="4"
                                 placeholder="Provide order details, transaction date, or details about your question..."
-                                class="w-full text-xs rounded-lg border border-neutral-200 p-2 dark:border-neutral-700 dark:bg-neutral-850"
+                                class="dark:bg-neutral-850 w-full rounded-lg border border-neutral-200 p-2 text-xs dark:border-neutral-700"
                             ></textarea>
                         </div>
 
-                        <button 
+                        <button
                             @click="handleCreateTicket"
-                            class="w-full h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white transition flex items-center justify-center gap-1.5"
+                            class="flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-600 text-xs font-bold text-white transition hover:bg-emerald-700"
                         >
                             <MessageSquare class="h-4 w-4" />
                             <span>Submit Ticket</span>
@@ -1507,40 +1902,59 @@ const filteredPayments = computed(() => {
                 </div>
 
                 <!-- Ticket list -->
-                <div class="md:col-span-2 space-y-4">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-neutral-400">
+                <div class="space-y-4 md:col-span-2">
+                    <h3
+                        class="text-xs font-bold tracking-wider text-neutral-400 uppercase"
+                    >
                         Your Support Inquiries
                     </h3>
-                    
+
                     <div class="space-y-3">
-                        <div 
-                            v-for="ticket in supportTickets" 
+                        <div
+                            v-for="ticket in supportTickets"
                             :key="ticket.id"
-                            class="border border-neutral-200 rounded-xl bg-white p-4 shadow-xs dark:border-neutral-800 dark:bg-neutral-900 space-y-3"
+                            class="space-y-3 rounded-xl border border-neutral-200 bg-white p-4 shadow-xs dark:border-neutral-800 dark:bg-neutral-900"
                         >
-                            <div class="flex justify-between items-center">
+                            <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-2">
-                                    <span class="font-mono text-xs font-bold text-neutral-700 dark:text-neutral-300">
+                                    <span
+                                        class="font-mono text-xs font-bold text-neutral-700 dark:text-neutral-300"
+                                    >
                                         {{ ticket.id }}
                                     </span>
-                                    <span class="rounded bg-neutral-100 px-2 py-0.5 text-[9px] font-bold uppercase text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
+                                    <span
+                                        class="rounded bg-neutral-100 px-2 py-0.5 text-[9px] font-bold text-neutral-600 uppercase dark:bg-neutral-800 dark:text-neutral-400"
+                                    >
                                         {{ ticket.category }}
                                     </span>
                                 </div>
-                                <span 
-                                    :class="ticket.status === 'Open' ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400' : 'bg-green-50 text-green-600 dark:bg-green-950/40 dark:text-green-400'"
+                                <span
+                                    :class="
+                                        ticket.status === 'Open'
+                                            ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400'
+                                            : 'bg-green-50 text-green-600 dark:bg-green-950/40 dark:text-green-400'
+                                    "
                                     class="rounded-full px-2.5 py-0.5 text-[10px] font-bold"
                                 >
                                     {{ ticket.status }}
                                 </span>
                             </div>
 
-                            <p class="text-xs text-neutral-600 dark:text-neutral-400">
+                            <p
+                                class="text-xs text-neutral-600 dark:text-neutral-400"
+                            >
                                 {{ ticket.message }}
                             </p>
 
-                            <div class="flex justify-between items-center text-[10px] text-neutral-400 pt-2 border-t border-neutral-50 dark:border-neutral-800/60">
-                                <span>Linked Order: <strong class="font-mono">{{ ticket.orderId }}</strong></span>
+                            <div
+                                class="flex items-center justify-between border-t border-neutral-50 pt-2 text-[10px] text-neutral-400 dark:border-neutral-800/60"
+                            >
+                                <span
+                                    >Linked Order:
+                                    <strong class="font-mono">{{
+                                        ticket.orderId
+                                    }}</strong></span
+                                >
                                 <span>Submitted: {{ ticket.date }}</span>
                             </div>
                         </div>
@@ -1549,73 +1963,116 @@ const filteredPayments = computed(() => {
             </div>
 
             <!-- Tab 5: Profile Settings -->
-            <div v-else-if="customerTab === 'profile'" class="grid gap-6 md:grid-cols-3">
+            <div
+                v-else-if="customerTab === 'profile'"
+                class="grid gap-6 md:grid-cols-3"
+            >
                 <!-- Profile Card -->
-                <div class="md:col-span-1 border border-neutral-200 rounded-xl bg-white p-5 space-y-5 text-center shadow-xs dark:border-neutral-800 dark:bg-neutral-900">
-                    <div class="mx-auto w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-xl font-bold">
-                        {{ (authUser?.first_name || 'U').charAt(0) }}{{ (authUser?.last_name || '').charAt(0) }}
+                <div
+                    class="space-y-5 rounded-xl border border-neutral-200 bg-white p-5 text-center shadow-xs md:col-span-1 dark:border-neutral-800 dark:bg-neutral-900"
+                >
+                    <div
+                        class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-xl font-bold text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
+                    >
+                        {{ (authUser?.first_name || 'U').charAt(0)
+                        }}{{ (authUser?.last_name || '').charAt(0) }}
                     </div>
-                    
+
                     <div class="space-y-1">
-                        <h3 class="text-sm font-bold">{{ authUser?.first_name }} {{ authUser?.last_name }}</h3>
-                        <span class="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400 uppercase inline-block">
+                        <h3 class="text-sm font-bold">
+                            {{ authUser?.first_name }} {{ authUser?.last_name }}
+                        </h3>
+                        <span
+                            class="inline-block rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-600 uppercase dark:bg-emerald-950 dark:text-emerald-400"
+                        >
                             {{ authUser?.user_type }}
                         </span>
                     </div>
 
-                    <div class="border-t border-neutral-100 pt-4 text-left space-y-3 dark:border-neutral-800/80 text-[11px]">
+                    <div
+                        class="space-y-3 border-t border-neutral-100 pt-4 text-left text-[11px] dark:border-neutral-800/80"
+                    >
                         <div class="flex justify-between">
                             <span class="text-neutral-400">Username</span>
-                            <span class="font-semibold">{{ authUser?.username || '-' }}</span>
+                            <span class="font-semibold">{{
+                                authUser?.username || '-'
+                            }}</span>
                         </div>
                         <div class="flex justify-between">
                             <span class="text-neutral-400">Email Address</span>
-                            <span class="font-semibold">{{ authUser?.email || '-' }}</span>
+                            <span class="font-semibold">{{
+                                authUser?.email || '-'
+                            }}</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Security Shortcuts / Link cards -->
-                <div class="md:col-span-2 space-y-4">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-neutral-400">Account Security & Options</h3>
-                    
+                <div class="space-y-4 md:col-span-2">
+                    <h3
+                        class="text-xs font-bold tracking-wider text-neutral-400 uppercase"
+                    >
+                        Account Security & Options
+                    </h3>
+
                     <div class="grid gap-4 sm:grid-cols-2">
-                        <Link 
-                            href="/settings/profile" 
-                            class="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs hover:border-emerald-500 transition dark:border-neutral-800 dark:bg-neutral-900 space-y-3 flex flex-col justify-between"
+                        <Link
+                            href="/settings/profile"
+                            class="flex flex-col justify-between space-y-3 rounded-xl border border-neutral-200 bg-white p-4 shadow-xs transition hover:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-900"
                         >
-                            <div class="h-8 w-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center dark:bg-emerald-950 dark:text-emerald-400">
+                            <div
+                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
+                            >
                                 <User class="h-4 w-4" />
                             </div>
                             <div>
-                                <h4 class="text-xs font-bold">Update Profile Details</h4>
-                                <p class="text-[10px] text-neutral-400 mt-1">Change your display name, username, or email details directly.</p>
+                                <h4 class="text-xs font-bold">
+                                    Update Profile Details
+                                </h4>
+                                <p class="mt-1 text-[10px] text-neutral-400">
+                                    Change your display name, username, or email
+                                    details directly.
+                                </p>
                             </div>
                         </Link>
 
-                        <Link 
-                            href="/settings/password" 
-                            class="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs hover:border-emerald-500 transition dark:border-neutral-800 dark:bg-neutral-900 space-y-3 flex flex-col justify-between"
+                        <Link
+                            href="/settings/password"
+                            class="flex flex-col justify-between space-y-3 rounded-xl border border-neutral-200 bg-white p-4 shadow-xs transition hover:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-900"
                         >
-                            <div class="h-8 w-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center dark:bg-amber-950 dark:text-amber-400">
+                            <div
+                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400"
+                            >
                                 <Key class="h-4 w-4" />
                             </div>
                             <div>
-                                <h4 class="text-xs font-bold">Change Password</h4>
-                                <p class="text-[10px] text-neutral-400 mt-1">Keep your portal access secure by rotating passwords.</p>
+                                <h4 class="text-xs font-bold">
+                                    Change Password
+                                </h4>
+                                <p class="mt-1 text-[10px] text-neutral-400">
+                                    Keep your portal access secure by rotating
+                                    passwords.
+                                </p>
                             </div>
                         </Link>
 
-                        <Link 
-                            href="/settings/security" 
-                            class="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs hover:border-emerald-500 transition dark:border-neutral-800 dark:bg-neutral-900 space-y-3 flex flex-col justify-between"
+                        <Link
+                            href="/settings/security"
+                            class="flex flex-col justify-between space-y-3 rounded-xl border border-neutral-200 bg-white p-4 shadow-xs transition hover:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-900"
                         >
-                            <div class="h-8 w-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center dark:bg-indigo-950 dark:text-indigo-400">
+                            <div
+                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400"
+                            >
                                 <Shield class="h-4 w-4" />
                             </div>
                             <div>
-                                <h4 class="text-xs font-bold">2FA Authentication</h4>
-                                <p class="text-[10px] text-neutral-400 mt-1">Setup multi-factor credentials to maximize account safety.</p>
+                                <h4 class="text-xs font-bold">
+                                    2FA Authentication
+                                </h4>
+                                <p class="mt-1 text-[10px] text-neutral-400">
+                                    Setup multi-factor credentials to maximize
+                                    account safety.
+                                </p>
                             </div>
                         </Link>
                     </div>
@@ -1623,75 +2080,112 @@ const filteredPayments = computed(() => {
             </div>
 
             <!-- Tab 6: Available Coupons -->
-            <div v-else-if="customerTab === 'coupons'" class="grid gap-4 sm:grid-cols-2">
-                <div 
-                    v-for="coupon in coupons" 
-                    :key="coupon.id" 
-                    class="relative overflow-hidden rounded-xl border-2 border-dashed border-emerald-500/30 bg-emerald-50/20 p-5 dark:bg-emerald-950/10 flex flex-col justify-between gap-4"
+            <div
+                v-else-if="customerTab === 'coupons' && isCartEnabled"
+                class="grid gap-4 sm:grid-cols-2"
+            >
+                <div
+                    v-for="coupon in coupons"
+                    :key="coupon.id"
+                    class="relative flex flex-col justify-between gap-4 overflow-hidden rounded-xl border-2 border-dashed border-emerald-500/30 bg-emerald-50/20 p-5 dark:bg-emerald-950/10"
                 >
                     <div class="space-y-1">
                         <div class="flex items-center justify-between">
-                            <span class="font-mono text-sm font-black tracking-wider text-emerald-600 dark:text-emerald-400">
+                            <span
+                                class="font-mono text-sm font-black tracking-wider text-emerald-600 dark:text-emerald-400"
+                            >
                                 {{ coupon.code }}
                             </span>
-                            <button 
+                            <button
                                 @click="copyCouponCode(coupon.code)"
-                                class="h-7 w-7 rounded-md bg-white border flex items-center justify-center hover:bg-neutral-50 dark:bg-neutral-900 dark:border-neutral-700 transition"
+                                class="flex h-7 w-7 items-center justify-center rounded-md border bg-white transition hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900"
                             >
                                 <Copy class="h-3.5 w-3.5 text-neutral-500" />
                             </button>
                         </div>
-                        <p class="text-xs text-neutral-600 dark:text-neutral-400">
-                            {{ coupon.description || 'Enjoy flat discount storewide' }}
+                        <p
+                            class="text-xs text-neutral-600 dark:text-neutral-400"
+                        >
+                            {{
+                                coupon.description ||
+                                'Enjoy flat discount storewide'
+                            }}
                         </p>
                     </div>
-                    <div class="border-t border-dashed border-emerald-500/20 pt-2 flex justify-between items-center text-[10px] text-neutral-500">
-                        <span>Min Order: <strong>{{ $page.props.currency_symbol ?? '$' }}{{ coupon.minOrderAmount.toFixed(2) }}</strong></span>
-                        <span class="bg-emerald-600 text-white px-2 py-0.5 rounded-full font-bold">
-                            {{ coupon.discountType === 'percentage' ? `${coupon.discountValue}% OFF` : `${$page.props.currency_symbol ?? '$'}${coupon.discountValue} OFF` }}
+                    <div
+                        class="flex items-center justify-between border-t border-dashed border-emerald-500/20 pt-2 text-[10px] text-neutral-500"
+                    >
+                        <span
+                            >Min Order:
+                            <strong
+                                >{{ $page.props.currency_symbol ?? '$'
+                                }}{{ coupon.minOrderAmount.toFixed(2) }}</strong
+                            ></span
+                        >
+                        <span
+                            class="rounded-full bg-emerald-600 px-2 py-0.5 font-bold text-white"
+                        >
+                            {{
+                                coupon.discountType === 'percentage'
+                                    ? `${coupon.discountValue}% OFF`
+                                    : `${$page.props.currency_symbol ?? '$'}${coupon.discountValue} OFF`
+                            }}
                         </span>
                     </div>
                 </div>
 
-                <div v-if="!coupons || coupons.length === 0" class="col-span-2 text-center text-xs text-neutral-400 py-8">
-                    No active promotional coupons at this moment. Check back soon!
+                <div
+                    v-if="!coupons || coupons.length === 0"
+                    class="col-span-2 py-8 text-center text-xs text-neutral-400"
+                >
+                    No active promotional coupons at this moment. Check back
+                    soon!
                 </div>
             </div>
-
         </div>
-
     </div>
 
     <!-- DETAILED INVOICE MODAL -->
-    <div 
-        v-if="showInvoiceModal && selectedInvoice" 
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-xs p-4 print:p-0 print:bg-white print:relative print:z-0"
+    <div
+        v-if="showInvoiceModal && selectedInvoice"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-xs print:relative print:z-0 print:bg-white print:p-0"
     >
-        <div class="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 max-h-[90vh] overflow-y-auto flex flex-col gap-6 print:max-h-none print:overflow-visible print:border-none print:shadow-none print:p-0">
-            
+        <div
+            class="flex max-h-[90vh] w-full max-w-2xl flex-col gap-6 overflow-y-auto rounded-2xl border border-neutral-100 bg-white p-6 shadow-2xl dark:border-neutral-800 dark:bg-neutral-900 print:max-h-none print:overflow-visible print:border-none print:p-0 print:shadow-none"
+        >
             <!-- Modal Header -->
-            <div class="flex items-center justify-between border-b border-neutral-100 pb-4 dark:border-neutral-800 print:border-neutral-200">
+            <div
+                class="flex items-center justify-between border-b border-neutral-100 pb-4 dark:border-neutral-800 print:border-neutral-200"
+            >
                 <div class="flex items-center gap-2">
-                    <div class="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-black">
+                    <div
+                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 font-black text-white"
+                    >
                         M
                     </div>
                     <div>
-                        <h2 class="font-extrabold text-sm tracking-tight text-neutral-900 dark:text-white print:text-neutral-900">StoreMint Inc.</h2>
-                        <p class="text-[10px] text-neutral-400">Premium E-commerce Experience</p>
+                        <h2
+                            class="text-sm font-extrabold tracking-tight text-neutral-900 dark:text-white print:text-neutral-900"
+                        >
+                            StoreMint Inc.
+                        </h2>
+                        <p class="text-[10px] text-neutral-400">
+                            Premium E-commerce Experience
+                        </p>
                     </div>
                 </div>
-                
+
                 <div class="flex items-center gap-2 print:hidden">
-                    <button 
+                    <button
                         @click="printInvoice"
-                        class="h-8 inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 transition"
+                        class="inline-flex h-8 items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
                     >
                         <Printer class="h-3.5 w-3.5" />
                         <span>Print Invoice</span>
                     </button>
-                    <button 
+                    <button
                         @click="closeInvoice"
-                        class="h-8 w-8 flex items-center justify-center rounded-lg border border-neutral-200 hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800 transition"
+                        class="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 transition hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
                     >
                         <X class="h-4 w-4 animate-in" />
                     </button>
@@ -1701,90 +2195,175 @@ const filteredPayments = computed(() => {
             <!-- Invoice Identity -->
             <div class="grid grid-cols-2 gap-4 text-xs">
                 <div>
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Invoice Information</span>
-                    <h3 class="font-black text-sm text-emerald-600 dark:text-emerald-400 mt-1">
+                    <span
+                        class="text-[10px] font-bold tracking-wider text-neutral-400 uppercase"
+                        >Invoice Information</span
+                    >
+                    <h3
+                        class="mt-1 text-sm font-black text-emerald-600 dark:text-emerald-400"
+                    >
                         {{ selectedInvoice.invoice_no || 'N/A' }}
                     </h3>
-                    <p class="text-[10px] text-neutral-500 mt-0.5">Order ID: {{ selectedInvoice.id }}</p>
-                    <p class="text-[10px] text-neutral-500">Date: {{ selectedInvoice.date }}</p>
+                    <p class="mt-0.5 text-[10px] text-neutral-500">
+                        Order ID: {{ selectedInvoice.id }}
+                    </p>
+                    <p class="text-[10px] text-neutral-500">
+                        Date: {{ selectedInvoice.date }}
+                    </p>
                 </div>
                 <div class="text-right">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Payment Status</span>
+                    <span
+                        class="text-[10px] font-bold tracking-wider text-neutral-400 uppercase"
+                        >Payment Status</span
+                    >
                     <div class="mt-1">
-                        <span 
-                            class="inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider"
+                        <span
+                            class="inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-black tracking-wider uppercase"
                             :class="{
-                                'bg-green-50 text-green-600 dark:bg-green-950 dark:text-green-400': selectedInvoice.status === 'Paid',
-                                'bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400': selectedInvoice.status === 'Pending',
-                                'bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400': selectedInvoice.status === 'Failed',
-                                'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400': selectedInvoice.status === 'Cancelled'
+                                'bg-green-50 text-green-600 dark:bg-green-950 dark:text-green-400':
+                                    selectedInvoice.status === 'Paid',
+                                'bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400':
+                                    selectedInvoice.status === 'Pending',
+                                'bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400':
+                                    selectedInvoice.status === 'Failed',
+                                'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400':
+                                    selectedInvoice.status === 'Cancelled',
                             }"
                         >
                             {{ selectedInvoice.status }}
                         </span>
                     </div>
-                    <p class="text-[10px] text-neutral-500 mt-1.5">Payment Status: <span class="font-bold uppercase text-neutral-800 dark:text-neutral-200 print:text-neutral-850">{{ selectedInvoice.payment_status }}</span></p>
-                    <p class="text-[10px] text-neutral-500">Gateway: <span class="font-bold uppercase text-neutral-800 dark:text-neutral-200 print:text-neutral-850">{{ selectedInvoice.gateway }}</span></p>
+                    <p class="mt-1.5 text-[10px] text-neutral-500">
+                        Payment Status:
+                        <span
+                            class="print:text-neutral-850 font-bold text-neutral-800 uppercase dark:text-neutral-200"
+                            >{{ selectedInvoice.payment_status }}</span
+                        >
+                    </p>
+                    <p class="text-[10px] text-neutral-500">
+                        Gateway:
+                        <span
+                            class="print:text-neutral-850 font-bold text-neutral-800 uppercase dark:text-neutral-200"
+                            >{{ selectedInvoice.gateway }}</span
+                        >
+                    </p>
                 </div>
             </div>
 
             <!-- Billing & Shipping Details -->
-            <div class="grid grid-cols-2 gap-6 border-t border-b border-neutral-100 py-4 dark:border-neutral-800 text-xs">
+            <div
+                class="grid grid-cols-2 gap-6 border-t border-b border-neutral-100 py-4 text-xs dark:border-neutral-800"
+            >
                 <div>
-                    <h4 class="font-bold text-neutral-400 uppercase tracking-wider text-[10px] mb-1.5">Billed To</h4>
-                    <p class="font-bold text-neutral-850 dark:text-neutral-100 print:text-neutral-900">{{ page.props.auth.user.name }}</p>
-                    <p class="text-neutral-500">{{ page.props.auth.user.email }}</p>
+                    <h4
+                        class="mb-1.5 text-[10px] font-bold tracking-wider text-neutral-400 uppercase"
+                    >
+                        Billed To
+                    </h4>
+                    <p
+                        class="text-neutral-850 font-bold dark:text-neutral-100 print:text-neutral-900"
+                    >
+                        {{ page.props.auth.user.name }}
+                    </p>
+                    <p class="text-neutral-500">
+                        {{ page.props.auth.user.email }}
+                    </p>
                 </div>
                 <div>
-                    <h4 class="font-bold text-neutral-400 uppercase tracking-wider text-[10px] mb-1.5">Shipping Address</h4>
-                    <p class="text-neutral-600 dark:text-neutral-350 leading-relaxed font-sans whitespace-pre-line print:text-neutral-800">
-                        {{ selectedInvoice.shipping_address || 'No shipping address specified.' }}
+                    <h4
+                        class="mb-1.5 text-[10px] font-bold tracking-wider text-neutral-400 uppercase"
+                    >
+                        Shipping Address
+                    </h4>
+                    <p
+                        class="dark:text-neutral-350 font-sans leading-relaxed whitespace-pre-line text-neutral-600 print:text-neutral-800"
+                    >
+                        {{
+                            selectedInvoice.shipping_address ||
+                            'No shipping address specified.'
+                        }}
                     </p>
                 </div>
             </div>
 
             <!-- Summary calculations -->
             <div class="space-y-3">
-                <h4 class="font-bold text-neutral-400 uppercase tracking-wider text-[10px]">Financial Summary</h4>
-                
-                <div class="rounded-xl bg-neutral-50 p-4 dark:bg-neutral-800/40 space-y-2 text-xs print:bg-neutral-50/50">
+                <h4
+                    class="text-[10px] font-bold tracking-wider text-neutral-400 uppercase"
+                >
+                    Financial Summary
+                </h4>
+
+                <div
+                    class="space-y-2 rounded-xl bg-neutral-50 p-4 text-xs dark:bg-neutral-800/40 print:bg-neutral-50/50"
+                >
                     <div class="flex justify-between">
                         <span class="text-neutral-500">Subtotal</span>
-                        <span class="font-mono font-semibold">{{ $page.props.currency_symbol ?? '$' }}{{ selectedInvoice.subtotal.toFixed(2) }}</span>
+                        <span class="font-mono font-semibold"
+                            >{{ $page.props.currency_symbol ?? '$'
+                            }}{{ selectedInvoice.subtotal.toFixed(2) }}</span
+                        >
                     </div>
-                    <div v-if="selectedInvoice.discount > 0" class="flex justify-between text-emerald-600 dark:text-emerald-400">
+                    <div
+                        v-if="selectedInvoice.discount > 0"
+                        class="flex justify-between text-emerald-600 dark:text-emerald-400"
+                    >
                         <span>Coupon Savings</span>
-                        <span class="font-mono font-bold">-{{ $page.props.currency_symbol ?? '$' }}{{ selectedInvoice.discount.toFixed(2) }}</span>
+                        <span class="font-mono font-bold"
+                            >-{{ $page.props.currency_symbol ?? '$'
+                            }}{{ selectedInvoice.discount.toFixed(2) }}</span
+                        >
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-neutral-500">Shipping & Handling</span>
-                        <span class="font-mono font-semibold">{{ $page.props.currency_symbol ?? '$' }}{{ selectedInvoice.shipping.toFixed(2) }}</span>
+                        <span class="text-neutral-500"
+                            >Shipping & Handling</span
+                        >
+                        <span class="font-mono font-semibold"
+                            >{{ $page.props.currency_symbol ?? '$'
+                            }}{{ selectedInvoice.shipping.toFixed(2) }}</span
+                        >
                     </div>
-                    <div v-if="selectedInvoice.tax > 0" class="flex justify-between">
+                    <div
+                        v-if="selectedInvoice.tax > 0"
+                        class="flex justify-between"
+                    >
                         <span class="text-neutral-500">Estimated Taxes</span>
-                        <span class="font-mono font-semibold">{{ $page.props.currency_symbol ?? '$' }}{{ selectedInvoice.tax.toFixed(2) }}</span>
+                        <span class="font-mono font-semibold"
+                            >{{ $page.props.currency_symbol ?? '$'
+                            }}{{ selectedInvoice.tax.toFixed(2) }}</span
+                        >
                     </div>
-                    <div class="border-t border-neutral-200 pt-2 flex justify-between items-baseline dark:border-neutral-700">
-                        <span class="font-bold text-neutral-900 dark:text-white print:text-neutral-900">Grand Total</span>
-                        <span class="font-mono text-base font-black text-emerald-600 dark:text-emerald-400">
-                            {{ $page.props.currency_symbol ?? '$' }}{{ selectedInvoice.total.toFixed(2) }}
+                    <div
+                        class="flex items-baseline justify-between border-t border-neutral-200 pt-2 dark:border-neutral-700"
+                    >
+                        <span
+                            class="font-bold text-neutral-900 dark:text-white print:text-neutral-900"
+                            >Grand Total</span
+                        >
+                        <span
+                            class="font-mono text-base font-black text-emerald-600 dark:text-emerald-400"
+                        >
+                            {{ $page.props.currency_symbol ?? '$'
+                            }}{{ selectedInvoice.total.toFixed(2) }}
                         </span>
                     </div>
                 </div>
             </div>
 
             <!-- Footer terms -->
-            <div class="text-center text-[10px] text-neutral-400 mt-2">
-                <p>Thank you for shopping at StoreMint! If you have any inquiries regarding this transaction, contact support.</p>
+            <div class="mt-2 text-center text-[10px] text-neutral-400">
+                <p>
+                    Thank you for shopping at StoreMint! If you have any
+                    inquiries regarding this transaction, contact support.
+                </p>
             </div>
-            
         </div>
     </div>
 
     <!-- GLOBAL TOAST FEEDBACK ALERT -->
-    <div 
+    <div
         v-if="toastMessage"
-        class="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl bg-neutral-900 px-4 py-3 text-xs font-bold text-white shadow-xl dark:bg-neutral-100 dark:text-neutral-900"
+        class="fixed right-6 bottom-6 z-50 flex items-center gap-2 rounded-xl bg-neutral-900 px-4 py-3 text-xs font-bold text-white shadow-xl dark:bg-neutral-100 dark:text-neutral-900"
     >
         <CheckCircle2 class="h-4 w-4 text-emerald-500" />
         <span>{{ toastMessage }}</span>

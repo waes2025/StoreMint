@@ -36,7 +36,6 @@ const leaveTeam = () => {
         onSuccess: () => emit('update:open', false),
     });
 };
-
 </script>
 
 <template>

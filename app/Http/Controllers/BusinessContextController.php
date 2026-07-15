@@ -3,8 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Business;
-use App\Models\BusinessLocation;
-use App\Models\Transaction;
+use Modules\Cart\Models\Transaction;
 use Illuminate\Http\Request;
 
 /**
@@ -47,9 +46,9 @@ class BusinessContextController extends Controller
      */
     public function selectLocation()
     {
-        if (!hasCurrentBusiness()) {
+        if (! hasCurrentBusiness()) {
             return response()->json([
-                'error' => 'Please select a business first'
+                'error' => 'Please select a business first',
             ], 422);
         }
 
@@ -69,9 +68,9 @@ class BusinessContextController extends Controller
             'location_id' => 'required|exists:business_locations,id',
         ]);
 
-        if (!hasCurrentBusiness()) {
+        if (! hasCurrentBusiness()) {
             return response()->json([
-                'error' => 'Business context not set'
+                'error' => 'Business context not set',
             ], 422);
         }
 
@@ -85,7 +84,7 @@ class BusinessContextController extends Controller
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 422);
         }
     }
@@ -106,7 +105,7 @@ class BusinessContextController extends Controller
         clearBusinessContext();
 
         return response()->json([
-            'message' => 'Business context cleared'
+            'message' => 'Business context cleared',
         ]);
     }
 
@@ -116,7 +115,7 @@ class BusinessContextController extends Controller
     public function createTransaction(Request $request)
     {
         // Validate business and location are selected
-        if (!currentBusinessId() || !currentLocationId()) {
+        if (! currentBusinessId() || ! currentLocationId()) {
             return response()->json([
                 'error' => 'Please select business and location',
                 'available_businesses' => availableBusinesses(),
@@ -152,7 +151,7 @@ class BusinessContextController extends Controller
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Failed to create transaction: ' . $e->getMessage()
+                'error' => 'Failed to create transaction: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -162,9 +161,9 @@ class BusinessContextController extends Controller
      */
     public function getTransactions(Request $request)
     {
-        if (!currentBusinessId()) {
+        if (! currentBusinessId()) {
             return response()->json([
-                'error' => 'Please select a business first'
+                'error' => 'Please select a business first',
             ], 422);
         }
 
@@ -198,7 +197,7 @@ class BusinessContextController extends Controller
      */
     private function generateInvoiceNumber(): string
     {
-        return 'INV-' . currentBusinessId() . '-' . now()->format('Ymd') . '-' . rand(10000, 99999);
+        return 'INV-'.currentBusinessId().'-'.now()->format('Ymd').'-'.rand(10000, 99999);
     }
 
     /**
@@ -206,6 +205,6 @@ class BusinessContextController extends Controller
      */
     private function generateRefNumber(): string
     {
-        return 'REF-' . strtoupper(bin2hex(random_bytes(4)));
+        return 'REF-'.strtoupper(bin2hex(random_bytes(4)));
     }
 }

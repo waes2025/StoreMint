@@ -14,6 +14,8 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import type { Team } from '@/types';
+import { route } from '@/lib/route';
+
 
 type Props = {
     teams: Team[];
@@ -41,7 +43,6 @@ defineOptions({
         ],
     },
 });
-
 </script>
 
 <template>
@@ -111,7 +112,11 @@ defineOptions({
                                     size="sm"
                                     as-child
                                 >
-                                    <Link :href="route('teams.edit', team.slug).url">
+                                    <Link
+                                        :href="
+                                            route('teams.edit', team.slug).url
+                                        "
+                                    >
                                         <Eye class="h-4 w-4" />
                                     </Link>
                                 </Button>
@@ -129,7 +134,11 @@ defineOptions({
                                     size="sm"
                                     as-child
                                 >
-                                    <Link :href="route('teams.edit', team.slug).url">
+                                    <Link
+                                        :href="
+                                            route('teams.edit', team.slug).url
+                                        "
+                                    >
                                         <Pencil class="h-4 w-4" />
                                     </Link>
                                 </Button>

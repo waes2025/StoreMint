@@ -10,7 +10,9 @@ import { Leaf } from '@lucide/vue';
     </div>
     <div class="ml-1 grid flex-1 text-left text-sm leading-tight">
         <span class="truncate leading-tight font-semibold">
-            Store<span class="text-emerald-500 dark:text-emerald-400">Mint</span>
+            Store<span class="text-emerald-500 dark:text-emerald-400"
+                >Mint</span
+            >
         </span>
     </div>
 </template>

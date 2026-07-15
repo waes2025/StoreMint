@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { 
-    LayoutGrid, 
-    ShoppingBag, 
-    Ticket, 
-    CreditCard, 
-    Settings, 
+import {
+    LayoutGrid,
+    ShoppingBag,
+    Ticket,
+    CreditCard,
+    Settings,
     LogOut,
-    Package
+    Package,
+    BookOpen,
+    Truck,
+    Globe,
+    Layers,
+    ShoppingCart,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
@@ -32,6 +37,11 @@ const isAdmin = computed(() => {
     return user && (user.user_type === 'admin' || user.user_type === 'user');
 });
 
+const isCartEnabled = computed(() => {
+    const enabledModules = (page.props.enabled_modules as string[]) || [];
+    return enabledModules.includes('Cart');
+});
+
 const dashboardUrl = computed(() => {
     if (isAdmin.value && page.props.currentTeam) {
         return route('dashboard', page.props.currentTeam.slug).url;
@@ -42,9 +52,15 @@ const dashboardUrl = computed(() => {
 const isTabActive = (tabName: string, featureName?: string) => {
     try {
         const urlObj = new URL(page.url, 'http://localhost');
+        if (!urlObj.pathname.endsWith('/dashboard')) {
+            return false;
+        }
         const currentTab = urlObj.searchParams.get('tab') || 'overview';
         if (tabName === 'coming_soon' && featureName) {
-            return currentTab === 'coming_soon' && urlObj.searchParams.get('feature') === featureName;
+            return (
+                currentTab === 'coming_soon' &&
+                urlObj.searchParams.get('feature') === featureName
+            );
         }
         return currentTab === tabName;
     } catch {
@@ -68,15 +84,64 @@ const adminRoute = (tabName: string, featureName?: string) => {
     }
     return `/dashboard?tab=${tabName}`;
 };
+
+const iconMap: Record<string, any> = {
+    BookOpen,
+    Truck,
+    Globe,
+    Layers,
+    LayoutGrid,
+    ShoppingBag,
+    Ticket,
+    CreditCard,
+    Settings,
+    Package
+};
+
+const sidebarModulesList = computed(() => {
+    const moduleMenus = (page.props.module_menus as any[]) || [];
+    return moduleMenus.filter(m => m.type === 'sidebar').map((menu: any) => {
+        let icon = Layers;
+        if (menu.icon && iconMap[menu.icon]) {
+            icon = iconMap[menu.icon];
+        }
+
+        let href = menu.href || '#';
+        try {
+            if (menu.route) {
+                href = route(menu.route).url;
+            }
+        } catch {}
+
+        return {
+            name: menu.title,
+            title: menu.title,
+            href,
+            icon,
+        };
+    });
+});
 </script>
 
 <template>
     <Sidebar collapsible="icon" variant="sidebar">
         <!-- Branded Green Header containing only Logo -->
-        <SidebarHeader class="bg-emerald-900 text-white dark:bg-emerald-950 border-b border-emerald-500/20" style="--sidebar-accent: 142.1 70.6% 25%; --sidebar-accent-foreground: 0 0% 100%; --foreground: 0 0% 100%; --muted-foreground: 142.1 70.6% 85%;">
+        <SidebarHeader
+            class="border-b border-emerald-500/20 bg-emerald-900 text-white dark:bg-emerald-950"
+            style="
+                --sidebar-accent: 142.1 70.6% 25%;
+                --sidebar-accent-foreground: 0 0% 100%;
+                --foreground: 0 0% 100%;
+                --muted-foreground: 142.1 70.6% 85%;
+            "
+        >
             <SidebarMenu>
                 <SidebarMenuItem>
-                    <SidebarMenuButton size="lg" as-child class="hover:bg-emerald-850/50 hover:text-white transition">
+                    <SidebarMenuButton
+                        size="lg"
+                        as-child
+                        class="hover:bg-emerald-850/50 transition hover:text-white"
+                    >
                         <Link :href="dashboardUrl">
                             <AppLogo />
                         </Link>
@@ -86,7 +151,7 @@ const adminRoute = (tabName: string, featureName?: string) => {
         </SidebarHeader>
 
         <!-- Sidebar Body (with default sidebar background color) -->
-        <SidebarContent class="px-2 py-3 space-y-4">
+        <SidebarContent class="space-y-4 px-2 py-3">
             <!-- Team Switcher at the top of content (matches sidebar background color) -->
             <SidebarMenu v-if="isAdmin">
                 <SidebarMenuItem>
@@ -99,7 +164,11 @@ const adminRoute = (tabName: string, featureName?: string) => {
                 <SidebarGroup class="p-0">
                     <SidebarMenu>
                         <SidebarMenuItem>
-                            <SidebarMenuButton :is-active="isTabActive('overview')" as-child tooltip="Overview">
+                            <SidebarMenuButton
+                                :is-active="isTabActive('overview')"
+                                as-child
+                                tooltip="Overview"
+                            >
                                 <Link :href="adminRoute('overview')">
                                     <LayoutGrid />
                                     <span>Overview</span>
@@ -107,34 +176,76 @@ const adminRoute = (tabName: string, featureName?: string) => {
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
-                            <SidebarMenuButton :is-active="isTabActive('products')" as-child tooltip="Products">
+                            <SidebarMenuButton
+                                :is-active="isTabActive('products')"
+                                as-child
+                                tooltip="Products"
+                            >
                                 <Link :href="adminRoute('products')">
                                     <Package />
                                     <span>Products</span>
                                 </Link>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <SidebarMenuButton :is-active="isTabActive('orders')" as-child tooltip="Orders">
+                        <SidebarMenuItem v-if="isCartEnabled">
+                            <SidebarMenuButton
+                                :is-active="isTabActive('orders')"
+                                as-child
+                                tooltip="Orders"
+                            >
                                 <Link :href="adminRoute('orders')">
                                     <ShoppingBag />
                                     <span>Orders</span>
                                 </Link>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <SidebarMenuButton :is-active="isTabActive('coupons')" as-child tooltip="Coupons">
+                        <SidebarMenuItem v-if="isCartEnabled">
+                            <SidebarMenuButton
+                                :is-active="isTabActive('coupons')"
+                                as-child
+                                tooltip="Coupons"
+                            >
                                 <Link :href="adminRoute('coupons')">
                                     <Ticket />
                                     <span>Coupons</span>
                                 </Link>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
+                        <SidebarMenuItem v-if="isCartEnabled">
+                            <SidebarMenuButton
+                                :is-active="isTabActive('carts')"
+                                as-child
+                                tooltip="Carts"
+                            >
+                                <Link :href="adminRoute('carts')">
+                                    <ShoppingCart />
+                                    <span>Carts</span>
+                                </Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
                         <SidebarMenuItem>
-                            <SidebarMenuButton :is-active="isTabActive('payments')" as-child tooltip="Payments">
+                            <SidebarMenuButton
+                                :is-active="isTabActive('payments')"
+                                as-child
+                                tooltip="Payments"
+                            >
                                 <Link :href="adminRoute('payments')">
                                     <CreditCard />
                                     <span>Payments</span>
+                                </Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+
+                        <!-- Dynamic Modules Menu Items -->
+                        <SidebarMenuItem v-for="mod in sidebarModulesList" :key="mod.name">
+                            <SidebarMenuButton
+                                :is-active="isCurrentUrl(mod.href)"
+                                as-child
+                                :tooltip="mod.title"
+                            >
+                                <Link :href="mod.href">
+                                    <component :is="mod.icon" />
+                                    <span>{{ mod.title }}</span>
                                 </Link>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
@@ -147,7 +258,11 @@ const adminRoute = (tabName: string, featureName?: string) => {
                 <SidebarGroup class="p-0">
                     <SidebarMenu>
                         <SidebarMenuItem>
-                            <SidebarMenuButton :is-active="isCurrentUrl('/dashboard')" as-child tooltip="My Dashboard">
+                            <SidebarMenuButton
+                                :is-active="isCurrentUrl('/dashboard')"
+                                as-child
+                                tooltip="My Dashboard"
+                            >
                                 <Link href="/dashboard">
                                     <LayoutGrid />
                                     <span>My Dashboard</span>
@@ -155,7 +270,11 @@ const adminRoute = (tabName: string, featureName?: string) => {
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
-                            <SidebarMenuButton :is-active="isCurrentUrl('/shop')" as-child tooltip="Go to Shop">
+                            <SidebarMenuButton
+                                :is-active="isCurrentUrl('/shop')"
+                                as-child
+                                tooltip="Go to Shop"
+                            >
                                 <Link href="/shop">
                                     <ShoppingBag />
                                     <span>Go to Shop</span>
@@ -167,10 +286,14 @@ const adminRoute = (tabName: string, featureName?: string) => {
             </template>
         </SidebarContent>
 
-        <SidebarFooter class="px-2 py-3 border-t border-sidebar-border/50">
+        <SidebarFooter class="border-t border-sidebar-border/50 px-2 py-3">
             <SidebarMenu>
                 <SidebarMenuItem>
-                    <SidebarMenuButton :is-active="isCurrentUrl('/settings/profile')" as-child tooltip="Settings">
+                    <SidebarMenuButton
+                        :is-active="isCurrentUrl('/settings/profile')"
+                        as-child
+                        tooltip="Settings"
+                    >
                         <Link :href="route('profile.edit')">
                             <Settings />
                             <span>Settings</span>
@@ -178,8 +301,17 @@ const adminRoute = (tabName: string, featureName?: string) => {
                     </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                    <SidebarMenuButton as-child class="text-rose-600 dark:text-rose-455 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30" tooltip="Sign out">
-                        <Link :href="route('logout')" method="post" as="button" class="w-full text-left flex items-center gap-2">
+                    <SidebarMenuButton
+                        as-child
+                        class="dark:text-rose-455 text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950/30"
+                        tooltip="Sign out"
+                    >
+                        <Link
+                            :href="route('logout')"
+                            method="post"
+                            as="button"
+                            class="flex w-full items-center gap-2 text-left"
+                        >
                             <LogOut />
                             <span>Sign out</span>
                         </Link>

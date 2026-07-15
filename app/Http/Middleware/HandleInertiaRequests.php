@@ -2,7 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Business;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -36,12 +38,12 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
-        
-        $businessId = $request->input('business_id') 
-            ?: session('storefront_business_id') 
+
+        $businessId = $request->input('business_id')
+            ?: session('storefront_business_id')
             ?: ($user?->business_id ?? config('ecommerce.business_id', 1));
 
-        $currencySymbol = \Illuminate\Support\Facades\DB::table('currencies')
+        $currencySymbol = DB::table('currencies')
             ->join('business', 'currencies.id', '=', 'business.currency_id')
             ->where('business.id', $businessId)
             ->value('symbol') ?? '$';
@@ -56,17 +58,46 @@ class HandleInertiaRequests extends Middleware
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'currentTeam' => fn () => $user?->currentTeam ? $user->toUserTeam($user->currentTeam) : null,
             'teams' => fn () => $user?->toUserTeams(includeCurrent: true) ?? [],
+            'enabled_modules' => function () use ($businessId) {
+                $business = Business::find($businessId);
+
+                return $business ? ($business->enabled_modules ?? []) : [];
+            },
+            'module_menus' => function () use ($businessId) {
+                $business = Business::find($businessId);
+                $enabled = $business ? ($business->enabled_modules ?? []) : [];
+                $menus = [];
+                foreach ($enabled as $moduleName) {
+                    $module = \Nwidart\Modules\Facades\Module::find($moduleName);
+                    if ($module) {
+                        $lowerName = strtolower($moduleName);
+                        $moduleMenus = config("{$lowerName}.menus");
+                        if (is_array($moduleMenus)) {
+                            foreach ($moduleMenus as $menu) {
+                                try {
+                                    $menu['href'] = route($menu['route']);
+                                } catch (\Exception $e) {
+                                    $menu['href'] = '#';
+                                }
+                                $menus[] = $menu;
+                            }
+                        }
+                    }
+                }
+                usort($menus, fn($a, $b) => ($a['order'] ?? 100) <=> ($b['order'] ?? 100));
+                return $menus;
+            },
             'promo_coupon' => function () use ($businessId) {
-                $coupon = \Illuminate\Support\Facades\DB::table('coupons')
+                $coupon = DB::table('coupons')
                     ->where('business_id', $businessId)
                     ->where('status', 'active')
                     ->where(function ($query) {
                         $query->whereNull('expires_at')
-                              ->orWhere('expires_at', '>', now());
+                            ->orWhere('expires_at', '>', now());
                     })
                     ->where(function ($query) {
                         $query->whereNull('starts_at')
-                              ->orWhere('starts_at', '<=', now());
+                            ->orWhere('starts_at', '<=', now());
                     })
                     ->orderBy('id', 'desc')
                     ->first();

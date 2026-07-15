@@ -51,7 +51,7 @@ const labels = {
         btn: 'পাসওয়ার্ড রিসেট লিঙ্ক পাঠান',
         orReturn: 'অথবা, ফিরে যান',
         login: 'লগইন পেজে',
-    }
+    },
 };
 
 const currentText = computed(() => {
@@ -70,9 +70,16 @@ const currentText = computed(() => {
     </div>
 
     <div class="space-y-6">
-        <Form v-bind="route('password.email.form')" v-slot="{ errors, processing }">
+        <Form
+            v-bind="route('password.email.form')"
+            v-slot="{ errors, processing }"
+        >
             <div class="grid gap-2">
-                <Label for="email" class="text-neutral-700 dark:text-neutral-300 font-semibold text-xs">{{ currentText.email }}</Label>
+                <Label
+                    for="email"
+                    class="text-xs font-semibold text-neutral-700 dark:text-neutral-300"
+                    >{{ currentText.email }}</Label
+                >
                 <Input
                     id="email"
                     type="email"
@@ -87,7 +94,7 @@ const currentText = computed(() => {
 
             <div class="my-6 flex items-center justify-start">
                 <Button
-                    class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/20 transition-all duration-300 border-none cursor-pointer"
+                    class="w-full cursor-pointer border-none bg-gradient-to-r from-emerald-600 to-teal-600 font-bold text-white shadow-md shadow-emerald-500/10 transition-all duration-300 hover:from-emerald-500 hover:to-teal-500 hover:shadow-emerald-500/20"
                     :disabled="processing"
                 >
                     <Spinner v-if="processing" />
@@ -98,13 +105,12 @@ const currentText = computed(() => {
 
         <div class="space-x-1 text-center text-xs text-neutral-500">
             <span>{{ currentText.orReturn }}</span>
-            <Link 
-                :href="route('login').url" 
-                class="font-semibold text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors underline decoration-emerald-500/30 hover:decoration-emerald-500 underline-offset-4"
+            <Link
+                :href="route('login').url"
+                class="font-semibold text-emerald-600 underline decoration-emerald-500/30 underline-offset-4 transition-colors hover:text-emerald-500 hover:decoration-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300"
             >
                 {{ currentText.login }}
             </Link>
         </div>
     </div>
 </template>
-

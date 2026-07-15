@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Business;
 use App\Models\BusinessLocation;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Session;
 
 /**
@@ -12,6 +13,7 @@ use Illuminate\Support\Facades\Session;
 class BusinessContextService
 {
     const CURRENT_BUSINESS_KEY = 'current_business_id';
+
     const CURRENT_LOCATION_KEY = 'current_business_location_id';
 
     /**
@@ -21,7 +23,7 @@ class BusinessContextService
     {
         $businessId = Session::get(self::CURRENT_BUSINESS_KEY);
 
-        if (!$businessId) {
+        if (! $businessId) {
             return null;
         }
 
@@ -59,7 +61,7 @@ class BusinessContextService
     {
         $locationId = Session::get(self::CURRENT_LOCATION_KEY);
 
-        if (!$locationId) {
+        if (! $locationId) {
             return null;
         }
 
@@ -86,7 +88,7 @@ class BusinessContextService
         $currentBusinessId = self::getCurrentBusinessId();
 
         if ($currentBusinessId && $location->business_id !== $currentBusinessId) {
-            throw new \Exception("Location does not belong to current business");
+            throw new \Exception('Location does not belong to current business');
         }
 
         Session::put(self::CURRENT_LOCATION_KEY, $location->id);
@@ -97,11 +99,11 @@ class BusinessContextService
     /**
      * Get all businesses for the current user
      */
-    public static function getAvailableBusinesses(): \Illuminate\Database\Eloquent\Collection
+    public static function getAvailableBusinesses(): Collection
     {
         $user = auth()->user();
 
-        if (!$user) {
+        if (! $user) {
             return collect();
         }
 
@@ -119,11 +121,11 @@ class BusinessContextService
     /**
      * Get all locations for the currently selected business
      */
-    public static function getAvailableLocations(): \Illuminate\Database\Eloquent\Collection
+    public static function getAvailableLocations(): Collection
     {
         $businessId = self::getCurrentBusinessId();
 
-        if (!$businessId) {
+        if (! $businessId) {
             return collect();
         }
 

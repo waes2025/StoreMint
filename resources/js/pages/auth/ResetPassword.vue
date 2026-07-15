@@ -55,7 +55,7 @@ const labels = {
         password: 'পাসওয়ার্ড',
         confirmPassword: 'পাসওয়ার্ড নিশ্চিত করুন',
         btn: 'পাসওয়ার্ড পরিবর্তন করুন',
-    }
+    },
 };
 
 const currentText = computed(() => {
@@ -74,7 +74,11 @@ const currentText = computed(() => {
     >
         <div class="grid gap-6">
             <div class="grid gap-2">
-                <Label for="email" class="text-neutral-700 dark:text-neutral-300 font-semibold text-xs">{{ currentText.email }}</Label>
+                <Label
+                    for="email"
+                    class="text-xs font-semibold text-neutral-700 dark:text-neutral-300"
+                    >{{ currentText.email }}</Label
+                >
                 <Input
                     id="email"
                     type="email"
@@ -88,7 +92,11 @@ const currentText = computed(() => {
             </div>
 
             <div class="grid gap-2">
-                <Label for="password" class="text-neutral-700 dark:text-neutral-300 font-semibold text-xs">{{ currentText.password }}</Label>
+                <Label
+                    for="password"
+                    class="text-xs font-semibold text-neutral-700 dark:text-neutral-300"
+                    >{{ currentText.password }}</Label
+                >
                 <PasswordInput
                     id="password"
                     name="password"
@@ -102,7 +110,11 @@ const currentText = computed(() => {
             </div>
 
             <div class="grid gap-2">
-                <Label for="password_confirmation" class="text-neutral-700 dark:text-neutral-300 font-semibold text-xs">{{ currentText.confirmPassword }}</Label>
+                <Label
+                    for="password_confirmation"
+                    class="text-xs font-semibold text-neutral-700 dark:text-neutral-300"
+                    >{{ currentText.confirmPassword }}</Label
+                >
                 <PasswordInput
                     id="password_confirmation"
                     name="password_confirmation"
@@ -116,7 +128,7 @@ const currentText = computed(() => {
 
             <Button
                 type="submit"
-                class="mt-4 w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/20 transition-all duration-300 border-none cursor-pointer"
+                class="mt-4 w-full cursor-pointer border-none bg-gradient-to-r from-emerald-600 to-teal-600 font-bold text-white shadow-md shadow-emerald-500/10 transition-all duration-300 hover:from-emerald-500 hover:to-teal-500 hover:shadow-emerald-500/20"
                 :disabled="processing"
                 data-test="reset-password-button"
             >

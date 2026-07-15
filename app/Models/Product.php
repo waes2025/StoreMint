@@ -6,10 +6,11 @@ use App\Concerns\BelongsToBusinessContext;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class Product extends Model
 {
-    use SoftDeletes, BelongsToBusinessContext;
+    use BelongsToBusinessContext, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -17,7 +18,7 @@ class Product extends Model
         'category_id',
         'image',
         'is_featured',
-        'is_active',
+        'is_allow_ecom',
         'sku',
         'type',
         'enable_stock',
@@ -49,7 +50,7 @@ class Product extends Model
      */
     public function currentStock(?int $locationId = null): int
     {
-        $purchasedQuery = \Illuminate\Support\Facades\DB::table('purchase_lines')
+        $purchasedQuery = DB::table('purchase_lines')
             ->join('transactions', 'purchase_lines.transaction_id', '=', 'transactions.id')
             ->where('purchase_lines.product_id', $this->id)
             ->whereNotIn('transactions.status', ['cancelled', 'draft', 'quotation']);
@@ -60,16 +61,16 @@ class Product extends Model
 
         $purchased = (float) $purchasedQuery->sum('purchase_lines.quantity');
 
-        $soldQuery = \Illuminate\Support\Facades\DB::table('transaction_sell_lines')
+        $soldQuery = DB::table('transaction_sell_lines')
             ->join('transactions', 'transaction_sell_lines.transaction_id', '=', 'transactions.id')
             ->where('transaction_sell_lines.product_id', $this->id)
             ->where(function ($query) {
                 $query->where(function ($q) {
                     $q->where('transactions.type', 'sell')
-                      ->whereNotIn('transactions.status', ['cancelled', 'draft', 'quotation']);
+                        ->whereNotIn('transactions.status', ['cancelled', 'draft', 'quotation']);
                 })->orWhere(function ($q) {
                     $q->whereIn('transactions.type', ['sales_order', 'sale_order'])
-                      ->whereNotIn('transactions.status', ['cancelled', 'draft', 'quotation', 'completed']);
+                        ->whereNotIn('transactions.status', ['cancelled', 'draft', 'quotation', 'completed']);
                 });
             });
 

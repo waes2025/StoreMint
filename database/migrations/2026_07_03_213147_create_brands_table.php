@@ -30,13 +30,19 @@ return new class extends Migration
                 if (! Schema::hasColumn('brands', 'created_by')) {
                     $table->unsignedInteger('created_by');
                 }
-
+                if (! Schema::hasColumn('brands', 'use_for_repair')) {
+                    $table->tinyInteger('use_for_repair')->default(0)->comment('brands to be used on repair module');
+                }
                 if (! Schema::hasColumn('brands', 'slug')) {
                     $table->string('slug', 191)->nullable();
                 }
 
                 if (! Schema::hasColumn('brands', 'image')) {
                     $table->string('image', 191)->nullable();
+                }
+
+                if (! Schema::hasColumn('brands', 'is_allow_ecom')) {
+                    $table->boolean('is_allow_ecom')->default(false);
                 }
 
                 $table->softDeletes();
