@@ -3,7 +3,6 @@
 namespace App\Concerns;
 
 use App\Models\Business;
-use App\Models\BusinessLocation;
 
 /**
  * Trait for models that belong to a specific business and location
@@ -16,7 +15,7 @@ trait BelongsToBusinessContext
     public function scopeForCurrentBusiness($query)
     {
         $businessId = currentBusinessId();
-        
+
         if ($businessId) {
             return $query->where('business_id', $businessId);
         }
@@ -30,7 +29,7 @@ trait BelongsToBusinessContext
     public function scopeForCurrentLocation($query)
     {
         $locationId = currentLocationId();
-        
+
         if ($locationId) {
             return $query->where('location_id', $locationId);
         }

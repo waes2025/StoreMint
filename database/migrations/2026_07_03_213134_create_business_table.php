@@ -175,7 +175,7 @@ return new class extends Migration
                 if (! Schema::hasColumn('business', 'woocommerce_wh_or_secret')) {
                     $table->string('woocommerce_wh_or_secret')->nullable();
                 }
-                
+
                 if (! Schema::hasColumn('business', 'weighing_scale_setting')) {
                     $table->text('weighing_scale_setting')->nullable();
                 }

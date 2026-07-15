@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CheckModuleEnabled;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SetTeamUrlDefaults;
@@ -20,6 +21,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->validateCsrfTokens(except: [
             'checkout',
+        ]);
+
+        $middleware->alias([
+            'module' => CheckModuleEnabled::class,
         ]);
 
         $middleware->web(append: [

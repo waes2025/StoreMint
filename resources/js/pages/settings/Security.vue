@@ -8,11 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import type { Props as ManageTwoFactorProps } from '@/components/ManageTwoFactor.vue';
 import ManageTwoFactor from '@/components/ManageTwoFactor.vue';
+import { route } from '@/lib/route';
 
 type Props = {
     passwordRules: string;
-} &
-    ManageTwoFactorProps;
+} & ManageTwoFactorProps;
 
 const props = defineProps<Props>();
 
@@ -26,7 +26,6 @@ defineOptions({
         ],
     },
 });
-
 </script>
 
 <template>
@@ -109,5 +108,4 @@ defineOptions({
         :requiresConfirmation="requiresConfirmation"
         :twoFactorEnabled="twoFactorEnabled"
     />
-
 </template>

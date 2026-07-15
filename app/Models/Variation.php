@@ -50,6 +50,7 @@ class Variation extends Model
     {
         // Check if relation is loaded, otherwise query or load it
         $detail = $this->details->firstWhere('key', 'short_description');
+
         return $detail ? $detail->value : null;
     }
 
@@ -57,6 +58,7 @@ class Variation extends Model
     {
         // Check if relation is loaded, otherwise query or load it
         $detail = $this->details->firstWhere('key', 'description');
+
         return $detail ? $detail->value : null;
     }
 }

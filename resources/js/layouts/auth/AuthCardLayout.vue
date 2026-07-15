@@ -25,10 +25,14 @@ defineProps<{
                 :href="home()"
                 class="flex items-center gap-2 self-center font-medium"
             >
-                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-400 to-emerald-600 text-white shadow-md shadow-emerald-500/20">
+                <div
+                    class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-400 to-emerald-600 text-white shadow-md shadow-emerald-500/20"
+                >
                     <Leaf class="size-5" />
                 </div>
-                <span class="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">
+                <span
+                    class="text-xl font-bold tracking-tight text-neutral-900 dark:text-white"
+                >
                     Store<span class="text-emerald-500">Mint</span>
                 </span>
             </Link>

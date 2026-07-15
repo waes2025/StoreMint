@@ -17,12 +17,15 @@ withDefaults(defineProps<Props>(), {
 <template>
     <AppShell variant="header">
         <AppHeader :breadcrumbs="breadcrumbs" />
-        <AppContent variant="header" class="flex flex-col min-h-screen">
+        <AppContent variant="header" class="flex min-h-screen flex-col">
             <div class="flex-1">
                 <slot />
             </div>
-            <footer class="mt-auto border-t border-neutral-200/50 py-4 px-6 text-center text-xs text-neutral-500 dark:border-neutral-850 dark:text-neutral-400">
-                &copy; {{ new Date().getFullYear() }} StoreMint Inc. All rights reserved.
+            <footer
+                class="dark:border-neutral-850 mt-auto border-t border-neutral-200/50 px-6 py-4 text-center text-xs text-neutral-500 dark:text-neutral-400"
+            >
+                &copy; {{ new Date().getFullYear() }} StoreMint Inc. All rights
+                reserved.
             </footer>
         </AppContent>
         <Toaster />

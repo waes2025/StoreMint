@@ -1,17 +1,5 @@
 import type { App } from 'vue';
 import * as baseRoutes from '@/routes';
-import appearance from '@/routes/appearance';
-import gateways from '@/routes/gateways';
-import invitations from '@/routes/invitations';
-import login from '@/routes/login';
-import password from '@/routes/password';
-import profile from '@/routes/profile';
-import register from '@/routes/register';
-import security from '@/routes/security';
-import storage from '@/routes/storage';
-import teams from '@/routes/teams';
-import twoFactor from '@/routes/two-factor';
-import userPassword from '@/routes/user-password';
 
 const wrapRoute = (fn: Function, obj: any) => {
     const wrapped = (...args: any[]) => fn(...args);
@@ -20,19 +8,25 @@ const wrapRoute = (fn: Function, obj: any) => {
 
 const routeRegistry: Record<string, any> = {
     ...baseRoutes,
-    appearance,
-    gateways,
-    invitations,
-    login: wrapRoute(baseRoutes.login, login),
-    password,
-    profile,
-    register: wrapRoute(baseRoutes.register, register),
-    security,
-    storage,
-    teams,
-    'two-factor': twoFactor,
-    'user-password': userPassword,
 };
+
+// Dynamically import all route modules under resources/js/routes/
+const routeModules = import.meta.glob('../routes/*/index.ts', { eager: true });
+
+for (const path in routeModules) {
+    const match = path.match(/\.\.\/routes\/(.+?)\/index\.ts$/);
+    if (match) {
+        const namespace = match[1]; // e.g. 'blog', 'two-factor', 'dashboard', etc.
+        const module: any = routeModules[path];
+        const routesObj = module.default || module;
+        
+        if (namespace in routeRegistry) {
+            routeRegistry[namespace] = wrapRoute(routeRegistry[namespace], routesObj);
+        } else {
+            routeRegistry[namespace] = routesObj;
+        }
+    }
+}
 
 export interface RouteResult {
     url: string;

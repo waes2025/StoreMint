@@ -31,13 +31,15 @@ const removeMember = () => {
         return;
     }
 
-    router.visit(route('teams.members.destroy', [props.team.slug, props.member.id]).url, {
-        onStart: () => (processing.value = true),
-        onFinish: () => (processing.value = false),
-        onSuccess: () => emit('update:open', false),
-    });
+    router.visit(
+        route('teams.members.destroy', [props.team.slug, props.member.id]).url,
+        {
+            onStart: () => (processing.value = true),
+            onFinish: () => (processing.value = false),
+            onSuccess: () => emit('update:open', false),
+        },
+    );
 };
-
 </script>
 
 <template>

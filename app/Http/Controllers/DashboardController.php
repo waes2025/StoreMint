@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Coupon;
+use Modules\Cart\Models\Coupon;
 use App\Models\Product;
 use App\Models\TeamInvitation;
-use App\Models\Transaction;
-use App\Models\TransactionPayment;
+use Modules\Cart\Models\Transaction;
+use Modules\Cart\Models\TransactionPayment;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -49,6 +50,12 @@ class DashboardController extends Controller
                         'gateway' => $gateway,
                         'status' => $this->mapOrderStatus($o->status, $o->payment_status),
                         'payment_status' => $o->payment_status ?? 'due',
+                        'shipping_status' => $o->shipping_status ?? 'ordered',
+                        'tracking_number' => $o->tracking_number,
+                        'tracking_url' => $o->tracking_url,
+                        'courier' => $o->courier,
+                        'shipped_at' => $o->shipped_at ? Carbon::parse($o->shipped_at)->format('M d, Y H:i') : null,
+                        'delivered_at' => $o->delivered_at ? Carbon::parse($o->delivered_at)->format('M d, Y H:i') : null,
                         'subtotal' => (float) ($o->total_before_tax > 0 ? $o->total_before_tax : $o->final_total - $o->shipping_charges + $o->discount_amount),
                         'tax' => (float) $o->tax_amount,
                         'discount' => (float) $o->discount_amount,
@@ -89,6 +96,7 @@ class DashboardController extends Controller
                 ->get()
                 ->map(function ($p) {
                     $variation = $p->variations->first();
+
                     return [
                         'id' => $p->id,
                         'name' => $p->name,
@@ -206,6 +214,12 @@ class DashboardController extends Controller
                     'total' => (float) $o->final_total,
                     'gateway' => $gateway,
                     'status' => $this->mapOrderStatus($o->status, $o->payment_status),
+                    'shipping_status' => $o->shipping_status ?? 'ordered',
+                    'tracking_number' => $o->tracking_number,
+                    'tracking_url' => $o->tracking_url,
+                    'courier' => $o->courier,
+                    'shipped_at' => $o->shipped_at ? Carbon::parse($o->shipped_at)->format('M d, Y H:i') : null,
+                    'delivered_at' => $o->delivered_at ? Carbon::parse($o->delivered_at)->format('M d, Y H:i') : null,
                     'db_id' => $o->id, // database primary key for actions
                 ];
             });
@@ -259,6 +273,44 @@ class DashboardController extends Controller
                 ];
             });
 
+        // Fetch active database carts if Cart module is enabled
+        $carts = [];
+        $businessId = $user->business_id ?? 1;
+        $businessModel = \App\Models\Business::find($businessId);
+        $enabledModules = $businessModel ? ($businessModel->enabled_modules ?? []) : [];
+        if (in_array('Cart', $enabledModules)) {
+            $carts = \Modules\Cart\Models\Cart::with(['user', 'items.product.variations'])
+                ->latest('updated_at')
+                ->get()
+                ->map(function ($c) {
+                    $total = 0;
+                    $itemsCount = 0;
+                    foreach ($c->items as $item) {
+                        $itemsCount += $item->quantity;
+                        if ($item->product) {
+                            $variation = $item->product->variations->first();
+                            $price = $variation ? (float) $variation->default_sell_price : 0.0;
+                            $total += $price * $item->quantity;
+                        }
+                    }
+                    return [
+                        'id' => $c->id,
+                        'customer' => $c->user ? trim($c->user->first_name . ' ' . $c->user->last_name) : 'Guest (Session ' . substr($c->session_id, 0, 8) . ')',
+                        'items_count' => $itemsCount,
+                        'total' => $total,
+                        'last_active' => $c->updated_at->format('M d, Y H:i'),
+                        'items' => $c->items->map(function ($item) {
+                            $variation = $item->product ? $item->product->variations->first() : null;
+                            return [
+                                'product_name' => $item->product ? $item->product->name : 'Unknown Product',
+                                'quantity' => $item->quantity,
+                                'price' => $variation ? (float) $variation->default_sell_price : 0.0,
+                            ];
+                        })->toArray(),
+                    ];
+                });
+        }
+
         return Inertia::render('Dashboard', [
             'role' => 'admin',
             'pendingInvitations' => $pendingInvitations,
@@ -272,6 +324,7 @@ class DashboardController extends Controller
             'orders' => $orders,
             'coupons' => $coupons,
             'payments' => $payments,
+            'carts' => $carts,
         ]);
     }
 
@@ -340,10 +393,10 @@ class DashboardController extends Controller
                 ->where(function ($query) {
                     $query->where(function ($q) {
                         $q->where('transactions.type', 'sell')
-                          ->whereNotIn('transactions.status', ['cancelled', 'draft', 'quotation']);
+                            ->whereNotIn('transactions.status', ['cancelled', 'draft', 'quotation']);
                     })->orWhere(function ($q) {
                         $q->whereIn('transactions.type', ['sales_order', 'sale_order'])
-                          ->whereNotIn('transactions.status', ['cancelled', 'draft', 'quotation', 'completed']);
+                            ->whereNotIn('transactions.status', ['cancelled', 'draft', 'quotation', 'completed']);
                     });
                 })
                 ->sum('transaction_sell_lines.quantity');
@@ -385,215 +438,6 @@ class DashboardController extends Controller
         return back()->with('toast', [
             'type' => 'success',
             'message' => "📦 Stock updated to {$newStock} for {$product->name}!",
-        ]);
-    }
-
-    /**
-     * Ship and mark order as paid.
-     */
-    public function shipOrder(Request $request, $currentTeam, $id): RedirectResponse
-    {
-        abort_if(! $request->user()->isAdmin(), 403);
-
-        $transaction = Transaction::findOrFail($id);
-        $transaction->update([
-            'status' => 'completed',
-            'payment_status' => 'paid',
-        ]);
-
-        // Insert or update transaction payment record
-        $payment = DB::table('transaction_payments')->where('transaction_id', $transaction->id)->first();
-        if (! $payment) {
-            $amount = (float) $transaction->final_total;
-            $paymentType = TransactionPayment::determinePaymentType($amount);
-
-            DB::table('transaction_payments')->insert([
-                'transaction_id' => $transaction->id,
-                'business_id' => $transaction->business_id ?? 1,
-                'amount' => $amount,
-                'method' => 'cash',
-                'payment_type' => $paymentType,
-                'paid_on' => now(),
-                'created_by' => $request->user()->id,
-                'status' => 'success',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        } else {
-            DB::table('transaction_payments')
-                ->where('transaction_id', $transaction->id)
-                ->update([
-                    'status' => 'success',
-                    'updated_at' => now(),
-                ]);
-        }
-
-        Transaction::checkAndGenerateSell($transaction->id);
-
-        return back()->with('toast', [
-            'type' => 'success',
-            'message' => "🚚 Order #{$transaction->ref_no} marked as Shipped and Paid!",
-        ]);
-    }
-
-    /**
-     * Cancel an order.
-     */
-    public function cancelOrder(Request $request, $currentTeam, $id): RedirectResponse
-    {
-        abort_if(! $request->user()->isAdmin(), 403);
-
-        $transaction = Transaction::findOrFail($id);
-        $transaction->update([
-            'status' => 'cancelled',
-            'payment_status' => 'cancelled',
-        ]);
-
-        DB::table('transaction_payments')
-            ->where('transaction_id', $transaction->id)
-            ->update([
-                'status' => 'cancelled',
-                'updated_at' => now(),
-            ]);
-
-        // If a corresponding sell transaction exists, cancel it too
-        $sellTransaction = Transaction::where('type', 'sell')
-            ->where('parent_transaction_id', $transaction->id)
-            ->first();
-        if ($sellTransaction) {
-            $sellTransaction->update([
-                'status' => 'cancelled',
-                'payment_status' => 'cancelled',
-            ]);
-
-            DB::table('transaction_payments')
-                ->where('transaction_id', $sellTransaction->id)
-                ->update([
-                    'status' => 'cancelled',
-                    'updated_at' => now(),
-                ]);
-        }
-
-        return back()->with('toast', [
-            'type' => 'success',
-            'message' => "❌ Order #{$transaction->ref_no} cancelled successfully.",
-        ]);
-    }
-
-    /**
-     * Store a new coupon.
-     */
-    public function storeCoupon(Request $request): RedirectResponse
-    {
-        abort_if(! $request->user()->isAdmin(), 403);
-
-        $businessId = $request->user()->business_id ?? 1;
-        $currencySymbol = DB::table('currencies')
-            ->join('business', 'currencies.id', '=', 'business.currency_id')
-            ->where('business.id', $businessId)
-            ->value('symbol') ?? '$';
-
-        $request->validate([
-            'code' => "required|string|max:50|unique:coupons,code,NULL,id,business_id,{$businessId}",
-            'discountType' => 'required|in:flat,percentage',
-            'discountValue' => 'required|numeric|min:0.01',
-            'minOrderAmount' => 'nullable|numeric|min:0',
-            'usageLimit' => 'nullable|integer|min:1',
-            'expiresAt' => 'nullable|date|after_or_equal:today',
-            'status' => 'required|in:active,inactive',
-        ]);
-
-        Coupon::create([
-            'business_id' => $businessId,
-            'code' => strtoupper($request->input('code')),
-            'description' => $request->input('discountType') === 'percentage'
-                ? "{$request->input('discountValue')}% off storewide!"
-                : "Flat {$currencySymbol}{$request->input('discountValue')} off!",
-            'discount_type' => $request->input('discountType'),
-            'discount_value' => $request->input('discountValue'),
-            'min_order_amount' => $request->input('minOrderAmount') ?? 0.00,
-            'usage_limit' => $request->input('usageLimit'),
-            'expires_at' => $request->input('expiresAt'),
-            'status' => $request->input('status'),
-            'created_by' => $request->user()->id,
-        ]);
-
-        return back()->with('toast', [
-            'type' => 'success',
-            'message' => '🎉 Coupon created successfully!',
-        ]);
-    }
-
-    /**
-     * Toggle coupon status.
-     */
-    public function toggleCoupon(Request $request, $currentTeam, Coupon $coupon): RedirectResponse
-    {
-        abort_if(! $request->user()->isAdmin(), 403);
-
-        $newStatus = $coupon->status === 'active' ? 'inactive' : 'active';
-        $coupon->update(['status' => $newStatus]);
-
-        return back()->with('toast', [
-            'type' => 'success',
-            'message' => "🏷️ Coupon {$coupon->code} is now {$newStatus}!",
-        ]);
-    }
-
-    /**
-     * Soft delete coupon.
-     */
-    public function destroyCoupon(Request $request, $currentTeam, Coupon $coupon): RedirectResponse
-    {
-        abort_if(! $request->user()->isAdmin(), 403);
-
-        $coupon->delete();
-
-        return back()->with('toast', [
-            'type' => 'success',
-            'message' => '🗑️ Coupon deleted.',
-        ]);
-    }
-
-    /**
-     * Update an existing coupon.
-     */
-    public function updateCoupon(Request $request, $currentTeam, Coupon $coupon): RedirectResponse
-    {
-        abort_if(! $request->user()->isAdmin(), 403);
-
-        $businessId = $request->user()->business_id ?? 1;
-        $currencySymbol = DB::table('currencies')
-            ->join('business', 'currencies.id', '=', 'business.currency_id')
-            ->where('business.id', $businessId)
-            ->value('symbol') ?? '$';
-
-        $request->validate([
-            'code' => "required|string|max:50|unique:coupons,code,{$coupon->id},id,business_id,{$businessId}",
-            'discountType' => 'required|in:flat,percentage',
-            'discountValue' => 'required|numeric|min:0.01',
-            'minOrderAmount' => 'nullable|numeric|min:0',
-            'usageLimit' => 'nullable|integer|min:1',
-            'expiresAt' => 'nullable|date|after_or_equal:today',
-            'status' => 'required|in:active,inactive',
-        ]);
-
-        $coupon->update([
-            'code' => strtoupper($request->input('code')),
-            'description' => $request->input('discountType') === 'percentage'
-                ? "{$request->input('discountValue')}% off storewide!"
-                : "Flat {$currencySymbol}{$request->input('discountValue')} off!",
-            'discount_type' => $request->input('discountType'),
-            'discount_value' => $request->input('discountValue'),
-            'min_order_amount' => $request->input('minOrderAmount') ?? 0.00,
-            'usage_limit' => $request->input('usageLimit'),
-            'expires_at' => $request->input('expiresAt'),
-            'status' => $request->input('status'),
-        ]);
-
-        return back()->with('toast', [
-            'type' => 'success',
-            'message' => '🏷️ Coupon updated successfully!',
         ]);
     }
 }

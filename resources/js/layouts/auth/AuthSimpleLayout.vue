@@ -25,7 +25,9 @@ defineProps<{
                         >
                             <Leaf class="size-5" />
                         </div>
-                        <span class="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">
+                        <span
+                            class="text-xl font-bold tracking-tight text-neutral-900 dark:text-white"
+                        >
                             Store<span class="text-emerald-500">Mint</span>
                         </span>
                     </Link>

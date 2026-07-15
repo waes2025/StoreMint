@@ -1,0 +1,8 @@
+{
+    "Blog": true,
+    "Shipment": true,
+    "Gateway": true,
+    "Inventory": true,
+    "Carts": true,
+    "Cart": true
+}

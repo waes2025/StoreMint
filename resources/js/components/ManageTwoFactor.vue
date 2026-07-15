@@ -69,7 +69,10 @@ onUnmounted(() => clearTwoFactorAuthData());
             </p>
 
             <div class="relative inline">
-                <Form v-bind="route('two-factor.disable.form')" #default="{ processing }">
+                <Form
+                    v-bind="route('two-factor.disable.form')"
+                    #default="{ processing }"
+                >
                     <Button
                         variant="destructive"
                         type="submit"

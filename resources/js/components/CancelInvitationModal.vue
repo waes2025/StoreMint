@@ -31,13 +31,18 @@ const cancelInvitation = () => {
         return;
     }
 
-    router.visit(route('teams.invitations.destroy', [props.team.slug, props.invitation.code]).url, {
-        onStart: () => (processing.value = true),
-        onFinish: () => (processing.value = false),
-        onSuccess: () => emit('update:open', false),
-    });
+    router.visit(
+        route('teams.invitations.destroy', [
+            props.team.slug,
+            props.invitation.code,
+        ]).url,
+        {
+            onStart: () => (processing.value = true),
+            onFinish: () => (processing.value = false),
+            onSuccess: () => emit('update:open', false),
+        },
+    );
 };
-
 </script>
 
 <template>

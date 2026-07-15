@@ -21,12 +21,14 @@ const contentTranslations = {
     English: {
         recovery: {
             title: 'Recovery code',
-            description: 'Please confirm access to your account by entering one of your emergency recovery codes.',
+            description:
+                'Please confirm access to your account by entering one of your emergency recovery codes.',
             buttonText: 'login using an authentication code',
         },
         auth: {
             title: 'Authentication code',
-            description: 'Enter the authentication code provided by your authenticator application.',
+            description:
+                'Enter the authentication code provided by your authenticator application.',
             buttonText: 'login using a recovery code',
         },
         continueBtn: 'Continue',
@@ -35,12 +37,14 @@ const contentTranslations = {
     Spanish: {
         recovery: {
             title: 'Codigo de recuperacion',
-            description: 'Confirme el acceso ingresando uno de sus codigos de emergencia.',
+            description:
+                'Confirme el acceso ingresando uno de sus codigos de emergencia.',
             buttonText: 'iniciar sesion con codigo de autenticacion',
         },
         auth: {
             title: 'Codigo de autenticacion',
-            description: 'Ingrese el codigo provisto por su aplicacion de autenticacion.',
+            description:
+                'Ingrese el codigo provisto por su aplicacion de autenticacion.',
             buttonText: 'iniciar sesion con codigo de recuperacion',
         },
         continueBtn: 'Continuar',
@@ -49,12 +53,14 @@ const contentTranslations = {
     French: {
         recovery: {
             title: 'Code de recuperation',
-            description: 'Veuillez confirmer l\'acces en saisissant un code de secours.',
-            buttonText: 'se connecter avec un code d\'authentification',
+            description:
+                "Veuillez confirmer l'acces en saisissant un code de secours.",
+            buttonText: "se connecter avec un code d'authentification",
         },
         auth: {
-            title: 'Code d\'authentification',
-            description: 'Entrez le code fourni par votre application d\'authentification.',
+            title: "Code d'authentification",
+            description:
+                "Entrez le code fourni par votre application d'authentification.",
             buttonText: 'se connecter avec un code de recuperation',
         },
         continueBtn: 'Continuer',
@@ -63,12 +69,14 @@ const contentTranslations = {
     German: {
         recovery: {
             title: 'Wiederherstellungscode',
-            description: 'Geben Sie einen Ihrer Notfall-Wiederherstellungscodes ein.',
+            description:
+                'Geben Sie einen Ihrer Notfall-Wiederherstellungscodes ein.',
             buttonText: 'Mit Authentifizierungscode anmelden',
         },
         auth: {
             title: 'Authentifizierungscode',
-            description: 'Geben Sie den Code aus Ihrer Authentifizierungs-App ein.',
+            description:
+                'Geben Sie den Code aus Ihrer Authentifizierungs-App ein.',
             buttonText: 'Mit Wiederherstellungscode anmelden',
         },
         continueBtn: 'Weiter',
@@ -77,7 +85,8 @@ const contentTranslations = {
     Bengali: {
         recovery: {
             title: 'রিকভারি কোড',
-            description: 'অনুগ্রহ করে আপনার জরুরি রিকভারি কোডগুলোর একটি প্রদান করুন।',
+            description:
+                'অনুগ্রহ করে আপনার জরুরি রিকভারি কোডগুলোর একটি প্রদান করুন।',
             buttonText: 'অথেন্টিকেশন কোড ব্যবহার করে লগইন করুন',
         },
         auth: {
@@ -87,7 +96,7 @@ const contentTranslations = {
         },
         continueBtn: 'এগিয়ে যান',
         orYouCan: 'অথবা আপনি করতে পারেন ',
-    }
+    },
 };
 
 const authConfigContent = computed(() => {
@@ -160,9 +169,9 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
                     </div>
                     <InputError :message="errors.code" />
                 </div>
-                <Button 
-                    type="submit" 
-                    class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/20 transition-all duration-300 border-none cursor-pointer" 
+                <Button
+                    type="submit"
+                    class="w-full cursor-pointer border-none bg-gradient-to-r from-emerald-600 to-teal-600 font-bold text-white shadow-md shadow-emerald-500/10 transition-all duration-300 hover:from-emerald-500 hover:to-teal-500 hover:shadow-emerald-500/20"
                     :disabled="processing"
                 >
                     {{ authConfigContent.continueBtn }}
@@ -171,7 +180,7 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
                     <span>{{ authConfigContent.orYouCan }}</span>
                     <button
                         type="button"
-                        class="font-semibold text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors underline decoration-emerald-500/30 hover:decoration-emerald-500 underline-offset-4 cursor-pointer bg-transparent border-none p-0"
+                        class="cursor-pointer border-none bg-transparent p-0 font-semibold text-emerald-600 underline decoration-emerald-500/30 underline-offset-4 transition-colors hover:text-emerald-500 hover:decoration-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300"
                         @click="() => toggleRecoveryMode(clearErrors)"
                     >
                         {{ authConfigContent.buttonText }}
@@ -196,9 +205,9 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
                     class="focus-visible:border-emerald-500 focus-visible:ring-emerald-500/20"
                 />
                 <InputError :message="errors.recovery_code" />
-                <Button 
-                    type="submit" 
-                    class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/20 transition-all duration-300 border-none cursor-pointer" 
+                <Button
+                    type="submit"
+                    class="w-full cursor-pointer border-none bg-gradient-to-r from-emerald-600 to-teal-600 font-bold text-white shadow-md shadow-emerald-500/10 transition-all duration-300 hover:from-emerald-500 hover:to-teal-500 hover:shadow-emerald-500/20"
                     :disabled="processing"
                 >
                     {{ authConfigContent.continueBtn }}
@@ -208,7 +217,7 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
                     <span>{{ authConfigContent.orYouCan }}</span>
                     <button
                         type="button"
-                        class="font-semibold text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors underline decoration-emerald-500/30 hover:decoration-emerald-500 underline-offset-4 cursor-pointer bg-transparent border-none p-0"
+                        class="cursor-pointer border-none bg-transparent p-0 font-semibold text-emerald-600 underline decoration-emerald-500/30 underline-offset-4 transition-colors hover:text-emerald-500 hover:decoration-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300"
                         @click="() => toggleRecoveryMode(clearErrors)"
                     >
                         {{ authConfigContent.buttonText }}

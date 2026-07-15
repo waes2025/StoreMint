@@ -4,11 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\Brand;
 use App\Models\Category;
-use App\Models\Coupon;
+use Modules\Cart\Models\Coupon;
 use App\Models\Product;
+use Modules\Cart\Models\Transaction;
+use Modules\Cart\Models\TransactionPayment;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -117,7 +121,10 @@ class StorefrontController extends Controller
                 ];
             });
 
-        $systemSetting = \Illuminate\Support\Facades\DB::table('system')->where('key', 'payment_gateways')->first();
+        $systemSetting = DB::table('settings')
+            ->where('business_id', $businessId)
+            ->where('key', 'payment_gateways')
+            ->first();
         $savedGateways = [];
         if ($systemSetting) {
             $val = $systemSetting->value;
@@ -148,13 +155,23 @@ class StorefrontController extends Controller
 
         $gateways = array_merge($defaultGateways, is_array($savedGateways) ? $savedGateways : []);
 
-        $announcementSetting = \Illuminate\Support\Facades\DB::table('system')->where('key', 'announcement_bar')->first();
+        $businessModel = \App\Models\Business::find($businessId);
+        $enabledModules = $businessModel ? ($businessModel->enabled_modules ?? []) : [];
+        if (! in_array('Gateway', $enabledModules)) {
+            $gateways['stripe']['enabled'] = false;
+            $gateways['sslcommerz']['enabled'] = false;
+        }
+
+        $announcementSetting = DB::table('settings')
+            ->where('business_id', $businessId)
+            ->where('key', 'announcement_bar')
+            ->first();
         $announcement = null;
         if ($announcementSetting) {
             $announcement = json_decode($announcementSetting->value, true);
         }
 
-        if (!$announcement) {
+        if (! $announcement) {
             $announcement = [
                 'enabled' => true,
                 'text' => '✨ GRAND OPENING OFFER: USE COUPON {coupon} FOR 50% OFF ALL PRODUCTS!',
@@ -164,8 +181,11 @@ class StorefrontController extends Controller
             ];
         }
 
-        // Hero slides (admin-managed) stored in `system` table under key 'hero_slides'
-        $heroSetting = \Illuminate\Support\Facades\DB::table('system')->where('key', 'hero_slides')->first();
+        // Hero slides (admin-managed) stored in `settings` table under key 'hero_slides'
+        $heroSetting = DB::table('settings')
+            ->where('business_id', $businessId)
+            ->where('key', 'hero_slides')
+            ->first();
         $heroSlides = [];
         if ($heroSetting) {
             $heroSlides = json_decode($heroSetting->value, true) ?: [];
@@ -191,23 +211,23 @@ class StorefrontController extends Controller
             return false;
         }
         $data = trim($value);
-        if ('N;' === $data) {
+        if ($data === 'N;') {
             return true;
         }
         if (strlen($data) < 4) {
             return false;
         }
-        if (':' !== $data[1]) {
+        if ($data[1] !== ':') {
             return false;
         }
         $lastc = substr($data, -1);
-        if (';' !== $lastc && '}' !== $lastc) {
+        if ($lastc !== ';' && $lastc !== '}') {
             return false;
         }
         $token = $data[0];
         switch ($token) {
             case 's':
-                if ('"' !== substr($data, -2, 1)) {
+                if (substr($data, -2, 1) !== '"') {
                     return false;
                 }
             case 'a':
@@ -218,258 +238,8 @@ class StorefrontController extends Controller
             case 'd':
                 return (bool) preg_match("/^{$token}:[0-9.E-]+;/s", $data);
         }
+
         return false;
     }
 
-    /**
-     * Place a storefront order and save it to the database.
-     */
-    public function placeOrder(Request $request): \Illuminate\Http\JsonResponse
-    {
-        $user = $request->user();
-
-        $businessId = (int) ($request->input('business_id') ?: session('storefront_business_id') ?: config('ecommerce.business_id', 1));
-        $locationId = (int) ($request->input('location_id') ?: session('storefront_location_id') ?: config('ecommerce.location_id', 1));
-
-        $business = DB::table('business')->where('id', $businessId)->first();
-        $ownerId = $business ? $business->owner_id : 1;
-
-        $customer = $request->input('customer', []);
-        $items    = $request->input('items', []);
-        $subtotal = (float) $request->input('subtotal', 0);
-        $discount = (float) $request->input('discount', 0);
-        $couponCode = $request->input('couponCode');
-        $shipping   = (float) $request->input('shipping', 0);
-        $grandTotal = (float) $request->input('grandTotal', 0);
-
-        $paymentMethod = $customer['paymentMethod'] ?? 'cod';
-        $paymentStatus = $paymentMethod === 'cod' ? 'due' : 'paid';
-        $orderStatus   = $paymentMethod === 'cod' ? 'ordered' : 'completed';
-
-        $invNo = 'INV-2026-' . rand(1000, 9999);
-        $refNo = 'ORD-' . rand(100000, 999999);
-
-        $contactId = null;
-        $userId    = $user ? $user->id : $ownerId;
-
-        if ($user) {
-            $contactId = DB::table('user_contact_access')
-                ->where('user_id', $user->id)
-                ->value('contact_id');
-        }
-
-        if (!$contactId) {
-            $email = $customer['email'] ?? ($user ? $user->email : 'guest@storemint.com');
-
-            // 1. Try to find an existing contact
-            $existingContact = DB::table('contacts')
-                ->where('business_id', $businessId)
-                ->where('email', $email)
-                ->first();
-
-            if ($existingContact) {
-                $contactId = $existingContact->id;
-
-                // If a user already exists for this contact, use them as created_by
-                if (!$user) {
-                    $linkedUserId = DB::table('user_contact_access')
-                        ->where('contact_id', $contactId)
-                        ->value('user_id');
-                    if ($linkedUserId) {
-                        $userId = $linkedUserId;
-                    }
-                }
-            } else {
-                // 2. Brand-new guest – build name parts
-                $contactName = $customer['name'] ?? ($user ? trim($user->first_name . ' ' . $user->last_name) : 'Guest Customer');
-                $parts     = explode(' ', $contactName, 2);
-                $firstName = $parts[0] ?? 'Guest';
-                $lastName  = $parts[1] ?? 'Customer';
-
-                // 2a. Create the contact record
-                $contactId = DB::table('contacts')->insertGetId([
-                    'business_id' => $businessId,
-                    'type'        => 'customer',
-                    'first_name'  => $firstName,
-                    'last_name'   => $lastName,
-                    'name'        => $contactName,
-                    'email'       => $email,
-                    'mobile'      => $customer['phone'] ?? null,
-                    'created_at'  => now(),
-                    'updated_at'  => now(),
-                ]);
-
-                // 2b. Create a customer User account if this is a guest checkout
-                if (!$user) {
-                    // Derive a unique username from the email local-part
-                    $baseUsername = strtolower(preg_replace('/[^a-z0-9]/i', '', explode('@', $email)[0]));
-                    $username     = $baseUsername;
-                    $suffix       = 1;
-                    while (DB::table('users')->where('username', $username)->exists()) {
-                        $username = $baseUsername . $suffix++;
-                    }
-
-                    // Resolve the store team id (first non-personal team)
-                    $storeTeamId = DB::table('teams')
-                        ->where('is_personal', false)
-                        ->orderBy('id')
-                        ->value('id');
-
-                    $newUserId = DB::table('users')->insertGetId([
-                        'first_name'      => $firstName,
-                        'last_name'       => $lastName,
-                        'username'        => $username,
-                        'email'           => $email,
-                        'password'        => \Illuminate\Support\Facades\Hash::make('password'),
-                        'user_type'       => 'customer',
-                        'business_id'     => $businessId,
-                        'current_team_id' => $storeTeamId,
-                        'created_at'      => now(),
-                        'updated_at'      => now(),
-                    ]);
-
-                    // Add to store team as member
-                    if ($storeTeamId) {
-                        DB::table('team_members')->insertOrIgnore([
-                            'team_id'    => $storeTeamId,
-                            'user_id'    => $newUserId,
-                            'role'       => 'member',
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ]);
-                    }
-
-                    $userId = $newUserId;
-                }
-            }
-
-            // 3. Link contact <-> user in user_contact_access
-            $ownerUserId = $user ? $user->id : $userId;
-            DB::table('user_contact_access')->insertOrIgnore([
-                'user_id'    => $ownerUserId,
-                'contact_id' => $contactId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-        
-        $couponId = null;
-        if ($couponCode) {
-            $couponId = DB::table('coupons')
-                ->where('business_id', $businessId)
-                ->where('code', $couponCode)
-                ->value('id');
-        }
-        
-        $transId = DB::table('transactions')->insertGetId([
-            'business_id' => $businessId,
-            'location_id' => $locationId,
-            'contact_id' => $contactId,
-            'created_by' => $userId,
-            'type' => 'sales_order',
-            'status' => $orderStatus,
-            'payment_status' => $paymentStatus,
-            'invoice_no' => $invNo,
-            'ref_no' => $refNo,
-            'transaction_date' => now(),
-            'total_before_tax' => $subtotal,
-            'discount_type' => $couponId ? 'fixed' : null,
-            'discount_amount' => $discount,
-            'coupon_id' => $couponId,
-            'shipping_charges' => $shipping,
-            'shipping_address' => trim(($customer['address'] ?? '') . ', ' . ($customer['city'] ?? '') . ', ' . ($customer['zip'] ?? '')),
-            'final_total' => $grandTotal,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-        
-        if ($paymentStatus === 'paid') {
-            $paymentType = \App\Models\TransactionPayment::determinePaymentType($grandTotal);
-            DB::table('transaction_payments')->insert([
-                'transaction_id' => $transId,
-                'business_id' => $businessId,
-                'amount' => $grandTotal,
-                'method' => 'online',
-                'payment_type' => $paymentType,
-                'gateway' => $paymentMethod,
-                'paid_on' => now(),
-                'created_by' => $userId,
-                'status' => 'success',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-        
-        foreach ($items as $item) {
-            $productId = $item['product_id'] ?? $item['product']['id'] ?? null;
-            $qty = $item['quantity'] ?? $item['qty'] ?? 1;
-            $price = $item['price'] ?? $item['product']['price'] ?? 0;
-            
-            if ($productId) {
-                $variationId = DB::table('variations')->where('product_id', $productId)->value('id');
-                
-                if ($variationId) {
-                    DB::table('transaction_sell_lines')->insert([
-                        'transaction_id' => $transId,
-                        'product_id' => $productId,
-                        'variation_id' => $variationId,
-                        'quantity' => $qty,
-                        'unit_price' => $price,
-                        'unit_price_before_discount' => $price,
-                        'unit_price_inc_tax' => $price,
-                        'item_tax' => 0.00,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                    
-                    DB::table('variation_location_details')
-                        ->where('product_id', $productId)
-                        ->where('variation_id', $variationId)
-                        ->where('location_id', $locationId)
-                        ->decrement('qty_available', $qty);
-                }
-            }
-        }
-        
-        if ($couponId) {
-            DB::table('coupon_usages')->insert([
-                'coupon_id' => $couponId,
-                'user_id' => $userId,
-                'transaction_id' => $transId,
-                'discount_applied' => $discount,
-                'created_at' => now(),
-            ]);
-            
-            // Increment coupon usage count
-            DB::table('coupons')->where('id', $couponId)->increment('used_count');
-        }
-        
-        \App\Models\Transaction::checkAndGenerateSell($transId);
-        
-        return response()->json([
-            'success' => true,
-            'invoice' => [
-                'invoiceNo' => $invNo,
-                'orderNo' => $refNo,
-                'date' => now()->format('F d, Y'),
-                'paymentMethod' => $paymentMethod === 'stripe' ? 'Stripe (Credit Card)' : 
-                                   ($paymentMethod === 'sslcommerz' ? 'SSLCommerz (Local Card/Mobile Banking)' : 'Cash on Delivery (COD)'),
-                'paymentStatus' => $paymentStatus === 'paid' ? 'Paid' : 'Pending',
-                'customer' => $customer,
-                'items' => array_map(function ($item) {
-                    return [
-                        'name' => $item['product']['name'] ?? 'Product',
-                        'price' => $item['product']['price'] ?? 0,
-                        'quantity' => $item['quantity'] ?? 1,
-                        'total' => ($item['product']['price'] ?? 0) * ($item['quantity'] ?? 1),
-                    ];
-                }, $items),
-                'subtotal' => $subtotal,
-                'discount' => $discount,
-                'couponCode' => $couponCode,
-                'shipping' => $shipping,
-                'grandTotal' => $grandTotal,
-            ]
-        ]);
-    }
 }
