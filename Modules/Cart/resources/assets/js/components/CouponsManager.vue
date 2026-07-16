@@ -12,6 +12,7 @@ interface Coupon {
     minOrderAmount: number;
     usedCount?: number;
     usageLimit?: number;
+    usageLimitPerUser?: number;
     expiresAt: string;
     status: 'active' | 'inactive';
 }
@@ -46,6 +47,7 @@ const newCoupon = ref({
     discountValue: 10,
     minOrderAmount: 0,
     usageLimit: 100,
+    usageLimitPerUser: null as number | null,
     expiresAt: '',
     status: 'active' as 'active' | 'inactive',
 });
@@ -56,6 +58,7 @@ const editCoupon = ref({
     discountValue: 10,
     minOrderAmount: 0,
     usageLimit: 100,
+    usageLimitPerUser: null as number | null,
     expiresAt: '',
     status: 'active' as 'active' | 'inactive',
 });
@@ -116,6 +119,7 @@ const handleCreateCoupon = () => {
             discountValue: newCoupon.value.discountValue,
             minOrderAmount: newCoupon.value.minOrderAmount,
             usageLimit: newCoupon.value.usageLimit,
+            usageLimitPerUser: newCoupon.value.usageLimitPerUser,
             expiresAt: newCoupon.value.expiresAt || null,
             status: newCoupon.value.status,
         },
@@ -129,6 +133,7 @@ const handleCreateCoupon = () => {
                     discountValue: 10,
                     minOrderAmount: 0,
                     usageLimit: 100,
+                    usageLimitPerUser: null,
                     expiresAt: '',
                     status: 'active',
                 };
@@ -146,6 +151,7 @@ const openEditCouponModal = (coupon: any) => {
         discountValue: coupon.discountValue,
         minOrderAmount: coupon.minOrderAmount,
         usageLimit: coupon.usageLimit,
+        usageLimitPerUser: coupon.usageLimitPerUser || null,
         expiresAt: coupon.expiresAt === 'Never' ? '' : coupon.expiresAt,
         status: coupon.status,
     };
@@ -188,6 +194,7 @@ const handleUpdateCoupon = () => {
             discountValue: editCoupon.value.discountValue,
             minOrderAmount: editCoupon.value.minOrderAmount,
             usageLimit: editCoupon.value.usageLimit,
+            usageLimitPerUser: editCoupon.value.usageLimitPerUser,
             expiresAt: editCoupon.value.expiresAt || null,
             status: editCoupon.value.status,
         },
@@ -311,8 +318,10 @@ const deleteCoupon = (couponId: number) => {
                                 {{ $page.props.currency_symbol ?? '$' }}{{ coupon.minOrderAmount.toFixed(2) }}
                             </td>
                             <td class="p-4 text-center font-mono">
-                                {{ coupon.usedCount ?? 0 }} /
-                                <span class="text-neutral-400">{{ coupon.usageLimit }}</span>
+                                <div class="font-bold">{{ coupon.usedCount ?? 0 }} / {{ coupon.usageLimit || '∞' }}</div>
+                                <div v-if="coupon.usageLimitPerUser" class="text-[10px] text-neutral-400">
+                                    Limit/User: {{ coupon.usageLimitPerUser }}
+                                </div>
                             </td>
                             <td class="p-4 font-mono text-neutral-500">
                                 {{ coupon.expiresAt }}
@@ -408,7 +417,7 @@ const deleteCoupon = (couponId: number) => {
                         </div>
                     </div>
 
-                    <div class="grid gap-4 sm:grid-cols-2">
+                    <div class="grid gap-4 sm:grid-cols-3">
                         <div class="flex flex-col gap-2">
                             <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">
                                 Min Order ({{ $page.props.currency_symbol ?? '$' }})
@@ -423,10 +432,19 @@ const deleteCoupon = (couponId: number) => {
                             </p>
                         </div>
                         <div class="flex flex-col gap-2">
-                            <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Usage Limit</label>
+                            <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Total Limit</label>
                             <input
                                 v-model="newCoupon.usageLimit"
                                 type="number"
+                                class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
+                            />
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Limit/Customer</label>
+                            <input
+                                v-model="newCoupon.usageLimitPerUser"
+                                type="number"
+                                placeholder="Unlimited"
                                 class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
                             />
                         </div>
@@ -520,7 +538,7 @@ const deleteCoupon = (couponId: number) => {
                         </div>
                     </div>
 
-                    <div class="grid gap-4 sm:grid-cols-2">
+                    <div class="grid gap-4 sm:grid-cols-3">
                         <div class="flex flex-col gap-2">
                             <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">
                                 Min Order ({{ $page.props.currency_symbol ?? '$' }})
@@ -535,10 +553,19 @@ const deleteCoupon = (couponId: number) => {
                             </p>
                         </div>
                         <div class="flex flex-col gap-2">
-                            <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Usage Limit</label>
+                            <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Total Limit</label>
                             <input
                                 v-model="editCoupon.usageLimit"
                                 type="number"
+                                class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
+                            />
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Limit/Customer</label>
+                            <input
+                                v-model="editCoupon.usageLimitPerUser"
+                                type="number"
+                                placeholder="Unlimited"
                                 class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
                             />
                         </div>

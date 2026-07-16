@@ -547,7 +547,7 @@ export function useStorefront(props: {
                         triggerToast('🎉 Order placed successfully!');
                     } else {
                         triggerToast(
-                            '⚠️ Failed to place order. Please try again.',
+                            data.message ? `⚠️ ${data.message}` : '⚠️ Failed to place order. Please try again.',
                         );
                     }
                 })

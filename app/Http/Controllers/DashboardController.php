@@ -86,6 +86,7 @@ class DashboardController extends Controller
                     'discountType' => $c->discount_type,
                     'discountValue' => (float) $c->discount_value,
                     'minOrderAmount' => (float) $c->min_order_amount,
+                    'usageLimitPerUser' => $c->usage_limit_per_user,
                 ]);
 
             // Featured/Recommended Products for customer dashboard
@@ -236,6 +237,7 @@ class DashboardController extends Controller
                 'minOrderAmount' => (float) $c->min_order_amount,
                 'usedCount' => $c->used_count,
                 'usageLimit' => $c->usage_limit ?? 999,
+                'usageLimitPerUser' => $c->usage_limit_per_user,
                 'expiresAt' => $c->expires_at ? $c->expires_at->format('Y-m-d') : 'Never',
                 'status' => $c->status,
             ]);

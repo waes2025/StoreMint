@@ -166,10 +166,47 @@ class CheckoutController extends Controller
 
         $couponId = null;
         if ($couponCode) {
-            $couponId = DB::table('coupons')
+            $coupon = DB::table('coupons')
                 ->where('business_id', $businessId)
                 ->where('code', $couponCode)
-                ->value('id');
+                ->first();
+
+            if (! $coupon) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The coupon code is invalid.',
+                ]);
+            }
+
+            if ($coupon->status !== 'active' || ($coupon->expires_at && \Carbon\Carbon::parse($coupon->expires_at)->isPast())) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The coupon code has expired.',
+                ]);
+            }
+
+            if ($coupon->usage_limit !== null && $coupon->used_count >= $coupon->usage_limit) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This coupon usage limit has been reached.',
+                ]);
+            }
+
+            if ($coupon->usage_limit_per_user !== null) {
+                $userUsages = DB::table('coupon_usages')
+                    ->where('coupon_id', $coupon->id)
+                    ->where('user_id', $userId)
+                    ->count();
+
+                if ($userUsages >= $coupon->usage_limit_per_user) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'You have reached the usage limit per customer for this coupon.',
+                    ]);
+                }
+            }
+
+            $couponId = $coupon->id;
         }
 
         $transId = DB::table('transactions')->insertGetId([

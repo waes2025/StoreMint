@@ -29,6 +29,7 @@ class CouponsController extends Controller
             'discountValue' => 'required|numeric|min:0.01',
             'minOrderAmount' => 'nullable|numeric|min:0',
             'usageLimit' => 'nullable|integer|min:1',
+            'usageLimitPerUser' => 'nullable|integer|min:1',
             'expiresAt' => 'nullable|date|after_or_equal:today',
             'status' => 'required|in:active,inactive',
         ]);
@@ -43,6 +44,7 @@ class CouponsController extends Controller
             'discount_value' => $request->input('discountValue'),
             'min_order_amount' => $request->input('minOrderAmount') ?? 0.00,
             'usage_limit' => $request->input('usageLimit'),
+            'usage_limit_per_user' => $request->input('usageLimitPerUser'),
             'expires_at' => $request->input('expiresAt'),
             'status' => $request->input('status'),
             'created_by' => $request->user()->id,
@@ -104,6 +106,7 @@ class CouponsController extends Controller
             'discountValue' => 'required|numeric|min:0.01',
             'minOrderAmount' => 'nullable|numeric|min:0',
             'usageLimit' => 'nullable|integer|min:1',
+            'usageLimitPerUser' => 'nullable|integer|min:1',
             'expiresAt' => 'nullable|date|after_or_equal:today',
             'status' => 'required|in:active,inactive',
         ]);
@@ -117,6 +120,7 @@ class CouponsController extends Controller
             'discount_value' => $request->input('discountValue'),
             'min_order_amount' => $request->input('minOrderAmount') ?? 0.00,
             'usage_limit' => $request->input('usageLimit'),
+            'usage_limit_per_user' => $request->input('usageLimitPerUser'),
             'expires_at' => $request->input('expiresAt'),
             'status' => $request->input('status'),
         ]);

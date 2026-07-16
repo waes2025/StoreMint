@@ -118,6 +118,7 @@ class StorefrontController extends Controller
                     'discountValue' => (float) $coupon->discount_value,
                     'minOrderAmount' => (float) $coupon->min_order_amount,
                     'maxDiscountAmount' => $coupon->max_discount_amount ? (float) $coupon->max_discount_amount : null,
+                    'usageLimitPerUser' => $coupon->usage_limit_per_user,
                 ];
             });
 
