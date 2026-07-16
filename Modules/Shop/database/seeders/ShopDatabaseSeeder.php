@@ -1,10 +1,10 @@
 <?php
 
-namespace Modules\Inventory\Database\Seeders;
+namespace Modules\Shop\Database\Seeders;
 
 use Illuminate\Database\Seeder;
 
-class InventoryDatabaseSeeder extends Seeder
+class ShopDatabaseSeeder extends Seeder
 {
     /**
      * Run the database seeds.

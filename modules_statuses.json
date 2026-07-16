@@ -2,7 +2,7 @@
     "Blog": true,
     "Shipment": true,
     "Gateway": true,
-    "Inventory": true,
+    "Shop": true,
     "Carts": true,
     "Cart": true
 }
