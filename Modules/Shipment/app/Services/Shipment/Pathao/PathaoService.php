@@ -10,7 +10,7 @@ use Modules\Shipment\Repositories\ShipmentRepositoryInterface;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
-use App\Models\TransactionPayment;
+use Modules\Cart\Models\TransactionPayment;
 use Exception;
 
 class PathaoService

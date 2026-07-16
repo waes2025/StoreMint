@@ -128,6 +128,14 @@ const closeShippingModal = () => {
     shippingOrder.value = null;
 };
 
+const handleStatusChange = () => {
+    if (!['shipped', 'delivered'].includes(shippingForm.value.shipping_status)) {
+        shippingForm.value.courier = '';
+        shippingForm.value.tracking_number = '';
+        shippingForm.value.tracking_url = '';
+    }
+};
+
 const submitShipping = () => {
     if (!props.currentTeamSlug || !shippingOrder.value?.db_id) return;
     router.post(
@@ -671,6 +679,7 @@ const hasActions = (order: Order) => {
                         <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Status</label>
                         <select
                             v-model="shippingForm.shipping_status"
+                            @change="handleStatusChange"
                             class="h-10 rounded-lg border border-neutral-200 bg-white px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
                         >
                             <option v-for="opt in shippingStatusOptions" :key="opt.value" :value="opt.value">
@@ -679,35 +688,46 @@ const hasActions = (order: Order) => {
                         </select>
                     </div>
 
-                    <div class="flex flex-col gap-2">
-                        <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Courier Company</label>
-                        <input
-                            v-model="shippingForm.courier"
-                            type="text"
-                            placeholder="e.g. FedEx, DHL"
-                            class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
-                        />
-                    </div>
+                    <Transition
+                        enter-active-class="transition-all duration-300 ease-out"
+                        enter-from-class="opacity-0 transform -translate-y-2 scale-95"
+                        enter-to-class="opacity-100 transform translate-y-0 scale-100"
+                        leave-active-class="transition-all duration-200 ease-in"
+                        leave-from-class="opacity-100 transform translate-y-0 scale-100"
+                        leave-to-class="opacity-0 transform -translate-y-2 scale-95"
+                    >
+                        <div v-if="['shipped', 'delivered'].includes(shippingForm.shipping_status)" class="space-y-4 overflow-hidden pt-1">
+                            <div class="flex flex-col gap-2">
+                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Courier Company</label>
+                                <input
+                                    v-model="shippingForm.courier"
+                                    type="text"
+                                    placeholder="e.g. FedEx, DHL"
+                                    class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
+                                />
+                            </div>
 
-                    <div class="flex flex-col gap-2">
-                        <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Tracking Number</label>
-                        <input
-                            v-model="shippingForm.tracking_number"
-                            type="text"
-                            placeholder="e.g. TRK9832104"
-                            class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
-                        />
-                    </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Tracking Number</label>
+                                <input
+                                    v-model="shippingForm.tracking_number"
+                                    type="text"
+                                    placeholder="e.g. TRK9832104"
+                                    class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
+                                />
+                            </div>
 
-                    <div class="flex flex-col gap-2">
-                        <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Tracking URL</label>
-                        <input
-                            v-model="shippingForm.tracking_url"
-                            type="text"
-                            placeholder="e.g. https://fedex.com/track/..."
-                            class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
-                        />
-                    </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Tracking URL</label>
+                                <input
+                                    v-model="shippingForm.tracking_url"
+                                    type="text"
+                                    placeholder="e.g. https://fedex.com/track/..."
+                                    class="h-10 rounded-lg border border-neutral-200 px-3 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-800"
+                                />
+                            </div>
+                        </div>
+                    </Transition>
                 </div>
 
                 <div class="flex justify-end gap-3 border-t border-neutral-100 pt-3 dark:border-neutral-800">

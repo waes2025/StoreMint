@@ -4,8 +4,8 @@ namespace Modules\Shipment\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Services\BusinessContextService;
-use App\Models\Transaction;
-use App\Models\TransactionPayment;
+use Modules\Cart\Models\Transaction;
+use Modules\Cart\Models\TransactionPayment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -38,12 +38,13 @@ class ShipmentController extends Controller
 
         $transaction = Transaction::findOrFail($id);
         $newStatus = $request->input('shipping_status');
+        $hasTracking = in_array($newStatus, ['shipped', 'delivered']);
 
         $updateData = [
             'shipping_status' => $newStatus,
-            'tracking_number' => $request->input('tracking_number') ?: $transaction->tracking_number,
-            'tracking_url' => $request->input('tracking_url') ?: $transaction->tracking_url,
-            'courier' => $request->input('courier') ?: $transaction->courier,
+            'tracking_number' => $hasTracking ? $request->input('tracking_number') : null,
+            'tracking_url' => $hasTracking ? $request->input('tracking_url') : null,
+            'courier' => $hasTracking ? $request->input('courier') : null,
         ];
 
         // Auto-set timestamps on key transitions
