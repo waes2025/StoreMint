@@ -15,4 +15,15 @@ Route::prefix('{current_team}')
     ->group(function () {
         Route::post('dashboard/orders/{transaction}/ship', [ShipmentController::class, 'shipOrder'])->name('dashboard.orders.ship');
         Route::post('dashboard/orders/{transaction}/shipping', [ShipmentController::class, 'updateShipping'])->name('dashboard.orders.shipping');
+
+        // Pathao location lookups
+        Route::get('dashboard/shipments/cities', [ShipmentController::class, 'getPathaoCities'])->name('dashboard.shipments.cities');
+        Route::get('dashboard/shipments/zones/{cityId}', [ShipmentController::class, 'getPathaoZones'])->name('dashboard.shipments.zones');
+        Route::get('dashboard/shipments/areas/{zoneId}', [ShipmentController::class, 'getPathaoAreas'])->name('dashboard.shipments.areas');
+
+        // Pathao shipment actions
+        Route::post('dashboard/orders/{transaction}/pathao-estimate', [ShipmentController::class, 'estimatePathaoCharge'])->name('dashboard.orders.pathao-estimate');
+        Route::post('dashboard/orders/{transaction}/pathao-book', [ShipmentController::class, 'bookPathaoShipment'])->name('dashboard.orders.pathao-book');
+        Route::post('dashboard/orders/{transaction}/pathao-sync', [ShipmentController::class, 'syncPathaoShipment'])->name('dashboard.orders.pathao-sync');
+        Route::post('dashboard/orders/{transaction}/pathao-cancel', [ShipmentController::class, 'cancelPathaoShipment'])->name('dashboard.orders.pathao-cancel');
     });

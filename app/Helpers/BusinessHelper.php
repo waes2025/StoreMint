@@ -136,3 +136,32 @@ if (! function_exists('businessContext')) {
         return BusinessContextService::getContextData();
     }
 }
+
+if (! function_exists('setting')) {
+    /**
+     * Get a setting value for a business.
+     */
+    function setting($business_id, $key, $default = null)
+    {
+        $setting = \Illuminate\Support\Facades\DB::table('settings')
+            ->where('business_id', $business_id)
+            ->where('key', $key)
+            ->first();
+
+        return $setting ? $setting->value : $default;
+    }
+}
+
+if (! function_exists('updateSetting')) {
+    /**
+     * Update or insert a setting value for a business.
+     */
+    function updateSetting($business_id, $key, $value)
+    {
+        \Illuminate\Support\Facades\DB::table('settings')->updateOrInsert(
+            ['business_id' => $business_id, 'key' => $key],
+            ['value' => $value, 'updated_at' => now()]
+        );
+    }
+}
+

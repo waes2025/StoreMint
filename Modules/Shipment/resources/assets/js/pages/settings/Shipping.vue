@@ -35,7 +35,29 @@ interface ShippingSettings {
     zones: ShippingZone[];
 }
 
-const props = defineProps<{ shippingSettings: ShippingSettings }>();
+interface PathaoSettings {
+    pathao_enabled: boolean;
+    pathao_client_id: string;
+    pathao_client_secret: string;
+    pathao_username: string;
+    pathao_password: string;
+    pathao_store_id: string;
+    pathao_base_url: string;
+    pathao_city_id: string | number;
+    pathao_zone_id: string | number;
+    pathao_area_id: string | number;
+    pathao_default_item_type: string;
+    pathao_default_item_weight: number;
+    pathao_default_special_instruction: string;
+}
+
+const props = defineProps<{
+    shippingSettings: ShippingSettings;
+    pathaoSettings: PathaoSettings;
+    pathaoCities: any[];
+    pathaoZones: any[];
+    pathaoAreas: any[];
+}>();
 
 defineOptions({
     layout: {
@@ -65,7 +87,82 @@ const form = useForm({
     zones: (props.shippingSettings.zones ?? []).map((z) => ({
         ...z,
     })) as ShippingZone[],
+
+    // Pathao Settings Form Bindings
+    pathao_enabled: props.pathaoSettings?.pathao_enabled ?? false,
+    pathao_client_id: props.pathaoSettings?.pathao_client_id ?? '',
+    pathao_client_secret: props.pathaoSettings?.pathao_client_secret ?? '',
+    pathao_username: props.pathaoSettings?.pathao_username ?? '',
+    pathao_password: props.pathaoSettings?.pathao_password ?? '',
+    pathao_store_id: props.pathaoSettings?.pathao_store_id ?? '',
+    pathao_base_url: props.pathaoSettings?.pathao_base_url ?? '',
+    pathao_city_id: props.pathaoSettings?.pathao_city_id ?? '',
+    pathao_zone_id: props.pathaoSettings?.pathao_zone_id ?? '',
+    pathao_area_id: props.pathaoSettings?.pathao_area_id ?? '',
+    pathao_default_item_type: props.pathaoSettings?.pathao_default_item_type ?? '2',
+    pathao_default_item_weight: props.pathaoSettings?.pathao_default_item_weight ?? 0.5,
+    pathao_default_special_instruction: props.pathaoSettings?.pathao_default_special_instruction ?? '',
 });
+
+const citiesList = ref(props.pathaoCities ?? []);
+const zonesList = ref(props.pathaoZones ?? []);
+const areasList = ref(props.pathaoAreas ?? []);
+const isLoadingZones = ref(false);
+const isLoadingAreas = ref(false);
+
+const handleCityChange = async () => {
+    form.pathao_zone_id = '';
+    form.pathao_area_id = '';
+    zonesList.value = [];
+    areasList.value = [];
+    if (!form.pathao_city_id) return;
+
+    isLoadingZones.value = true;
+    try {
+        const response = await fetch(`/dashboard/shipments/zones/${form.pathao_city_id}`);
+        const result = await response.json();
+        if (result.success) {
+            zonesList.value = result.data;
+        }
+    } catch (e) {
+        console.error("Failed to load Pathao zones", e);
+    } finally {
+        isLoadingZones.value = false;
+    }
+};
+
+const handleZoneChange = async () => {
+    form.pathao_area_id = '';
+    areasList.value = [];
+    if (!form.pathao_zone_id) return;
+
+    isLoadingAreas.value = true;
+    try {
+        const response = await fetch(`/dashboard/shipments/areas/${form.pathao_zone_id}`);
+        const result = await response.json();
+        if (result.success) {
+            areasList.value = result.data;
+        }
+    } catch (e) {
+        console.error("Failed to load Pathao areas", e);
+    } finally {
+        isLoadingAreas.value = false;
+    }
+};
+
+const handleEnabledChange = async () => {
+    if (form.pathao_enabled && citiesList.value.length === 0) {
+        try {
+            const response = await fetch('/dashboard/shipments/cities');
+            const result = await response.json();
+            if (result.success) {
+                citiesList.value = result.data;
+            }
+        } catch (e) {
+            console.error("Failed to load Pathao cities", e);
+        }
+    }
+};
 
 const addZone = () => {
     form.zones.push({ name: '', rate: 0, enabled: true });
@@ -461,6 +558,212 @@ const toggleClass = (on: boolean) =>
                             >
                                 <Trash2 class="h-4 w-4" />
                             </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── 4. PATHAO COURIER INTEGRATION ────────────────────────────── -->
+            <div class="space-y-3">
+                <h2
+                    class="text-xs font-bold tracking-widest text-neutral-400 uppercase dark:text-neutral-500"
+                >
+                    Pathao Courier Integration
+                </h2>
+
+                <div
+                    class="space-y-4 rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900"
+                >
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-50 dark:bg-orange-950/40"
+                            >
+                                <Truck class="h-4 w-4 text-orange-600" />
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-bold tracking-tight">
+                                    Pathao Merchant API
+                                </h3>
+                                <p class="text-xs text-neutral-500">
+                                    Book orders and sync delivery status automatically.
+                                </p>
+                            </div>
+                        </div>
+                        <label
+                            class="relative inline-flex cursor-pointer items-center"
+                        >
+                            <input
+                                type="checkbox"
+                                v-model="form.pathao_enabled"
+                                @change="handleEnabledChange"
+                                class="peer sr-only"
+                            />
+                            <div
+                                :class="toggleClass(form.pathao_enabled)"
+                                class="relative"
+                            />
+                        </label>
+                    </div>
+
+                    <div
+                        v-if="form.pathao_enabled"
+                        class="grid gap-4 sm:grid-cols-2 border-t border-neutral-100 pt-4 dark:border-neutral-800"
+                    >
+                        <div class="flex flex-col gap-2">
+                            <Label for="pathao-base-url">API Base URL</Label>
+                            <Input
+                                id="pathao-base-url"
+                                v-model="form.pathao_base_url"
+                                placeholder="https://courier-api-sandbox.pathao.com"
+                            />
+                            <p class="text-[10px] text-neutral-400">
+                                Sandbox: https://courier-api-sandbox.pathao.com<br>
+                                Production: https://api-hermes.pathao.com
+                            </p>
+                        </div>
+
+                        <div class="flex flex-col gap-2">
+                            <Label for="pathao-client-id">Client ID</Label>
+                            <Input
+                                id="pathao-client-id"
+                                v-model="form.pathao_client_id"
+                                placeholder="Enter Client ID"
+                            />
+                        </div>
+
+                        <div class="flex flex-col gap-2">
+                            <Label for="pathao-client-secret">Client Secret</Label>
+                            <Input
+                                id="pathao-client-secret"
+                                type="password"
+                                v-model="form.pathao_client_secret"
+                                placeholder="Enter Client Secret"
+                            />
+                        </div>
+
+                        <div class="flex flex-col gap-2">
+                            <Label for="pathao-username">Merchant Username (Email)</Label>
+                            <Input
+                                id="pathao-username"
+                                v-model="form.pathao_username"
+                                placeholder="Enter Email"
+                            />
+                        </div>
+
+                        <div class="flex flex-col gap-2">
+                            <Label for="pathao-password">Merchant Password</Label>
+                            <Input
+                                id="pathao-password"
+                                type="password"
+                                v-model="form.pathao_password"
+                                placeholder="Enter Password"
+                            />
+                        </div>
+
+                        <div class="flex flex-col gap-2">
+                            <Label for="pathao-store-id">Store ID (Optional)</Label>
+                            <Input
+                                id="pathao-store-id"
+                                v-model="form.pathao_store_id"
+                                placeholder="Pre-fills automatically on first sync"
+                            />
+                        </div>
+
+                        <!-- Location Defaults -->
+                        <div class="sm:col-span-2 border-t border-neutral-100 pt-4 dark:border-neutral-800">
+                            <h4 class="text-xs font-bold text-neutral-400 uppercase mb-3">Location Defaults</h4>
+                            <div class="grid gap-4 sm:grid-cols-3">
+                                <div class="flex flex-col gap-2">
+                                    <Label for="pathao-city">Default City</Label>
+                                    <select
+                                        id="pathao-city"
+                                        v-model="form.pathao_city_id"
+                                        @change="handleCityChange"
+                                        class="flex h-9 w-full rounded-md border border-neutral-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:focus-visible:ring-neutral-300 dark:bg-neutral-900"
+                                    >
+                                        <option value="">Select City</option>
+                                        <option v-for="city in citiesList" :key="city.city_id" :value="city.city_id">
+                                            {{ city.city_name }}
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div class="flex flex-col gap-2">
+                                    <Label for="pathao-zone" class="flex items-center gap-2">
+                                        Default Zone
+                                        <span v-if="isLoadingZones" class="text-xs text-neutral-400 animate-pulse">Loading...</span>
+                                    </Label>
+                                    <select
+                                        id="pathao-zone"
+                                        v-model="form.pathao_zone_id"
+                                        @change="handleZoneChange"
+                                        :disabled="isLoadingZones"
+                                        class="flex h-9 w-full rounded-md border border-neutral-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:focus-visible:ring-neutral-300 dark:bg-neutral-900"
+                                    >
+                                        <option value="">Select Zone</option>
+                                        <option v-for="zone in zonesList" :key="zone.zone_id" :value="zone.zone_id">
+                                            {{ zone.zone_name }}
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div class="flex flex-col gap-2">
+                                    <Label for="pathao-area" class="flex items-center gap-2">
+                                        Default Area
+                                        <span v-if="isLoadingAreas" class="text-xs text-neutral-400 animate-pulse">Loading...</span>
+                                    </Label>
+                                    <select
+                                        id="pathao-area"
+                                        v-model="form.pathao_area_id"
+                                        :disabled="isLoadingAreas"
+                                        class="flex h-9 w-full rounded-md border border-neutral-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:focus-visible:ring-neutral-300 dark:bg-neutral-900"
+                                    >
+                                        <option value="">Select Area</option>
+                                        <option v-for="area in areasList" :key="area.area_id" :value="area.area_id">
+                                            {{ area.area_name }}
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Delivery Defaults -->
+                        <div class="sm:col-span-2 border-t border-neutral-100 pt-4 dark:border-neutral-800">
+                            <h4 class="text-xs font-bold text-neutral-400 uppercase mb-3">Delivery Defaults</h4>
+                            <div class="grid gap-4 sm:grid-cols-3">
+                                <div class="flex flex-col gap-2">
+                                    <Label for="pathao-default-item-type">Default Item Type</Label>
+                                    <select
+                                        id="pathao-default-item-type"
+                                        v-model="form.pathao_default_item_type"
+                                        class="flex h-9 w-full rounded-md border border-neutral-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:focus-visible:ring-neutral-300 dark:bg-neutral-900"
+                                    >
+                                        <option value="1">Document</option>
+                                        <option value="2">Parcel</option>
+                                    </select>
+                                </div>
+
+                                <div class="flex flex-col gap-2">
+                                    <Label for="pathao-default-weight">Default Weight (KG)</Label>
+                                    <Input
+                                        id="pathao-default-weight"
+                                        type="number"
+                                        step="0.1"
+                                        v-model="form.pathao_default_item_weight"
+                                        placeholder="0.5"
+                                    />
+                                </div>
+
+                                <div class="flex flex-col gap-2">
+                                    <Label for="pathao-instruction">Special Instructions</Label>
+                                    <Input
+                                        id="pathao-instruction"
+                                        v-model="form.pathao_default_special_instruction"
+                                        placeholder="e.g. Handle with care"
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

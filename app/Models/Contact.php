@@ -60,5 +60,6 @@ class Contact extends Model
         'custom_field8',
         'custom_field9',
         'custom_field10',
+        'shipping_custom_field_details',
     ];
 }

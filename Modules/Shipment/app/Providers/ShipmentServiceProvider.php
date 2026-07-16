@@ -17,12 +17,9 @@ class ShipmentServiceProvider extends ModuleServiceProvider
      */
     protected string $nameLower = 'shipment';
 
-    /**
-     * Command classes to register.
-     *
-     * @var string[]
-     */
-    // protected array $commands = [];
+    protected array $commands = [
+        \Modules\Shipment\Console\Commands\PathaoSyncCommand::class,
+    ];
 
     /**
      * Provider classes to register.
@@ -35,9 +32,20 @@ class ShipmentServiceProvider extends ModuleServiceProvider
     ];
 
     /**
+     * Register any application services.
+     */
+    public function register(): void
+    {
+        parent::register();
+        
+        $this->app->bind(
+            \Modules\Shipment\Repositories\ShipmentRepositoryInterface::class,
+            \Modules\Shipment\Repositories\ShipmentRepository::class
+        );
+    }
+
+    /**
      * Define module schedules.
-     * 
-     * @param $schedule
      */
     // protected function configureSchedules(Schedule $schedule): void
     // {
