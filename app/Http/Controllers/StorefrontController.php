@@ -173,9 +173,9 @@ class StorefrontController extends Controller
 
         if (! $announcement) {
             $announcement = [
-                'enabled' => true,
-                'text' => '✨ GRAND OPENING OFFER: USE COUPON {coupon} FOR 50% OFF ALL PRODUCTS!',
-                'coupon' => 'MINT50',
+                'enabled' => false,
+                'text' => '',
+                'coupon' => '',
                 'bg_color' => '#059669',
                 'text_color' => '#ffffff',
             ];

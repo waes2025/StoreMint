@@ -141,7 +141,7 @@ export function useStorefront(props: {
 
     // Coupon State
     const activeCoupons = computed<Coupon[]>(() => {
-        if (props.dbCoupons && props.dbCoupons.length > 0) {
+        if (props.dbCoupons) {
             return props.dbCoupons.map((c) => ({
                 code: c.code,
                 description: c.description,
@@ -151,23 +151,7 @@ export function useStorefront(props: {
                 maxDiscountAmount: c.maxDiscountAmount || undefined,
             }));
         }
-        return [
-            {
-                code: 'MINT50',
-                description: `50% off for new shoppers (Max discount ${currencySymbol.value}100, min order ${currencySymbol.value}50)`,
-                discountType: 'percentage',
-                discountValue: 50,
-                minOrderAmount: 50,
-                maxDiscountAmount: 100,
-            },
-            {
-                code: 'WELCOME10',
-                description: `Flat ${currencySymbol.value}10 off (Min order ${currencySymbol.value}40)`,
-                discountType: 'flat',
-                discountValue: 10,
-                minOrderAmount: 40,
-            },
-        ];
+        return [];
     });
 
     const couponInput = ref('');
@@ -189,12 +173,12 @@ export function useStorefront(props: {
 
     // Checkout form state
     const checkoutForm = ref({
-        name: 'Waes Ahmed',
-        email: 'waes@example.com',
-        address: '123 StoreMint Lane',
-        city: 'Dhaka',
-        zip: '1207',
-        phone: '+880 1712-345678',
+        name: '',
+        email: '',
+        address: '',
+        city: '',
+        zip: '',
+        phone: '',
         paymentMethod: defaultPaymentMethod,
     });
 
@@ -209,106 +193,9 @@ export function useStorefront(props: {
     // Invoice detail state
     const orderInvoice = ref<OrderInvoice | null>(null);
 
-    // Mock products database
-    const mockProducts: Product[] = [
-        {
-            id: 1,
-            name: 'Quantum Chronograph Watch',
-            description:
-                'A precision timekeeper with mechanical elegance, featuring a surgical-grade stainless steel casing and sapphire crystal cover.',
-            price: 299.0,
-            originalPrice: 399.0,
-            rating: 4.8,
-            reviewsCount: 124,
-            category: 'Accessories',
-            brand: 'Apex',
-            imageGradient: 'from-slate-700 to-indigo-950',
-            stock: 12,
-            badge: 'Trending',
-            badgeColor: 'bg-emerald-500 text-white',
-        },
-        {
-            id: 2,
-            name: 'AeroBuds Pro Wireless',
-            description:
-                'Active noise-cancelling earbuds with high-fidelity acoustic drivers and seamless auto-pairing. 36 hours of total playtime.',
-            price: 149.0,
-            rating: 4.9,
-            reviewsCount: 88,
-            category: 'Electronics',
-            brand: 'Aero',
-            imageGradient: 'from-teal-600 to-emerald-900',
-            stock: 5,
-            badge: 'Hot Deal',
-            badgeColor: 'bg-amber-500 text-black',
-        },
-        {
-            id: 3,
-            name: 'Minimalist Leather Backpack',
-            description:
-                'Crafted from full-grain vegetable-tanned leather. Waterproof lining, fits laptops up to 16 inches.',
-            price: 89.0,
-            originalPrice: 120.0,
-            rating: 4.6,
-            reviewsCount: 45,
-            category: 'Fashion',
-            brand: 'Sleek',
-            imageGradient: 'from-amber-600 to-orange-950',
-            stock: 3,
-            badge: 'Low Stock',
-            badgeColor: 'bg-red-500 text-white',
-        },
-        {
-            id: 4,
-            name: 'Lumbar Comfort Office Chair',
-            description:
-                'Ergonomic workspace solution with responsive lumbar support, 3D armrests, and high-density breathable mesh back.',
-            price: 249.0,
-            rating: 4.7,
-            reviewsCount: 210,
-            category: 'Furniture',
-            brand: 'Ergo',
-            imageGradient: 'from-purple-700 to-violet-950',
-            stock: 15,
-            badge: 'Best Seller',
-            badgeColor: 'bg-indigo-600 text-white',
-        },
-        {
-            id: 5,
-            name: 'Ember Mug Smart Temperature',
-            description:
-                'Keep your hot beverage at the exact temperature you like. App-controlled with built-in battery.',
-            price: 129.0,
-            rating: 4.5,
-            reviewsCount: 62,
-            category: 'Home',
-            brand: 'Ember',
-            imageGradient: 'from-rose-600 to-pink-950',
-            stock: 0,
-            badge: 'Out of Stock',
-            badgeColor: 'bg-gray-400 text-white',
-        },
-        {
-            id: 6,
-            name: 'Aura Light Ring Lamp',
-            description:
-                'Studio-quality lighting with adjustable color temperatures and brightness levels. Perfect for video calls and content creators.',
-            price: 59.0,
-            originalPrice: 79.0,
-            rating: 4.4,
-            reviewsCount: 38,
-            category: 'Electronics',
-            brand: 'Aura',
-            imageGradient: 'from-yellow-500 to-orange-800',
-            stock: 22,
-            badge: 'Sale',
-            badgeColor: 'bg-red-500 text-white',
-        },
-    ];
-
     // Active products mapper
     const activeProducts = computed<Product[]>(() => {
-        if (props.dbProducts && props.dbProducts.length > 0) {
+        if (props.dbProducts) {
             return props.dbProducts.map((p) => ({
                 id: p.id,
                 name: p.name,
@@ -337,27 +224,20 @@ export function useStorefront(props: {
                 image: p.image,
             }));
         }
-        return mockProducts;
+        return [];
     });
 
     // Computed Category List
     const categories = computed(() => {
-        if (props.dbCategories && props.dbCategories.length > 0) {
+        if (props.dbCategories) {
             return props.dbCategories;
         }
-        return [
-            'All',
-            'Accessories',
-            'Electronics',
-            'Fashion',
-            'Furniture',
-            'Home',
-        ];
+        return [];
     });
 
     // Computed Brand List
     const brands = computed(() => {
-        if (props.dbBrands && props.dbBrands.length > 0) {
+        if (props.dbBrands) {
             return props.dbBrands;
         }
         const uniqueBrands = new Set<string>();

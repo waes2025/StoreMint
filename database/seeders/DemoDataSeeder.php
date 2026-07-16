@@ -12,119 +12,23 @@ use Illuminate\Support\Str;
 class DemoDataSeeder extends Seeder
 {
     /**
-     * Fully self-contained demo seeder.
-     * Truncates all relevant tables, then seeds: currencies, business, owner user,
-     * teams, locations, staff, customers, products, coupons, and orders.
+     * Seed demo data on top of the base configuration.
+     * Seeds: extra teams, staff, customers, products, coupons, and orders.
      */
     public function run(): void
     {
-        // Disable foreign key checks for clean truncation
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        // Run BaseDataSeeder to seed base configuration (owner, business, team, location)
+        $this->call(BaseDataSeeder::class);
 
-        // Truncate tables
-        DB::table('coupon_usages')->truncate();
-        DB::table('coupons')->truncate();
-        DB::table('variation_location_details')->truncate();
-        DB::table('variations')->truncate();
-        DB::table('product_variations')->truncate();
-        DB::table('products')->truncate();
-        DB::table('brands')->truncate();
-        DB::table('categories')->truncate();
-        DB::table('business_locations')->truncate();
-        DB::table('business')->truncate();
-        DB::table('team_invitations')->truncate();
-        DB::table('team_members')->truncate();
-        DB::table('teams')->truncate();
-        DB::table('users')->truncate();
-        DB::table('currencies')->truncate();
-        DB::table('transaction_sell_lines')->truncate();
-        DB::table('purchase_lines')->truncate();
-        DB::table('transaction_payments')->truncate();
-        DB::table('transactions')->truncate();
+        $userId = DB::table('users')->where('username', 'waes')->value('id');
+        $businessId = (int) config('ecommerce.business_id', 1);
+        $storeTeamId = DB::table('teams')->where('slug', 'storemint-store')->value('id');
+        $locationId = (int) config('ecommerce.location_id', 1);
 
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-
-        // ── Currencies ────────────────────────────────────────────────────────────
-        DB::table('currencies')->insert([
-            ['country' => 'Bangladesh',            'currency' => 'Taka',    'code' => 'BDT', 'symbol' => '৳', 'thousand_separator' => ',', 'decimal_separator' => '.'],
-            ['country' => 'America',               'currency' => 'Dollars', 'code' => 'USD', 'symbol' => '$', 'thousand_separator' => ',', 'decimal_separator' => '.'],
-            ['country' => 'Britain [United Kingdom]', 'currency' => 'Pounds', 'code' => 'GBP', 'symbol' => '£', 'thousand_separator' => ',', 'decimal_separator' => '.'],
-            ['country' => 'Euro',                  'currency' => 'Euro',    'code' => 'EUR', 'symbol' => '€', 'thousand_separator' => '.', 'decimal_separator' => ','],
-            ['country' => 'India',                 'currency' => 'Rupees',  'code' => 'INR', 'symbol' => '₹', 'thousand_separator' => ',', 'decimal_separator' => '.'],
-        ]);
-
-        $bdtCurrencyId = DB::table('currencies')->where('code', 'BDT')->value('id');
-
-        // ── Owner User (temp business_id=0 to break circular dependency) ─────────
-        $userId = DB::table('users')->insertGetId([
-            'first_name' => 'Waes',
-            'last_name' => 'Ahmed',
-            'username' => 'waes',
-            'email' => 'waes@storemint.com',
-            'password' => Hash::make('password'),
-            'user_type' => 'user',
-            'business_id' => null,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        $targetBusinessId = (int) config('ecommerce.business_id', 1);
-        $targetLocationId = (int) config('ecommerce.location_id', 1);
-
-        // ── Business ──────────────────────────────────────────────────────────────
-        DB::table('business')->insert([
-            'id' => $targetBusinessId,
-            'name' => 'StoreMint Demo',
-            'currency_id' => $bdtCurrencyId,
-            'start_date' => now()->subYear()->toDateString(),
-            'owner_id' => $userId,
-            'default_profit_percent' => 40.00,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        $businessId = $targetBusinessId;
-
-        // Update user with real business_id
-        DB::table('users')->where('id', $userId)->update(['business_id' => $businessId]);
-
-        // ── Base Store Team ───────────────────────────────────────────────────────
-        $storeTeamId = DB::table('teams')->insertGetId([
-            'name' => 'StoreMint Store',
-            'slug' => 'storemint-store',
-            'is_personal' => false,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        DB::table('users')->where('id', $userId)->update(['current_team_id' => $storeTeamId]);
-
-        DB::table('team_members')->insert([
-            'team_id' => $storeTeamId,
-            'user_id' => $userId,
-            'role' => 'admin',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        // ── Business Location ─────────────────────────────────────────────────────
-        DB::table('business_locations')->insert([
-            'id' => $targetLocationId,
-            'business_id' => $businessId,
-            'name' => 'Main Store',
-            'country' => 'Bangladesh',
-            'state' => 'Dhaka',
-            'city' => 'Dhaka',
-            'zip_code' => '1200',
-            'landmark' => 'Dhaka, Bangladesh',
-            'mobile' => '+880 1700-000000',
-            'invoice_scheme_id' => 1,
-            'invoice_layout_id' => 1,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        $locationId = $targetLocationId;
+        // Customize the business name for the demo environment
+        DB::table('business')
+            ->where('id', $businessId)
+            ->update(['name' => 'StoreMint Demo']);
 
         // ── Extra Teams ───────────────────────────────────────────────────────────
         $techTeamId = DB::table('teams')->insertGetId([
@@ -166,7 +70,7 @@ class DemoDataSeeder extends Seeder
             'first_name' => 'Alex',
             'last_name' => 'Mercer',
             'username' => 'alex',
-            'email' => 'alex@storemint.com',
+            'email' => 'alex@example.com',
             'password' => Hash::make('password'),
             'user_type' => 'user',
             'business_id' => $businessId,
@@ -198,39 +102,39 @@ class DemoDataSeeder extends Seeder
         // ── Demo Customers ────────────────────────────────────────────────────────
         $customersData = [
             [
-                'first_name' => 'Sarah',
-                'last_name' => 'Connor',
-                'email' => 'sarah@example.com',
-                'username' => 'sarah',
-                'mobile' => '+1 (555) 019-2831',
+                'first_name' => 'Rahim',
+                'last_name' => 'Ali',
+                'email' => 'rahim@example.com',
+                'username' => 'rahim',
+                'mobile' => '+8801711000001',
             ],
             [
-                'first_name' => 'Bruce',
-                'last_name' => 'Wayne',
-                'email' => 'bruce@example.com',
-                'username' => 'bruce',
-                'mobile' => '+1 (555) 911-3829',
+                'first_name' => 'Abul',
+                'last_name' => 'Kalam',
+                'email' => 'kalam@example.com',
+                'username' => 'kalam',
+                'mobile' => '+8801819000002',
             ],
             [
-                'first_name' => 'Clark',
-                'last_name' => 'Kent',
-                'email' => 'clark@example.com',
-                'username' => 'clark',
-                'mobile' => '+1 (555) 777-8822',
+                'first_name' => 'Karim',
+                'last_name' => 'Uddin',
+                'email' => 'karim@example.com',
+                'username' => 'karim',
+                'mobile' => '+8801911000003',
             ],
             [
-                'first_name' => 'Diana',
-                'last_name' => 'Prince',
-                'email' => 'diana@example.com',
-                'username' => 'diana',
-                'mobile' => '+1 (555) 333-4477',
+                'first_name' => 'Tasnim',
+                'last_name' => 'Jahan',
+                'email' => 'tasnim@example.com',
+                'username' => 'tasnim',
+                'mobile' => '+8801515000004',
             ],
             [
-                'first_name' => 'Tony',
-                'last_name' => 'Stark',
-                'email' => 'tony@example.com',
-                'username' => 'tony',
-                'mobile' => '+1 (555) 999-0011',
+                'first_name' => 'Nusrat',
+                'last_name' => 'Jahan',
+                'email' => 'nusrat@example.com',
+                'username' => 'nusrat',
+                'mobile' => '+8801616000005',
             ],
         ];
 
@@ -347,160 +251,226 @@ class DemoDataSeeder extends Seeder
             [
                 'name' => 'Quantum Chronograph Watch',
                 'slug' => 'quantum-chronograph-watch',
-                'price' => 299.00,
-                'compare_at_price' => 350.00,
-                'stock' => 15,
+                'price' => 25000.00,
+                'compare_at_price' => 30000.00,
                 'short_description' => 'Precision engineered chronograph watch with sapphire dial.',
                 'image' => 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => true,
                 'is_best_seller' => true,
                 'brand' => 'Apex',
                 'category' => 'tech',
+                'type' => 'single',
             ],
             [
                 'name' => 'AeroBuds Pro Wireless',
                 'slug' => 'aerobuds-pro-wireless',
-                'price' => 149.00,
-                'compare_at_price' => 199.00,
-                'stock' => 24,
+                'price' => 12000.00,
+                'compare_at_price' => 15000.00,
                 'short_description' => 'True wireless studio sound earbuds with Active Noise Cancelling.',
                 'image' => 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => true,
                 'is_best_seller' => false,
                 'brand' => 'Aero',
                 'category' => 'tech',
+                'type' => 'single',
+            ],
+            [
+                'name' => 'Smart Fitness Band V4',
+                'slug' => 'smart-fitness-band-v4',
+                'price' => 4500.00,
+                'compare_at_price' => 6000.00,
+                'short_description' => 'Feature-rich smart band with heart rate monitoring and AMOLED display.',
+                'image' => 'https://images.unsplash.com/photo-1575311373937-040b8e1fd5b6?w=500&auto=format&fit=crop&q=60',
+                'is_featured' => true,
+                'is_best_seller' => true,
+                'brand' => 'Apex',
+                'category' => 'tech',
+                'type' => 'variable',
+                'variations' => [
+                    [
+                        'name' => 'Black',
+                        'slug' => 'smart-fitness-band-v4-black',
+                        'price' => 4500.00,
+                        'compare_at_price' => 6000.00,
+                    ],
+                    [
+                        'name' => 'Blue',
+                        'slug' => 'smart-fitness-band-v4-blue',
+                        'price' => 4500.00,
+                        'compare_at_price' => 6000.00,
+                    ],
+                    [
+                        'name' => 'Red',
+                        'slug' => 'smart-fitness-band-v4-red',
+                        'price' => 4700.00,
+                        'compare_at_price' => 6200.00,
+                    ],
+                ]
             ],
             [
                 'name' => 'Ember Mug Smart Temperature',
                 'slug' => 'ember-mug-smart-temperature',
-                'price' => 129.00,
-                'compare_at_price' => 149.00,
-                'stock' => 0,
+                'price' => 10500.00,
+                'compare_at_price' => 12500.00,
                 'short_description' => 'App-controlled smart mug keeping your brew at the ideal temperature.',
                 'image' => 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => false,
                 'is_best_seller' => false,
                 'brand' => 'Ember',
                 'category' => 'tech',
+                'type' => 'single',
             ],
             [
                 'name' => 'Aura Light Ring Lamp',
                 'slug' => 'aura-light-ring-lamp',
-                'price' => 59.00,
-                'compare_at_price' => 79.00,
-                'stock' => 30,
+                'price' => 4800.00,
+                'compare_at_price' => 6000.00,
                 'short_description' => 'Warm multi-intensity studio lighting for professional streams.',
                 'image' => 'https://images.unsplash.com/photo-1507646227500-4d389b0012be?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => true,
                 'is_best_seller' => false,
                 'brand' => 'Aura',
                 'category' => 'tech',
+                'type' => 'single',
             ],
             [
                 'name' => 'Nimbus 4K Action Camera',
                 'slug' => 'nimbus-4k-action-camera',
-                'price' => 219.00,
-                'compare_at_price' => 269.00,
-                'stock' => 18,
+                'price' => 18500.00,
+                'compare_at_price' => 22000.00,
                 'short_description' => 'Rugged 4K waterproof action camera with 3-axis stabilization.',
                 'image' => 'https://images.unsplash.com/photo-1502920917128-1aa500764bee?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => true,
                 'is_best_seller' => true,
                 'brand' => 'Nimbus',
                 'category' => 'tech',
+                'type' => 'single',
             ],
             [
                 'name' => 'Lumix Portable Power Bank 20K',
                 'slug' => 'lumix-portable-power-bank-20k',
-                'price' => 49.00,
-                'compare_at_price' => 65.00,
-                'stock' => 45,
+                'price' => 3800.00,
+                'compare_at_price' => 4500.00,
                 'short_description' => '20,000 mAh fast-charge power bank with dual USB-C ports.',
                 'image' => 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => false,
                 'is_best_seller' => true,
                 'brand' => 'Lumix',
                 'category' => 'tech',
+                'type' => 'single',
             ],
             // Fashion & Lifestyle
             [
+                'name' => 'Premium Cotton Polo T-Shirt',
+                'slug' => 'premium-cotton-polo-t-shirt',
+                'price' => 1200.00,
+                'compare_at_price' => 1800.00,
+                'short_description' => 'Comfortable premium cotton polo shirt for casual wear.',
+                'image' => 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500&auto=format&fit=crop&q=60',
+                'is_featured' => true,
+                'is_best_seller' => true,
+                'brand' => 'Apex',
+                'category' => 'fashion',
+                'type' => 'variable',
+                'variations' => [
+                    [
+                        'name' => 'Red / M',
+                        'slug' => 'premium-cotton-polo-t-shirt-red-m',
+                        'price' => 1200.00,
+                        'compare_at_price' => 1800.00,
+                    ],
+                    [
+                        'name' => 'Red / L',
+                        'slug' => 'premium-cotton-polo-t-shirt-red-l',
+                        'price' => 1250.00,
+                        'compare_at_price' => 1850.00,
+                    ],
+                    [
+                        'name' => 'Black / M',
+                        'slug' => 'premium-cotton-polo-t-shirt-black-m',
+                        'price' => 1200.00,
+                        'compare_at_price' => 1800.00,
+                    ],
+                ]
+            ],
+            [
                 'name' => 'Minimalist Leather Backpack',
                 'slug' => 'minimalist-leather-backpack',
-                'price' => 89.00,
-                'compare_at_price' => 120.00,
-                'stock' => 8,
+                'price' => 7500.00,
+                'compare_at_price' => 9500.00,
                 'short_description' => 'Sleek top-grain calf leather laptop pack for clean utility.',
                 'image' => 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => false,
                 'is_best_seller' => true,
                 'brand' => 'Sleek',
                 'category' => 'fashion',
+                'type' => 'single',
             ],
             [
                 'name' => 'Velta Premium Sunglasses',
                 'slug' => 'velta-premium-sunglasses',
-                'price' => 119.00,
-                'compare_at_price' => 159.00,
-                'stock' => 22,
+                'price' => 9800.00,
+                'compare_at_price' => 12000.00,
                 'short_description' => 'Polarized UV400 titanium frame sunglasses for all-day wear.',
                 'image' => 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => true,
                 'is_best_seller' => false,
                 'brand' => 'Velta',
                 'category' => 'fashion',
+                'type' => 'single',
             ],
             [
                 'name' => 'Kova Urban Sneakers',
                 'slug' => 'kova-urban-sneakers',
-                'price' => 79.00,
-                'compare_at_price' => 99.00,
-                'stock' => 35,
+                'price' => 6500.00,
+                'compare_at_price' => 8500.00,
                 'short_description' => 'Lightweight breathable mesh sneakers for everyday street style.',
                 'image' => 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => true,
                 'is_best_seller' => true,
                 'brand' => 'Kova',
                 'category' => 'fashion',
+                'type' => 'single',
             ],
             // Home & Living
             [
                 'name' => 'Lumbar Comfort Office Chair',
                 'slug' => 'lumbar-comfort-office-chair',
-                'price' => 249.00,
-                'compare_at_price' => 299.00,
-                'stock' => 12,
+                'price' => 22000.00,
+                'compare_at_price' => 26000.00,
                 'short_description' => 'Ergonomic lumbar adaptive chair with high-breathability mesh.',
                 'image' => 'https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => false,
                 'is_best_seller' => false,
                 'brand' => 'Ergo',
                 'category' => 'home',
+                'type' => 'single',
             ],
             [
                 'name' => 'Apex Aromatherapy Diffuser',
                 'slug' => 'apex-aromatherapy-diffuser',
-                'price' => 44.00,
-                'compare_at_price' => 59.00,
-                'stock' => 50,
+                'price' => 3500.00,
+                'compare_at_price' => 4500.00,
                 'short_description' => 'Ultrasonic 500ml mist diffuser with 7-color LED ambient lighting.',
                 'image' => 'https://images.unsplash.com/photo-1608181831718-c9fbb5bfb95a?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => false,
                 'is_best_seller' => true,
                 'brand' => 'Apex',
                 'category' => 'home',
+                'type' => 'single',
             ],
             [
                 'name' => 'Sleek Bamboo Desk Organizer',
                 'slug' => 'sleek-bamboo-desk-organizer',
-                'price' => 34.00,
-                'compare_at_price' => 45.00,
-                'stock' => 60,
+                'price' => 2800.00,
+                'compare_at_price' => 3500.00,
                 'short_description' => 'Eco-friendly modular bamboo desk tray for a clutter-free workspace.',
                 'image' => 'https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=500&auto=format&fit=crop&q=60',
                 'is_featured' => false,
                 'is_best_seller' => false,
                 'brand' => 'Sleek',
                 'category' => 'home',
+                'type' => 'single',
             ],
         ];
 
@@ -522,14 +492,15 @@ class DemoDataSeeder extends Seeder
             'invoice_no' => 'INV-PUR-INIT',
             'ref_no' => 'PUR-INIT',
             'transaction_date' => now()->subDays(10),
-            'total_before_tax' => 10000.00,
-            'final_total' => 10000.00,
+            'total_before_tax' => 1000000.00,
+            'final_total' => 1000000.00,
             'created_at' => now()->subDays(10),
             'updated_at' => now()->subDays(10),
         ]);
 
         foreach ($productsData as $pData) {
             $sku = 'SKU-'.strtoupper(Str::random(6));
+            $isVariable = isset($pData['type']) && $pData['type'] === 'variable';
 
             $prodId = DB::table('products')->insertGetId([
                 'name' => $pData['name'],
@@ -540,89 +511,164 @@ class DemoDataSeeder extends Seeder
                 'is_featured' => $pData['is_featured'],
                 'is_allow_ecom' => true,
                 'sku' => $sku,
-                'type' => 'single',
+                'type' => $isVariable ? 'variable' : 'single',
                 'enable_stock' => 1,
                 'created_by' => $userId,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
-            $prodVarId = DB::table('product_variations')->insertGetId([
-                'product_id' => $prodId,
-                'name' => 'DUMMY_VAR',
-                'is_dummy' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            $varId = DB::table('variations')->insertGetId([
-                'name' => 'DUMMY_VAR',
-                'product_id' => $prodId,
-                'sub_sku' => $sku,
-                'product_variation_id' => $prodVarId,
-                'default_purchase_price' => $pData['price'] * 0.6,
-                'dpp_inc_tax' => $pData['price'] * 0.6,
-                'profit_percent' => 40.00,
-                'default_sell_price' => $pData['price'],
-                'sell_price_inc_tax' => $pData['price'],
-                'slug' => $pData['slug'],
-                'compare_at_price' => $pData['compare_at_price'],
-                'is_best_seller' => $pData['is_best_seller'],
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            DB::table('product_details')->insert([
-                [
+            if ($isVariable) {
+                $prodVarId = DB::table('product_variations')->insertGetId([
                     'product_id' => $prodId,
-                    'variation_id' => $varId,
-                    'key' => 'short_description',
-                    'value' => $pData['short_description'],
+                    'name' => 'Size-Color',
+                    'is_dummy' => 0,
                     'created_at' => now(),
                     'updated_at' => now(),
-                ],
-                [
+                ]);
+
+                foreach ($pData['variations'] as $v) {
+                    $varSku = $sku . '-' . strtoupper(Str::slug($v['name']));
+                    $varId = DB::table('variations')->insertGetId([
+                        'name' => $v['name'],
+                        'product_id' => $prodId,
+                        'sub_sku' => $varSku,
+                        'product_variation_id' => $prodVarId,
+                        'default_purchase_price' => $v['price'] * 0.6,
+                        'dpp_inc_tax' => $v['price'] * 0.6,
+                        'profit_percent' => 40.00,
+                        'default_sell_price' => $v['price'],
+                        'sell_price_inc_tax' => $v['price'],
+                        'slug' => $v['slug'],
+                        'compare_at_price' => $v['compare_at_price'],
+                        'is_best_seller' => $pData['is_best_seller'],
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+
+                    DB::table('product_details')->insert([
+                        [
+                            'product_id' => $prodId,
+                            'variation_id' => $varId,
+                            'key' => 'short_description',
+                            'value' => $pData['short_description'],
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ],
+                        [
+                            'product_id' => $prodId,
+                            'variation_id' => $varId,
+                            'key' => 'description',
+                            'value' => $pData['short_description'],
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ],
+                    ]);
+
+                    $stock = rand(15, 60);
+
+                    DB::table('variation_location_details')->insert([
+                        'product_id' => $prodId,
+                        'product_variation_id' => $prodVarId,
+                        'variation_id' => $varId,
+                        'location_id' => $locationId,
+                        'qty_available' => $stock,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+
+                    DB::table('purchase_lines')->insert([
+                        'transaction_id' => $initPurchaseId,
+                        'product_id' => $prodId,
+                        'variation_id' => $varId,
+                        'quantity' => $stock,
+                        'purchase_price' => $v['price'] * 0.6,
+                        'purchase_price_inc_tax' => $v['price'] * 0.6,
+                        'item_tax' => 0.00,
+                        'created_at' => now()->subDays(10),
+                        'updated_at' => now()->subDays(10),
+                    ]);
+                }
+            } else {
+                $prodVarId = DB::table('product_variations')->insertGetId([
                     'product_id' => $prodId,
-                    'variation_id' => $varId,
-                    'key' => 'description',
-                    'value' => $pData['short_description'],
+                    'name' => 'DUMMY_VAR',
+                    'is_dummy' => 1,
                     'created_at' => now(),
                     'updated_at' => now(),
-                ],
-            ]);
+                ]);
 
-            DB::table('variation_location_details')->insert([
-                'product_id' => $prodId,
-                'product_variation_id' => $prodVarId,
-                'variation_id' => $varId,
-                'location_id' => $locationId,
-                'qty_available' => $pData['stock'],
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+                $varId = DB::table('variations')->insertGetId([
+                    'name' => 'DUMMY_VAR',
+                    'product_id' => $prodId,
+                    'sub_sku' => $sku,
+                    'product_variation_id' => $prodVarId,
+                    'default_purchase_price' => $pData['price'] * 0.6,
+                    'dpp_inc_tax' => $pData['price'] * 0.6,
+                    'profit_percent' => 40.00,
+                    'default_sell_price' => $pData['price'],
+                    'sell_price_inc_tax' => $pData['price'],
+                    'slug' => $pData['slug'],
+                    'compare_at_price' => $pData['compare_at_price'],
+                    'is_best_seller' => $pData['is_best_seller'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
 
-            DB::table('purchase_lines')->insert([
-                'transaction_id' => $initPurchaseId,
-                'product_id' => $prodId,
-                'variation_id' => $varId,
-                'quantity' => $pData['stock'],
-                'purchase_price' => $pData['price'] * 0.6,
-                'purchase_price_inc_tax' => $pData['price'] * 0.6,
-                'item_tax' => 0.00,
-                'created_at' => now()->subDays(10),
-                'updated_at' => now()->subDays(10),
-            ]);
+                DB::table('product_details')->insert([
+                    [
+                        'product_id' => $prodId,
+                        'variation_id' => $varId,
+                        'key' => 'short_description',
+                        'value' => $pData['short_description'],
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ],
+                    [
+                        'product_id' => $prodId,
+                        'variation_id' => $varId,
+                        'key' => 'description',
+                        'value' => $pData['short_description'],
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ],
+                ]);
+
+                $stock = ($pData['slug'] === 'ember-mug-smart-temperature') ? 0 : rand(15, 60);
+
+                DB::table('variation_location_details')->insert([
+                    'product_id' => $prodId,
+                    'product_variation_id' => $prodVarId,
+                    'variation_id' => $varId,
+                    'location_id' => $locationId,
+                    'qty_available' => $stock,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                DB::table('purchase_lines')->insert([
+                    'transaction_id' => $initPurchaseId,
+                    'product_id' => $prodId,
+                    'variation_id' => $varId,
+                    'quantity' => $stock,
+                    'purchase_price' => $pData['price'] * 0.6,
+                    'purchase_price_inc_tax' => $pData['price'] * 0.6,
+                    'item_tax' => 0.00,
+                    'created_at' => now()->subDays(10),
+                    'updated_at' => now()->subDays(10),
+                ]);
+            }
         }
 
         // ── Coupons ───────────────────────────────────────────────────────────────
         $coupon1 = DB::table('coupons')->insertGetId([
             'business_id' => $businessId,
             'code' => 'MINT50',
-            'description' => '50% off storewide on orders over ৳50!',
+            'description' => '50% off storewide on orders over ৳5000!',
             'discount_type' => 'percentage',
             'discount_value' => 50.00,
-            'max_discount_amount' => 100.00,
-            'min_order_amount' => 50.00,
+            'max_discount_amount' => 10000.00,
+            'min_order_amount' => 5000.00,
             'usage_limit' => 500,
             'usage_limit_per_user' => 1,
             'used_count' => 14,
@@ -637,10 +683,10 @@ class DemoDataSeeder extends Seeder
         $coupon2 = DB::table('coupons')->insertGetId([
             'business_id' => $businessId,
             'code' => 'WELCOME10',
-            'description' => 'Flat ৳10 off on orders over ৳40!',
+            'description' => 'Flat ৳1000 off on orders over ৳4000!',
             'discount_type' => 'flat',
-            'discount_value' => 10.00,
-            'min_order_amount' => 40.00,
+            'discount_value' => 1000.00,
+            'min_order_amount' => 4000.00,
             'usage_limit' => 1000,
             'usage_limit_per_user' => 1,
             'used_count' => 45,
@@ -658,8 +704,8 @@ class DemoDataSeeder extends Seeder
             'description' => '25% off sitewide — limited time flash sale!',
             'discount_type' => 'percentage',
             'discount_value' => 25.00,
-            'max_discount_amount' => 75.00,
-            'min_order_amount' => 30.00,
+            'max_discount_amount' => 7500.00,
+            'min_order_amount' => 3000.00,
             'usage_limit' => 200,
             'usage_limit_per_user' => 2,
             'used_count' => 82,
@@ -677,15 +723,15 @@ class DemoDataSeeder extends Seeder
             [
                 'ref_no' => 'ORD-100201',
                 'invoice_no' => 'INV-2026-9041',
-                'customer_name' => 'Sarah Connor',
-                'address' => '404 Resistance Rd, Los Angeles, CA',
+                'customer_name' => 'Rahim Ali',
+                'address' => '12/A Dhanmondi, Dhaka, Bangladesh',
                 'items' => [
                     ['slug' => 'quantum-chronograph-watch', 'qty' => 1],
                     ['slug' => 'aerobuds-pro-wireless',     'qty' => 1],
                 ],
                 'coupon_id' => $coupon2,
-                'coupon_discount' => 10.00,
-                'shipping' => 15.00,
+                'coupon_discount' => 1000.00,
+                'shipping' => 150.00,
                 'gateway' => 'stripe',
                 'status' => 'completed',
                 'payment_status' => 'paid',
@@ -694,14 +740,14 @@ class DemoDataSeeder extends Seeder
             [
                 'ref_no' => 'ORD-100202',
                 'invoice_no' => 'INV-2026-4859',
-                'customer_name' => 'Bruce Wayne',
-                'address' => 'Wayne Manor, Gotham City',
+                'customer_name' => 'Abul Kalam',
+                'address' => 'House 45, Road 11, Banani, Dhaka',
                 'items' => [
                     ['slug' => 'lumbar-comfort-office-chair', 'qty' => 2],
                 ],
                 'coupon_id' => $coupon1,
-                'coupon_discount' => 100.00,
-                'shipping' => 25.00,
+                'coupon_discount' => 10000.00,
+                'shipping' => 250.00,
                 'gateway' => 'sslcommerz',
                 'status' => 'completed',
                 'payment_status' => 'paid',
@@ -711,10 +757,10 @@ class DemoDataSeeder extends Seeder
             [
                 'ref_no' => 'ORD-100203',
                 'invoice_no' => 'INV-2026-1182',
-                'customer_name' => 'Clark Kent',
-                'address' => '345 Metro Heights, Metropolis',
+                'customer_name' => 'Karim Uddin',
+                'address' => 'Mirpur 10, Dhaka, Bangladesh',
                 'items' => [
-                    ['slug' => 'minimalist-leather-backpack', 'qty' => 1],
+                    ['slug' => 'premium-cotton-polo-t-shirt-red-m', 'qty' => 1],
                 ],
                 'coupon_id' => null,
                 'coupon_discount' => 0.00,
@@ -727,15 +773,15 @@ class DemoDataSeeder extends Seeder
             [
                 'ref_no' => 'ORD-100204',
                 'invoice_no' => 'INV-2026-3371',
-                'customer_name' => 'Diana Prince',
-                'address' => 'Paradise Island, Themyscira',
+                'customer_name' => 'Tasnim Jahan',
+                'address' => 'GEC Circle, Chittagong, Bangladesh',
                 'items' => [
                     ['slug' => 'velta-premium-sunglasses', 'qty' => 1],
                     ['slug' => 'kova-urban-sneakers',      'qty' => 1],
                 ],
                 'coupon_id' => $coupon3,
-                'coupon_discount' => 49.50,
-                'shipping' => 10.00,
+                'coupon_discount' => 4075.00,
+                'shipping' => 100.00,
                 'gateway' => 'stripe',
                 'status' => 'ordered',
                 'payment_status' => 'paid',
@@ -744,15 +790,15 @@ class DemoDataSeeder extends Seeder
             [
                 'ref_no' => 'ORD-100205',
                 'invoice_no' => 'INV-2026-7723',
-                'customer_name' => 'Tony Stark',
-                'address' => 'Stark Tower, New York City',
+                'customer_name' => 'Nusrat Jahan',
+                'address' => 'Zindabazar, Sylhet, Bangladesh',
                 'items' => [
                     ['slug' => 'nimbus-4k-action-camera',       'qty' => 1],
                     ['slug' => 'lumix-portable-power-bank-20k', 'qty' => 2],
                 ],
                 'coupon_id' => null,
                 'coupon_discount' => 0.00,
-                'shipping' => 20.00,
+                'shipping' => 200.00,
                 'gateway' => 'stripe',
                 'status' => 'processing',
                 'payment_status' => 'paid',
@@ -762,15 +808,15 @@ class DemoDataSeeder extends Seeder
             [
                 'ref_no' => 'ORD-100206',
                 'invoice_no' => 'INV-2026-5510',
-                'customer_name' => 'Sarah Connor',
-                'address' => '404 Resistance Rd, Los Angeles, CA',
+                'customer_name' => 'Rahim Ali',
+                'address' => '12/A Dhanmondi, Dhaka, Bangladesh',
                 'items' => [
                     ['slug' => 'apex-aromatherapy-diffuser',    'qty' => 1],
                     ['slug' => 'sleek-bamboo-desk-organizer',   'qty' => 2],
                 ],
                 'coupon_id' => $coupon2,
-                'coupon_discount' => 10.00,
-                'shipping' => 8.00,
+                'coupon_discount' => 1000.00,
+                'shipping' => 80.00,
                 'gateway' => 'sslcommerz',
                 'status' => 'shipped',
                 'payment_status' => 'paid',
@@ -779,14 +825,15 @@ class DemoDataSeeder extends Seeder
             [
                 'ref_no' => 'ORD-100207',
                 'invoice_no' => 'INV-2026-8832',
-                'customer_name' => 'Bruce Wayne',
-                'address' => 'Wayne Manor, Gotham City',
+                'customer_name' => 'Abul Kalam',
+                'address' => 'House 45, Road 11, Banani, Dhaka',
                 'items' => [
-                    ['slug' => 'aura-light-ring-lamp', 'qty' => 3],
+                    ['slug' => 'smart-fitness-band-v4-black', 'qty' => 1],
+                    ['slug' => 'aura-light-ring-lamp',        'qty' => 2],
                 ],
                 'coupon_id' => null,
                 'coupon_discount' => 0.00,
-                'shipping' => 12.00,
+                'shipping' => 120.00,
                 'gateway' => 'stripe',
                 'status' => 'shipped',
                 'payment_status' => 'paid',
@@ -796,14 +843,14 @@ class DemoDataSeeder extends Seeder
             [
                 'ref_no' => 'ORD-100208',
                 'invoice_no' => 'INV-2026-2241',
-                'customer_name' => 'Clark Kent',
-                'address' => '345 Metro Heights, Metropolis',
+                'customer_name' => 'Karim Uddin',
+                'address' => 'Mirpur 10, Dhaka, Bangladesh',
                 'items' => [
                     ['slug' => 'quantum-chronograph-watch', 'qty' => 1],
                 ],
                 'coupon_id' => $coupon1,
-                'coupon_discount' => 100.00,
-                'shipping' => 15.00,
+                'coupon_discount' => 10000.00,
+                'shipping' => 150.00,
                 'gateway' => 'bkash',
                 'status' => 'completed',
                 'payment_status' => 'paid',
@@ -812,8 +859,8 @@ class DemoDataSeeder extends Seeder
             [
                 'ref_no' => 'ORD-100209',
                 'invoice_no' => 'INV-2026-6614',
-                'customer_name' => 'Tony Stark',
-                'address' => 'Stark Tower, New York City',
+                'customer_name' => 'Nusrat Jahan',
+                'address' => 'Zindabazar, Sylhet, Bangladesh',
                 'items' => [
                     ['slug' => 'aerobuds-pro-wireless',    'qty' => 1],
                     ['slug' => 'velta-premium-sunglasses', 'qty' => 1],
@@ -830,14 +877,14 @@ class DemoDataSeeder extends Seeder
             [
                 'ref_no' => 'ORD-100210',
                 'invoice_no' => 'INV-2026-9999',
-                'customer_name' => 'Diana Prince',
-                'address' => 'Paradise Island, Themyscira',
+                'customer_name' => 'Tasnim Jahan',
+                'address' => 'GEC Circle, Chittagong, Bangladesh',
                 'items' => [
                     ['slug' => 'lumix-portable-power-bank-20k', 'qty' => 1],
                 ],
                 'coupon_id' => null,
                 'coupon_discount' => 0.00,
-                'shipping' => 5.00,
+                'shipping' => 50.00,
                 'gateway' => 'cod',
                 'status' => 'cancelled',
                 'payment_status' => 'pending',

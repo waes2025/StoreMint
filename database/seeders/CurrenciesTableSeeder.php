@@ -14,6 +14,10 @@ class CurrenciesTableSeeder extends Seeder
      */
     public function run()
     {
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        DB::table('currencies')->truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
         $data = [
             ['id' => '1', 'country' => 'Albania', 'currency' => 'Leke', 'code' => 'ALL', 'symbol' => 'Lek',
                 'thousand_separator' => ',', 'decimal_separator' => '.', 'created_at' => null, 'updated_at' => null],
