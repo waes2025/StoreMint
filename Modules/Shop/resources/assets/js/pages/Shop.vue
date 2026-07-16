@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, useTemplateRef } from 'vue';
+import { computed, onMounted, ref, useTemplateRef } from 'vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { onClickOutside } from '@vueuse/core';
 import {
@@ -41,10 +41,12 @@ import {
 import { DbProduct, DbCoupon } from '@/types/storefront';
 import { useStorefront } from '@/composables/useStorefront';
 import Footer from '@/components/Footer.vue';
-import CartDrawer from '../../../Modules/Cart/resources/assets/js/components/CartDrawer.vue';
-import Announcement from '../../../Modules/Cart/resources/assets/js/components/Announcement.vue';
-import ActiveCoupons from '../../../Modules/Cart/resources/assets/js/components/ActiveCoupons.vue';
-import OrderSummary from '../../../Modules/Cart/resources/assets/js/components/OrderSummary.vue';
+import CartDrawer from '../../../../../Cart/resources/assets/js/components/CartDrawer.vue';
+import Announcement from '../../../../../Cart/resources/assets/js/components/Announcement.vue';
+import ActiveCoupons from '../../../../../Cart/resources/assets/js/components/ActiveCoupons.vue';
+import OrderSummary from '../../../../../Cart/resources/assets/js/components/OrderSummary.vue';
+import ProductFilter from '../components/ProductFilter.vue';
+import AllProductView from '../components/AllProductView.vue';
 
 const props = defineProps<{
     dbProducts?: DbProduct[];
@@ -125,6 +127,8 @@ const {
     isShipmentEnabled,
     isCartEnabled,
     categories,
+    brands,
+    selectedBrand,
     activeProducts,
     minPrice,
     maxPrice,
@@ -139,6 +143,11 @@ const {
     selectCategory,
 } = useStorefront(props);
 
+const isBlogEnabled = computed(() => {
+    const enabledModules = (page.props.enabled_modules as string[]) || [];
+    return enabledModules.includes('Blog');
+});
+
 // Language setup
 const selectedLang = ref('English');
 const langOpen = ref(false);
@@ -150,6 +159,25 @@ onClickOutside(langDropdownRef, () => {
 });
 
 
+
+onMounted(() => {
+    const params = new URLSearchParams(window.location.search);
+    const categoryParam = params.get('category');
+    const tabParam = params.get('tab');
+
+    if (categoryParam) {
+        // Find if this category exists
+        const exists = categories.value.includes(categoryParam);
+        if (exists) {
+            selectedCategory.value = categoryParam;
+        }
+    }
+    if (tabParam) {
+        if (['categories', 'new-arrivals', 'support'].includes(tabParam)) {
+            viewMode.value = tabParam as any;
+        }
+    }
+});
 </script>
 
 <template>
@@ -323,6 +351,12 @@ onClickOutside(langDropdownRef, () => {
                 <nav
                     class="hidden items-center gap-8 text-sm font-medium text-neutral-600 md:flex dark:text-neutral-400"
                 >
+                    <Link
+                        href="/"
+                        class="cursor-pointer py-1 transition hover:text-emerald-500"
+                    >
+                        Home
+                    </Link>
                     <button
                         @click="viewMode = 'browse'"
                         :class="
@@ -332,14 +366,8 @@ onClickOutside(langDropdownRef, () => {
                         "
                         class="cursor-pointer border-none bg-transparent py-1 transition"
                     >
-                        Home
-                    </button>
-                    <Link
-                        href="/shop"
-                        class="cursor-pointer py-1 transition hover:text-emerald-500"
-                    >
                         Shop All
-                    </Link>
+                    </button>
                     <button
                         @click="viewMode = 'categories'"
                         :class="
@@ -362,6 +390,13 @@ onClickOutside(langDropdownRef, () => {
                     >
                         Support
                     </button>
+                    <Link
+                        v-if="isBlogEnabled"
+                        href="/blogs"
+                        class="cursor-pointer py-1 transition hover:text-emerald-500"
+                    >
+                        Blog
+                    </Link>
                     <Link
                         v-if="$page.props.auth.user"
                         :href="dashboardUrl || '/dashboard'"
@@ -409,56 +444,6 @@ onClickOutside(langDropdownRef, () => {
         <main class="mx-auto max-w-[1280px] px-6 py-8">
             <!-- BROWSE STATE -->
             <div v-if="viewMode === 'browse'" class="space-y-12">
-                <!-- HERO SECTION (Guidelines Section 2) -->
-                <section
-                    class="relative overflow-hidden rounded-2xl bg-neutral-900 text-white dark:bg-neutral-900"
-                >
-                    <!-- Soft background ambient glows -->
-                    <div
-                        class="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-emerald-500/20 blur-3xl"
-                    ></div>
-                    <div
-                        class="absolute -right-24 -bottom-24 h-96 w-96 rounded-full bg-emerald-600/10 blur-3xl"
-                    ></div>
-
-                    <div
-                        class="relative z-10 max-w-2xl space-y-6 px-8 py-16 md:p-20"
-                    >
-                        <div
-                            class="inline-flex items-center gap-2 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-400"
-                        >
-                            <Sparkles class="h-3 w-3" />
-                            <span>REDESIGNED PLATFORM</span>
-                        </div>
-                        <h1
-                            class="text-4xl leading-tight font-extrabold tracking-tight md:text-5xl"
-                        >
-                            State-of-the-Art <br />
-                            <span
-                                class="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent"
-                                >E-Commerce Redefined</span
-                            >
-                        </h1>
-                        <p
-                            class="max-w-lg text-sm leading-relaxed text-neutral-300 md:text-base"
-                        >
-                            Designed strictly according to the Design Grid &
-                            System Guidelines. Experience fluid 12-column
-                            layouts, unified spacing scales, and pixel-perfect
-                            contrast.
-                        </p>
-                        <div class="pt-4">
-                            <button
-                                @click="scrollToCollection"
-                                class="inline-flex h-12 items-center gap-2 rounded-lg bg-emerald-500 px-6 text-sm font-semibold text-neutral-950 transition hover:bg-emerald-400"
-                            >
-                                <span>Shop the Collection</span>
-                                <ArrowRight class="h-4 w-4" />
-                            </button>
-                        </div>
-                    </div>
-                </section>
-
                 <!-- ACTIVE PROMOS HIGHLIGHT (Guidelines Section 1.5) -->
                 <ActiveCoupons
                     v-if="isCartEnabled"
@@ -467,361 +452,63 @@ onClickOutside(langDropdownRef, () => {
                     @apply="code => { couponInput = code; applyCoupon(); }"
                 />
 
-                <!-- FEATURED CATEGORIES SECTION -->
+                <!-- SHOP PAGE SECTION WITH PRODUCT FILTERS -->
                 <section class="space-y-6">
                     <div
-                        class="flex items-center justify-between border-b border-neutral-200/80 pb-4 dark:border-neutral-800"
+                        id="shop-collection-header"
+                        class="border-b border-neutral-200/80 pb-4 dark:border-neutral-800"
                     >
-                        <div>
-                            <h2 class="text-2xl font-bold tracking-tight">
-                                Featured Collections
-                            </h2>
-                            <p class="text-xs text-neutral-500">
-                                Shop by select categories crafted for your
-                                aesthetic
-                            </p>
-                        </div>
-                        <Link
-                            href="/shop?tab=categories"
-                            class="text-xs font-semibold text-emerald-600 transition hover:text-emerald-700 dark:text-emerald-400"
-                        >
-                            View All Categories &rarr;
-                        </Link>
-                    </div>
-
-                    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                        <Link
-                            v-for="(cat, index) in categories
-                                .filter((c) => c !== 'All')
-                                .slice(0, 3)"
-                            :key="cat"
-                            :href="`/shop?category=${cat}`"
-                            class="group relative block cursor-pointer overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition duration-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900"
-                        >
-                            <!-- Card Gradient backdrop visual -->
-                            <div
-                                :class="[
-                                    index % 3 === 0
-                                        ? 'from-amber-500/10 to-orange-500/10'
-                                        : index % 3 === 1
-                                          ? 'from-emerald-500/10 to-teal-500/10'
-                                          : 'from-blue-500/10 to-indigo-500/10',
-                                ]"
-                                class="absolute inset-0 bg-gradient-to-br opacity-50 transition duration-300 group-hover:opacity-100"
-                            ></div>
-
-                            <div
-                                class="relative z-10 flex h-36 flex-col justify-between"
-                            >
-                                <div class="flex items-start justify-between">
-                                    <div
-                                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
-                                    >
-                                        <ShoppingBag
-                                            v-if="cat === 'Accessories'"
-                                            class="h-6 w-6"
-                                        />
-                                        <Sparkles
-                                            v-else-if="cat === 'Electronics'"
-                                            class="h-6 w-6"
-                                        />
-                                        <Leaf
-                                            v-else-if="cat === 'Fashion'"
-                                            class="h-6 w-6"
-                                        />
-                                        <LayoutGrid v-else class="h-6 w-6" />
-                                    </div>
-                                    <span
-                                        class="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
-                                    >
-                                        Go to Collection
-                                    </span>
-                                </div>
-
-                                <div>
-                                    <h3
-                                        class="text-lg font-bold text-neutral-900 transition group-hover:text-emerald-500 dark:text-white"
-                                    >
-                                        {{ cat }}
-                                    </h3>
-                                    <p
-                                        class="mt-1 text-xs text-neutral-500 dark:text-neutral-400"
-                                    >
-                                        Explore our premium selection of
-                                        hand-crafted {{ cat.toLowerCase() }}.
-                                    </p>
-                                </div>
-                            </div>
-                        </Link>
-                    </div>
-                </section>
-
-                <!-- FEATURED PRODUCTS SECTION -->
-                <section class="space-y-6">
-                    <div
-                        class="flex items-center justify-between border-b border-neutral-200/80 pb-4 dark:border-neutral-800"
-                    >
-                        <div>
-                            <h2 class="text-2xl font-bold tracking-tight">
-                                Featured Products
-                            </h2>
-                            <p class="text-xs text-neutral-500">
-                                Handpicked premium goods selected for style and
-                                value
-                            </p>
-                        </div>
-                        <Link
-                            href="/shop"
-                            class="text-xs font-semibold text-emerald-600 transition hover:text-emerald-700 dark:text-emerald-400"
-                        >
-                            Explore Shop &rarr;
-                        </Link>
-                    </div>
-
-                    <div
-                        class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4"
-                    >
-                        <div
-                            v-for="product in featuredProducts"
-                            :key="'featured-' + product.id"
-                            class="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm transition hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900"
-                        >
-                            <!-- Badge -->
-                            <span
-                                class="absolute top-3 left-3 z-10 rounded-full bg-emerald-600 px-2 py-0.5 text-[9px] font-bold tracking-wider text-white uppercase"
-                            >
-                                Featured
-                            </span>
-
-                            <div
-                                class="relative aspect-square w-full cursor-pointer overflow-hidden bg-neutral-100 dark:bg-neutral-800"
-                                @click="selectedProduct = product"
-                            >
-                                <img
-                                    v-if="product.image"
-                                    :src="product.image"
-                                    :alt="product.name"
-                                    class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                                />
-                                <div
-                                    v-else
-                                    :class="product.imageGradient"
-                                    class="absolute inset-0 bg-gradient-to-tr opacity-90 transition duration-500 group-hover:scale-105"
-                                ></div>
-                                <div
-                                    v-if="!product.image"
-                                    class="absolute inset-0 flex items-center justify-center text-4xl font-bold text-white/10 transition duration-500 select-none group-hover:scale-110"
-                                >
-                                    {{
-                                        product.name
-                                            .split(' ')
-                                            .map((w) => w[0])
-                                            .join('')
-                                    }}
-                                </div>
-                                <div
-                                    class="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition duration-300 group-hover:opacity-100"
-                                >
-                                    <span
-                                        class="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-neutral-900 shadow-lg"
-                                    >
-                                        <Eye class="h-3.5 w-3.5" /> Quick View
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div
-                                class="flex flex-1 flex-col justify-between space-y-3 p-4"
-                            >
-                                <div class="space-y-1">
-                                    <span
-                                        class="text-[10px] font-bold tracking-wider text-emerald-500 uppercase"
-                                        >{{ product.category }}</span
-                                    >
-                                    <h4
-                                        class="line-clamp-1 h-5 cursor-pointer text-xs font-bold text-neutral-900 transition group-hover:text-emerald-500 dark:text-white"
-                                        @click="selectedProduct = product"
-                                    >
-                                        {{ product.name }}
-                                    </h4>
-                                </div>
-
-                                <div
-                                    class="flex items-center gap-1 text-[10px] text-amber-500"
-                                >
-                                    <Star class="h-3 w-3 fill-current" />
-                                    <span class="font-bold">{{
-                                        product.rating
-                                    }}</span>
-                                </div>
-
-                                <div
-                                    class="flex items-center justify-between pt-1"
-                                >
-                                    <span
-                                        class="font-mono text-sm font-extrabold text-neutral-900 dark:text-white"
-                                        >{{ $page.props.currency_symbol ?? '$'
-                                        }}{{ product.price.toFixed(2) }}</span
-                                    >
-                                    <button
-                                        v-if="isCartEnabled"
-                                        @click="addToCart(product)"
-                                        :disabled="product.stock === 0"
-                                        class="rounded-lg bg-neutral-950 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-600 disabled:bg-neutral-200 disabled:text-neutral-500 dark:bg-neutral-800 dark:hover:bg-emerald-600"
-                                    >
-                                        Add
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- BEST SELLERS SECTION -->
-                <section class="space-y-6">
-                    <div
-                        class="flex items-center justify-between border-b border-neutral-200/80 pb-4 dark:border-neutral-800"
-                    >
-                        <div>
-                            <h2 class="text-2xl font-bold tracking-tight">
-                                Best Sellers
-                            </h2>
-                            <p class="text-xs text-neutral-500">
-                                Our customer favorites and top-ranking
-                                essentials
-                            </p>
-                        </div>
-                        <Link
-                            href="/shop?sortBy=best-seller"
-                            class="text-xs font-semibold text-emerald-600 transition hover:text-emerald-700 dark:text-emerald-400"
-                        >
-                            View Best Sellers &rarr;
-                        </Link>
-                    </div>
-
-                    <div
-                        class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4"
-                    >
-                        <div
-                            v-for="product in bestSellerProducts"
-                            :key="'best-' + product.id"
-                            class="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm transition hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900"
-                        >
-                            <!-- Badge -->
-                            <span
-                                class="absolute top-3 left-3 z-10 rounded-full bg-indigo-600 px-2 py-0.5 text-[9px] font-bold tracking-wider text-white uppercase"
-                            >
-                                Best Seller
-                            </span>
-
-                            <div
-                                class="relative aspect-square w-full cursor-pointer overflow-hidden bg-neutral-100 dark:bg-neutral-800"
-                                @click="selectedProduct = product"
-                            >
-                                <img
-                                    v-if="product.image"
-                                    :src="product.image"
-                                    :alt="product.name"
-                                    class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                                />
-                                <div
-                                    v-else
-                                    :class="product.imageGradient"
-                                    class="absolute inset-0 bg-gradient-to-tr opacity-90 transition duration-500 group-hover:scale-105"
-                                ></div>
-                                <div
-                                    v-if="!product.image"
-                                    class="absolute inset-0 flex items-center justify-center text-4xl font-bold text-white/10 transition duration-500 select-none group-hover:scale-110"
-                                >
-                                    {{
-                                        product.name
-                                            .split(' ')
-                                            .map((w) => w[0])
-                                            .join('')
-                                    }}
-                                </div>
-                                <div
-                                    class="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition duration-300 group-hover:opacity-100"
-                                >
-                                    <span
-                                        class="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-neutral-900 shadow-lg"
-                                    >
-                                        <Eye class="h-3.5 w-3.5" /> Quick View
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div
-                                class="flex flex-1 flex-col justify-between space-y-3 p-4"
-                            >
-                                <div class="space-y-1">
-                                    <span
-                                        class="text-[10px] font-bold tracking-wider text-indigo-500 uppercase"
-                                        >{{ product.category }}</span
-                                    >
-                                    <h4
-                                        class="line-clamp-1 h-5 cursor-pointer text-xs font-bold text-neutral-900 transition group-hover:text-emerald-500 dark:text-white"
-                                        @click="selectedProduct = product"
-                                    >
-                                        {{ product.name }}
-                                    </h4>
-                                </div>
-
-                                <div
-                                    class="flex items-center gap-1 text-[10px] text-amber-500"
-                                >
-                                    <Star class="h-3 w-3 fill-current" />
-                                    <span class="font-bold">{{
-                                        product.rating
-                                    }}</span>
-                                </div>
-
-                                <div
-                                    class="flex items-center justify-between pt-1"
-                                >
-                                    <span
-                                        class="font-mono text-sm font-extrabold text-neutral-900 dark:text-white"
-                                        >{{ $page.props.currency_symbol ?? '$'
-                                        }}{{ product.price.toFixed(2) }}</span
-                                    >
-                                    <button
-                                        v-if="isCartEnabled"
-                                        @click="addToCart(product)"
-                                        :disabled="product.stock === 0"
-                                        class="rounded-lg bg-neutral-950 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-600 disabled:bg-neutral-200 disabled:text-neutral-500 dark:bg-neutral-800 dark:hover:bg-emerald-600"
-                                    >
-                                        Add
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- BOTTOM CTA CATALOG PROMOTION -->
-                <section
-                    class="relative space-y-6 overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-800 p-8 text-center text-white shadow-lg md:p-12"
-                >
-                    <div
-                        class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.15),transparent)]"
-                    ></div>
-                    <div class="relative z-10 mx-auto max-w-xl space-y-4">
-                        <h2 class="text-3xl font-extrabold tracking-tight">
-                            Explore the Complete StoreMint Collection
+                        <h2 class="text-2xl font-bold tracking-tight">
+                            Shop the Collection
                         </h2>
-                        <p class="text-xs text-neutral-100 md:text-sm">
-                            Browse through hundreds of modern lifestyle goods.
-                            Filter by price, category, availability, and sort
-                            them dynamically to match your lifestyle.
+                        <p class="text-xs text-neutral-500">
+                            Filter and find the perfect premium item for your
+                            needs.
                         </p>
-                        <div class="pt-2">
-                            <Link
-                                href="/shop"
-                                class="inline-flex h-11 items-center justify-center rounded-lg bg-white px-8 text-xs font-semibold text-emerald-900 shadow-md transition hover:bg-neutral-100"
-                            >
-                                Go to Shop Catalog
-                            </Link>
-                        </div>
+                    </div>
+
+                    <div
+                        class="grid grid-cols-1 items-start gap-8 lg:grid-cols-12"
+                    >
+                        <!-- Sidebar Filters (3 Cols on Desktop) -->
+                        <ProductFilter
+                            v-model:searchQuery="searchQuery"
+                            v-model:selectedCategory="selectedCategory"
+                            v-model:selectedBrand="selectedBrand"
+                            v-model:minPrice="minPrice"
+                            v-model:maxPrice="maxPrice"
+                            v-model:showInStockOnly="showInStockOnly"
+                            :categories="categories"
+                            :brands="brands"
+                            :active-products="activeProducts"
+                            @clear-all="
+                                searchQuery = '';
+                                selectedCategory = 'All';
+                                selectedBrand = 'All';
+                                minPrice = null;
+                                maxPrice = null;
+                                showInStockOnly = false;
+                                sortBy = 'featured';
+                            "
+                        />
+
+                        <!-- Product Display Area (9 Cols on Desktop) -->
+                        <AllProductView
+                            v-model:sortBy="sortBy"
+                            :filtered-products="filteredProducts"
+                            :is-cart-enabled="isCartEnabled"
+                            @select-product="product => selectedProduct = product"
+                            @add-to-cart="product => addToCart(product)"
+                            @reset-filters="
+                                searchQuery = '';
+                                selectedCategory = 'All';
+                                selectedBrand = 'All';
+                                minPrice = null;
+                                maxPrice = null;
+                                showInStockOnly = false;
+                                sortBy = 'featured';
+                            "
+                        />
                     </div>
                 </section>
             </div>
@@ -1666,153 +1353,252 @@ onClickOutside(langDropdownRef, () => {
                 </div>
             </div>
 
-            <!-- ORDER CONFIRMATION & DOCUMENT INVOICE -->
+            <!-- ORDER CONFIRMATION & PREMIUM INVOICE -->
             <div
                 v-else-if="viewMode === 'confirmation' && orderInvoice"
-                class="mx-auto max-w-2xl space-y-4"
+                class="mx-auto max-w-3xl space-y-6"
             >
-                <!-- Action Buttons -->
-                <div class="flex justify-end gap-2">
-                    <button
-                        @click="handlePrint"
-                        class="inline-flex h-8 items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-3 text-xs font-semibold transition hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
+                <!-- Success Banner -->
+                <div
+                    class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700 p-8 text-white shadow-xl"
+                >
+                    <div
+                        class="absolute inset-0 opacity-10"
+                        style="
+                            background-image:
+                                radial-gradient(
+                                    circle at 20% 80%,
+                                    white 1px,
+                                    transparent 1px
+                                ),
+                                radial-gradient(
+                                    circle at 80% 20%,
+                                    white 1px,
+                                    transparent 1px
+                                );
+                            background-size: 30px 30px;
+                        "
+                    ></div>
+                    <div
+                        class="relative flex flex-col items-center justify-between gap-6 sm:flex-row"
                     >
-                        <Printer class="h-3.5 w-3.5" /> Print Invoice
-                    </button>
-                    <button
-                        @click="resetStorefront"
-                        class="inline-flex h-8 items-center gap-1.5 rounded-md bg-emerald-600 px-3 text-xs font-semibold text-white transition hover:bg-emerald-700"
-                    >
-                        Back to Shop
-                    </button>
+                        <div class="flex items-center gap-4">
+                            <div
+                                class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/20 ring-2 ring-white/30 backdrop-blur-sm"
+                            >
+                                <CheckCircle2 class="h-7 w-7 text-white" />
+                            </div>
+                            <div>
+                                <h1
+                                    class="text-xl font-extrabold tracking-tight"
+                                >
+                                    Payment Confirmed!
+                                </h1>
+                                <p class="mt-0.5 text-sm text-emerald-100">
+                                    Your order has been placed and invoice
+                                    generated.
+                                </p>
+                                <div class="mt-2 flex items-center gap-2">
+                                    <span
+                                        class="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase"
+                                        >{{ orderInvoice.orderNo }}</span
+                                    >
+                                    <span
+                                        class="text-[10px] text-emerald-200"
+                                        >{{ orderInvoice.date }}</span
+                                    >
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex shrink-0 gap-2">
+                            <button
+                                @click="handlePrint"
+                                class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white/15 px-4 text-xs font-semibold text-white ring-1 ring-white/30 backdrop-blur-sm transition hover:bg-white/25"
+                            >
+                                <Download class="h-3.5 w-3.5" /> Export PDF
+                            </button>
+                            <button
+                                @click="resetStorefront"
+                                class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white px-4 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50"
+                            >
+                                Back to Shop
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- DOCUMENT INVOICE -->
+                <!-- PREMIUM INVOICE DOCUMENT -->
                 <div
                     id="invoice-printable"
-                    class="rounded-xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-700 dark:bg-white print:border-0 print:shadow-none"
+                    class="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-900"
                 >
-                    <!-- Company Header -->
+                    <!-- Invoice Brand Header -->
                     <div
-                        class="border-b border-neutral-300 px-10 pt-8 pb-4 text-center dark:border-neutral-600"
+                        class="flex flex-col gap-4 bg-gradient-to-r from-neutral-900 to-neutral-800 px-8 py-6 sm:flex-row sm:items-center sm:justify-between dark:from-neutral-950 dark:to-neutral-900"
+                    >
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 shadow-lg shadow-emerald-500/30"
+                            >
+                                <Leaf class="h-5 w-5 text-white" />
+                            </div>
+                            <div>
+                                <div
+                                    class="text-base font-extrabold tracking-tight text-white"
+                                >
+                                    StoreMint Inc.
+                                </div>
+                                <div class="text-[10px] text-neutral-400">
+                                    45 Design Grid Plaza, Gulshan-2 · Dhaka 1212
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sm:text-right">
+                            <div
+                                class="text-2xl font-black tracking-widest text-white/10 select-none dark:text-white/5"
+                                style="
+                                    font-size: 2.5rem;
+                                    line-height: 1;
+                                    letter-spacing: 0.25em;
+                                "
+                            >
+                                INVOICE
+                            </div>
+                            <div
+                                class="mt-1 font-mono text-xs font-bold text-emerald-400"
+                            >
+                                {{ orderInvoice.invoiceNo }}
+                            </div>
+                            <div class="text-[10px] text-neutral-500">
+                                Issued: {{ orderInvoice.date }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status Bar -->
+                    <div
+                        class="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-100 bg-neutral-50 px-8 py-3 dark:border-neutral-800 dark:bg-neutral-800/50"
+                    >
+                        <div class="flex items-center gap-3">
+                            <span
+                                :class="
+                                    orderInvoice.paymentStatus === 'Paid'
+                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
+                                        : orderInvoice.paymentStatus ===
+                                            'Pending'
+                                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400'
+                                          : 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400'
+                                "
+                                class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold tracking-wider uppercase"
+                            >
+                                <span
+                                    class="h-1.5 w-1.5 rounded-full"
+                                    :class="
+                                        orderInvoice.paymentStatus === 'Paid'
+                                            ? 'bg-emerald-500'
+                                            : orderInvoice.paymentStatus ===
+                                                'Pending'
+                                              ? 'bg-amber-500'
+                                              : 'bg-red-500'
+                                    "
+                                ></span>
+                                {{ orderInvoice.paymentStatus }}
+                            </span>
+                            <span class="font-mono text-[10px] text-neutral-400"
+                                >Order: {{ orderInvoice.orderNo }}</span
+                            >
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] text-neutral-400"
+                                >Paid via</span
+                            >
+                            <span
+                                class="rounded-md bg-neutral-200 px-2 py-0.5 text-[10px] font-bold text-neutral-700 uppercase dark:bg-neutral-700 dark:text-neutral-200"
+                                >{{ orderInvoice.paymentMethod }}</span
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Billing & Shipping Panels -->
+                    <div
+                        class="grid border-b border-neutral-100 sm:grid-cols-2 dark:border-neutral-800"
                     >
                         <div
-                            class="text-3xl font-black tracking-tight text-neutral-900 uppercase"
-                            style="letter-spacing: 0.05em"
+                            class="space-y-2 border-neutral-100 px-8 py-5 sm:border-r dark:border-neutral-800"
                         >
-                            {{ $page.props.name ?? 'StoreMint' }}
-                        </div>
-                        <div class="mt-1 text-[11px] text-neutral-600">
-                            45 Design Grid Plaza, Gulshan-2,
-                            Dhaka-1212&nbsp;&nbsp;|&nbsp;&nbsp; Mobile: +880
-                            1600 000 000&nbsp;&nbsp;|&nbsp;&nbsp; Email:
-                            support@storemint.com
-                        </div>
-                    </div>
-
-                    <!-- Invoice Title -->
-                    <div class="py-3 text-center">
-                        <span
-                            class="text-base font-semibold tracking-wide text-neutral-700"
-                            >Invoice</span
-                        >
-                    </div>
-
-                    <!-- Two-column Metadata -->
-                    <div
-                        class="grid grid-cols-2 gap-x-6 px-10 pb-4 text-[11px]"
-                    >
-                        <!-- Left -->
-                        <div class="space-y-1">
-                            <div>
-                                <span class="font-semibold text-neutral-700"
-                                    >Invoice No.</span
-                                >
-                                <span class="ml-1 font-mono text-neutral-600">{{
-                                    orderInvoice.invoiceNo
-                                }}</span>
+                            <span
+                                class="text-[9px] font-bold tracking-[0.15em] text-neutral-400 uppercase"
+                                >Bill To</span
+                            >
+                            <div
+                                class="text-sm font-bold text-neutral-900 dark:text-white"
+                            >
+                                {{ orderInvoice.customer.name }}
                             </div>
-                            <div>
-                                <div class="font-semibold text-neutral-700">
-                                    Customer
+                            <div class="space-y-0.5 text-xs text-neutral-500">
+                                <div class="flex items-center gap-1.5">
+                                    <Mail class="h-3 w-3 shrink-0" />{{
+                                        orderInvoice.customer.email
+                                    }}
                                 </div>
-                                <div class="text-neutral-600">
-                                    {{ orderInvoice.customer.name }}
+                                <div class="flex items-center gap-1.5">
+                                    <Phone class="h-3 w-3 shrink-0" />{{
+                                        orderInvoice.customer.phone
+                                    }}
                                 </div>
                             </div>
-                            <div>
-                                <span class="font-semibold text-neutral-700"
-                                    >Mobile</span
-                                >
-                                <span class="ml-1 text-neutral-600">{{
-                                    orderInvoice.customer.phone || '-'
-                                }}</span>
-                            </div>
-                            <div class="pt-2">
-                                <span class="text-neutral-500">Created by</span>
-                                <span
-                                    class="ml-1 font-semibold text-neutral-700"
-                                    >{{ orderInvoice.customer.name }}</span
-                                >
-                            </div>
                         </div>
-                        <!-- Right -->
-                        <div class="space-y-1 text-right">
-                            <div>
-                                <span class="font-semibold text-neutral-700"
-                                    >Date</span
-                                >
-                                <span class="ml-1 text-neutral-600">{{
-                                    orderInvoice.date
-                                }}</span>
+                        <div class="space-y-2 px-8 py-5">
+                            <span
+                                class="text-[9px] font-bold tracking-[0.15em] text-neutral-400 uppercase"
+                                >Ship To</span
+                            >
+                            <div
+                                class="text-sm font-bold text-neutral-900 dark:text-white"
+                            >
+                                Delivery Address
                             </div>
-                            <div>
-                                <span class="font-semibold text-neutral-700"
-                                    >Serve By</span
-                                >
-                                <span class="ml-1 text-neutral-600">-</span>
+                            <div class="space-y-0.5 text-xs text-neutral-500">
+                                <div>{{ orderInvoice.customer.address }}</div>
+                                <div>
+                                    {{ orderInvoice.customer.city }},
+                                    {{ orderInvoice.customer.zip }}
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Items Table -->
-                    <div
-                        class="border-t border-b border-neutral-300 dark:border-neutral-600"
-                    >
-                        <table class="w-full text-[11px]">
+                    <!-- Itemized Table -->
+                    <div class="px-8 py-6">
+                        <table class="w-full border-collapse text-xs">
                             <thead>
                                 <tr
-                                    class="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-100"
+                                    class="rounded-lg bg-neutral-50 dark:bg-neutral-800"
                                 >
                                     <th
-                                        class="w-7 px-3 py-2 text-left font-bold text-neutral-700"
+                                        class="rounded-l-lg px-4 py-3 text-left text-[9px] font-bold tracking-wider text-neutral-500 uppercase dark:text-neutral-400"
                                     >
                                         #
                                     </th>
                                     <th
-                                        class="px-3 py-2 text-left font-bold text-neutral-700"
+                                        class="px-4 py-3 text-left text-[9px] font-bold tracking-wider text-neutral-500 uppercase dark:text-neutral-400"
                                     >
                                         Product
                                     </th>
                                     <th
-                                        class="w-24 px-3 py-2 text-center font-bold text-neutral-700"
-                                    >
-                                        Quantity
-                                    </th>
-                                    <th
-                                        class="w-24 px-3 py-2 text-right font-bold text-neutral-700"
+                                        class="px-4 py-3 text-center text-[9px] font-bold tracking-wider text-neutral-500 uppercase dark:text-neutral-400"
                                     >
                                         Unit Price
                                     </th>
                                     <th
-                                        class="w-20 px-3 py-2 text-right font-bold text-neutral-700"
+                                        class="px-4 py-3 text-center text-[9px] font-bold tracking-wider text-neutral-500 uppercase dark:text-neutral-400"
                                     >
-                                        Discount
+                                        Qty
                                     </th>
                                     <th
-                                        class="w-24 px-3 py-2 text-right font-bold text-neutral-700"
+                                        class="rounded-r-lg px-4 py-3 text-right text-[9px] font-bold tracking-wider text-neutral-500 uppercase dark:text-neutral-400"
                                     >
-                                        Subtotal
+                                        Line Total
                                     </th>
                                 </tr>
                             </thead>
@@ -1820,197 +1606,148 @@ onClickOutside(langDropdownRef, () => {
                                 <tr
                                     v-for="(item, index) in orderInvoice.items"
                                     :key="item.name"
-                                    class="border-b border-neutral-100 last:border-0"
+                                    :class="
+                                        index % 2 === 0
+                                            ? ''
+                                            : 'bg-neutral-50/60 dark:bg-neutral-800/30'
+                                    "
+                                    class="border-b border-neutral-100 last:border-0 dark:border-neutral-800/60"
                                 >
-                                    <td class="px-3 py-2.5 text-neutral-500">
-                                        {{ index + 1 }}
-                                    </td>
                                     <td
-                                        class="px-3 py-2.5 leading-snug font-medium text-neutral-800"
+                                        class="px-4 py-3.5 font-mono text-neutral-400"
                                     >
-                                        {{ item.name }}
-                                        <span
-                                            class="block text-[10px] font-normal text-neutral-400"
-                                            >1 Pc(s)</span
+                                        {{ String(index + 1).padStart(2, '0') }}
+                                    </td>
+                                    <td class="px-4 py-3.5">
+                                        <div
+                                            class="font-semibold text-neutral-800 dark:text-neutral-200"
                                         >
+                                            {{ item.name }}
+                                        </div>
                                     </td>
                                     <td
-                                        class="px-3 py-2.5 text-center text-neutral-700"
+                                        class="px-4 py-3.5 text-center font-mono text-neutral-600 dark:text-neutral-400"
                                     >
-                                        {{ item.quantity }} Pc(s)
+                                        {{ $page.props.currency_symbol ?? '$'
+                                        }}{{ item.price.toFixed(2) }}
+                                    </td>
+                                    <td class="px-4 py-3.5 text-center">
+                                        <span
+                                            class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-neutral-100 font-mono font-bold text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+                                        >
+                                            {{ item.quantity }}
+                                        </span>
                                     </td>
                                     <td
-                                        class="px-3 py-2.5 text-right font-mono text-neutral-700"
+                                        class="px-4 py-3.5 text-right font-mono font-bold text-neutral-900 dark:text-white"
                                     >
-                                        {{
-                                            Number(item.price).toLocaleString(
-                                                undefined,
-                                                {
-                                                    minimumFractionDigits: 2,
-                                                    maximumFractionDigits: 2,
-                                                },
-                                            )
-                                        }}
-                                    </td>
-                                    <td
-                                        class="px-3 py-2.5 text-right font-mono text-neutral-700"
-                                    >
-                                        0.00
-                                    </td>
-                                    <td
-                                        class="px-3 py-2.5 text-right font-mono font-semibold text-neutral-800"
-                                    >
-                                        {{
-                                            Number(item.total).toLocaleString(
-                                                undefined,
-                                                {
-                                                    minimumFractionDigits: 2,
-                                                    maximumFractionDigits: 2,
-                                                },
-                                            )
-                                        }}
+                                        {{ $page.props.currency_symbol ?? '$'
+                                        }}{{ item.total.toFixed(2) }}
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
 
-                    <!-- Bottom Summary -->
+                    <!-- Totals Breakdown -->
                     <div
-                        class="grid grid-cols-2 gap-x-8 px-10 py-5 text-[11px]"
+                        class="flex justify-end border-t border-dashed border-neutral-200 px-8 py-6 dark:border-neutral-700"
                     >
-                        <!-- Left: Payment rows -->
-                        <div class="space-y-1.5">
-                            <div class="flex justify-between">
-                                <span class="font-semibold text-neutral-700">{{
-                                    orderInvoice.paymentMethod
-                                }}</span>
-                                <span class="font-mono text-neutral-700">
-                                    ৳
-                                    {{
-                                        Number(
-                                            orderInvoice.grandTotal,
-                                        ).toLocaleString(undefined, {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2,
-                                        })
-                                    }}
-                                </span>
-                            </div>
-                            <div class="text-[10px] text-neutral-500">
-                                {{ orderInvoice.date }}
-                            </div>
-                            <div class="mt-2 flex justify-between">
-                                <span class="font-bold text-neutral-800"
-                                    >Total Paid</span
-                                >
+                        <div class="w-72 space-y-2">
+                            <div
+                                class="flex justify-between text-xs text-neutral-500"
+                            >
+                                <span>Subtotal</span>
                                 <span
-                                    class="font-mono font-bold text-neutral-800"
-                                >
-                                    ৳
-                                    {{
-                                        Number(
-                                            orderInvoice.grandTotal,
-                                        ).toLocaleString(undefined, {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2,
-                                        })
-                                    }}
-                                </span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="font-bold text-neutral-800"
-                                    >Total Due</span
-                                >
-                                <span
-                                    class="font-mono font-bold text-neutral-800"
-                                    >৳ 0.00</span
+                                    class="font-mono font-medium text-neutral-700 dark:text-neutral-300"
+                                    >{{ $page.props.currency_symbol ?? '$'
+                                    }}{{
+                                        orderInvoice.subtotal.toFixed(2)
+                                    }}</span
                                 >
                             </div>
-                        </div>
 
-                        <!-- Right: Quantity & Net Total -->
-                        <div
-                            class="space-y-1.5 border-l border-neutral-200 pl-8 text-right"
-                        >
-                            <div class="flex justify-between">
-                                <span class="text-neutral-600"
-                                    >Total quantity</span
-                                >
-                                <span class="font-semibold text-neutral-800">
-                                    {{
-                                        orderInvoice.items.reduce(
-                                            (s, i) => s + i.quantity,
-                                            0,
-                                        )
-                                    }}
-                                </span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-neutral-600"
-                                    >Total Items</span
-                                >
-                                <span class="font-semibold text-neutral-800">{{
-                                    orderInvoice.items.length
-                                }}</span>
-                            </div>
                             <div
                                 v-if="orderInvoice.discount > 0"
-                                class="flex justify-between"
+                                class="flex justify-between text-xs"
                             >
-                                <span class="text-neutral-600">Discount</span>
                                 <span
-                                    class="font-mono font-semibold text-neutral-800"
+                                    class="flex items-center gap-1.5 text-emerald-600"
                                 >
-                                    ৳
+                                    <Tag class="h-3 w-3" /> Discount
+                                    <span class="font-mono text-emerald-500"
+                                        >({{ orderInvoice.couponCode }})</span
+                                    >
+                                </span>
+                                <span
+                                    class="font-mono font-semibold text-emerald-600"
+                                    >− {{ $page.props.currency_symbol ?? '$'
+                                    }}{{
+                                        orderInvoice.discount.toFixed(2)
+                                    }}</span
+                                >
+                            </div>
+
+                            <div
+                                v-if="isShipmentEnabled"
+                                class="flex justify-between text-xs text-neutral-500"
+                            >
+                                <span class="flex items-center gap-1.5"
+                                    ><Truck class="h-3 w-3" /> Shipping</span
+                                >
+                                <span
+                                    class="font-mono font-medium text-neutral-700 dark:text-neutral-300"
+                                >
                                     {{
-                                        Number(
-                                            orderInvoice.discount,
-                                        ).toLocaleString(undefined, {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2,
-                                        })
+                                        orderInvoice.shipping === 0
+                                            ? 'Free'
+                                            : `${$page.props.currency_symbol ?? '$'}${orderInvoice.shipping.toFixed(2)}`
                                     }}
                                 </span>
                             </div>
+
+                            <!-- Grand Total -->
                             <div
-                                class="mt-1 flex justify-between border-t border-neutral-300 pt-1.5"
+                                class="mt-3 flex items-center justify-between rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 p-4"
                             >
-                                <span class="font-bold text-neutral-800"
-                                    >Net Total:</span
+                                <span class="text-sm font-bold text-white"
+                                    >Grand Total</span
                                 >
                                 <span
-                                    class="font-mono font-bold text-neutral-800"
+                                    class="font-mono text-lg font-black text-white"
+                                    >{{ $page.props.currency_symbol ?? '$'
+                                    }}{{
+                                        orderInvoice.grandTotal.toFixed(2)
+                                    }}</span
                                 >
-                                    ৳
-                                    {{
-                                        Number(
-                                            orderInvoice.grandTotal,
-                                        ).toLocaleString(undefined, {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2,
-                                        })
-                                    }}
-                                </span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- QR Code -->
+                    <!-- Invoice Footer -->
                     <div
-                        class="flex justify-center border-t border-neutral-200 pb-8"
+                        class="flex flex-col items-center justify-between gap-3 border-t border-neutral-100 bg-neutral-50 px-8 py-5 sm:flex-row dark:border-neutral-800 dark:bg-neutral-800/30"
                     >
-                        <div class="flex flex-col items-center gap-2 pt-5">
-                            <img
-                                :src="`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(orderInvoice.invoiceNo + '-' + orderInvoice.orderNo)}&size=100x100&margin=4`"
-                                alt="Invoice QR Code"
-                                class="h-24 w-24"
-                                loading="lazy"
-                            />
-                            <span
-                                class="font-mono text-[9px] text-neutral-400"
-                                >{{ orderInvoice.invoiceNo }}</span
+                        <div
+                            class="max-w-sm text-[10px] leading-relaxed text-neutral-400"
+                        >
+                            <span class="font-semibold text-neutral-500"
+                                >StoreMint Inc.</span
                             >
+                            · 45 Design Grid Plaza, Gulshan-2, Dhaka 1212<br />
+                            GST/VAT Reg: BD-2025-SMT-001 · support@storemint.com
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div
+                                v-if="orderInvoice.paymentStatus === 'Paid'"
+                                class="flex h-14 w-14 rotate-[-12deg] flex-col items-center justify-center rounded-full border-2 border-emerald-500 text-emerald-600 opacity-90 dark:text-emerald-400"
+                            >
+                                <CheckCircle2 class="h-4 w-4" />
+                                <span
+                                    class="mt-0.5 text-[8px] font-black tracking-widest"
+                                    >PAID</span
+                                >
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2020,6 +1757,7 @@ onClickOutside(langDropdownRef, () => {
         <!-- Dynamic Storefront Footer -->
         <Footer v-model:viewMode="viewMode" />
 
+        <!-- CART SIDE OVER DRAWER (Guidelines Section 1.5 / 2.4) -->
         <CartDrawer
             v-if="isCartEnabled"
             v-model:cartOpen="cartOpen"

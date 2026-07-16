@@ -41,7 +41,7 @@ createInertiaApp({
         const isSettings = name.startsWith('settings/') || name.includes('::settings/');
         const isTeams = name.startsWith('teams/') || name.includes('::teams/');
         const isAuth = name.startsWith('auth/') || name.includes('::auth/');
-        const isWelcomeOrShop = name === 'Welcome' || name === 'Shop';
+        const isWelcomeOrShop = name === 'Welcome' || name === 'Shop' || name === 'Shop::Welcome' || name === 'Shop::Shop' || name === 'Blog::Index' || name === 'Blog::Show';
 
         if (isWelcomeOrShop) {
             return null;

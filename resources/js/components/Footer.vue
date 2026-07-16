@@ -236,6 +236,14 @@ const currentYear = new Date().getFullYear();
                             Support Help
                         </button>
                     </li>
+                    <li v-if="Array.isArray($page.props.enabled_modules) && $page.props.enabled_modules.includes('Blog')">
+                        <Link
+                            href="/blogs"
+                            class="font-medium text-neutral-600 transition-colors duration-200 hover:text-emerald-500 dark:text-neutral-400 dark:hover:text-emerald-400"
+                        >
+                            Blog
+                        </Link>
+                    </li>
                 </ul>
             </div>
 

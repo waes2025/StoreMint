@@ -21,7 +21,10 @@ class CheckModuleEnabled
         $enabled = $business ? ($business->enabled_modules ?? []) : [];
 
         if (! in_array($module, $enabled)) {
-            abort(403, "The {$module} module is not enabled for this business.");
+            return \Inertia\Inertia::render('Error', [
+                'status' => 403,
+                'message' => "The {$module} module is not enabled for this business."
+            ])->toResponse($request)->setStatusCode(403);
         }
 
         return $next($request);

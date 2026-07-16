@@ -44,6 +44,17 @@ class Business extends Model
     ];
 
     /**
+     * Get the enabled modules, defaulting to Shop if null.
+     */
+    public function getEnabledModulesAttribute($value): array
+    {
+        if (is_null($value)) {
+            return ['Shop'];
+        }
+        return json_decode($value, true) ?: [];
+    }
+
+    /**
      * Get the owner (User) of this business
      */
     public function owner(): BelongsTo

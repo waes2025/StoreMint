@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace Modules\Shop\Http\Controllers;
 
+use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
 use Modules\Cart\Models\Coupon;
@@ -34,7 +35,7 @@ class StorefrontController extends Controller
             session(['storefront_location_id' => (int) $request->input('location_id')]);
         }
 
-        return Inertia::render('Welcome', $this->getStorefrontData());
+        return Inertia::render('Shop::Welcome', $this->getStorefrontData());
     }
 
     /**
@@ -53,7 +54,7 @@ class StorefrontController extends Controller
             session(['storefront_location_id' => (int) $request->input('location_id')]);
         }
 
-        return Inertia::render('Shop', $this->getStorefrontData());
+        return Inertia::render('Shop::Shop', $this->getStorefrontData());
     }
 
     /**
@@ -242,5 +243,4 @@ class StorefrontController extends Controller
 
         return false;
     }
-
 }

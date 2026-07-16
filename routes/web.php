@@ -1,13 +1,9 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\StorefrontController;
 use App\Http\Controllers\Teams\TeamInvitationController;
 use App\Http\Middleware\EnsureTeamMembership;
 use Illuminate\Support\Facades\Route;
-
-Route::get('/', [StorefrontController::class, 'index'])->name('home');
-Route::get('/shop', [StorefrontController::class, 'shop'])->name('shop');
 
 Route::prefix('{current_team}')
     ->middleware(['auth', 'verified', EnsureTeamMembership::class])
