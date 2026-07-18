@@ -13,6 +13,7 @@ import {
     Globe,
     Layers,
     ShoppingCart,
+    LifeBuoy,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
@@ -95,7 +96,8 @@ const iconMap: Record<string, any> = {
     Ticket,
     CreditCard,
     Settings,
-    Package
+    Package,
+    LifeBuoy,
 };
 
 const sidebarModulesList = computed(() => {

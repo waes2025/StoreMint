@@ -4,5 +4,6 @@
     "Gateway": true,
     "Shop": true,
     "Carts": true,
-    "Cart": true
+    "Cart": true,
+    "Support": true
 }

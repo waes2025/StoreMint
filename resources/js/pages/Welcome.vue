@@ -38,16 +38,16 @@ import {
     ChevronDown,
     Monitor,
 } from '@lucide/vue';
-import { DbProduct, DbCoupon } from '@/types/storefront';
+import { DbProduct, DbCoupon, Product } from '@/types/storefront';
 import { useStorefront } from '@/composables/useStorefront';
 import Footer from '@/components/Footer.vue';
-import CartDrawer from '../../../../../Cart/resources/assets/js/components/CartDrawer.vue';
-import Announcement from '../../../../../Cart/resources/assets/js/components/Announcement.vue';
-import ActiveCoupons from '../../../../../Cart/resources/assets/js/components/ActiveCoupons.vue';
-import OrderSummary from '../../../../../Cart/resources/assets/js/components/OrderSummary.vue';
-import FeaturedCollections from '../components/FeaturedCollections.vue';
-import FeaturedProducts from '../components/FeaturedProducts.vue';
-import BestSellers from '../components/BestSellers.vue';
+import CartDrawer from '@modules/Cart/resources/assets/js/components/CartDrawer.vue';
+import Announcement from '@modules/Cart/resources/assets/js/components/Announcement.vue';
+import ActiveCoupons from '@modules/Cart/resources/assets/js/components/ActiveCoupons.vue';
+import OrderSummary from '@modules/Cart/resources/assets/js/components/OrderSummary.vue';
+import FeaturedCollections from '@modules/Shop/resources/assets/js/components/FeaturedCollections.vue';
+import FeaturedProducts from '@modules/Shop/resources/assets/js/components/FeaturedProducts.vue';
+import BestSellers from '@modules/Shop/resources/assets/js/components/BestSellers.vue';
 
 const props = defineProps<{
     dbProducts?: DbProduct[];
@@ -490,7 +490,7 @@ onClickOutside(langDropdownRef, () => {
                     v-if="isCartEnabled"
                     :active-coupons="activeCoupons"
                     :applied-coupon="appliedCoupon"
-                    @apply="code => { couponInput = code; applyCoupon(); }"
+                    @apply="(code: string) => { couponInput = code; applyCoupon(); }"
                 />
 
                 <!-- FEATURED CATEGORIES SECTION -->
@@ -501,8 +501,8 @@ onClickOutside(langDropdownRef, () => {
                     v-if="isShopEnabled"
                     :featured-products="featuredProducts"
                     :is-cart-enabled="isCartEnabled"
-                    @select-product="product => selectedProduct = product"
-                    @add-to-cart="product => addToCart(product)"
+                    @select-product="(product: Product) => selectedProduct = product"
+                    @add-to-cart="(product: Product) => addToCart(product)"
                 />
 
                 <!-- BEST SELLERS SECTION -->
@@ -510,8 +510,8 @@ onClickOutside(langDropdownRef, () => {
                     v-if="isShopEnabled"
                     :best-seller-products="bestSellerProducts"
                     :is-cart-enabled="isCartEnabled"
-                    @select-product="product => selectedProduct = product"
-                    @add-to-cart="product => addToCart(product)"
+                    @select-product="(product: Product) => selectedProduct = product"
+                    @add-to-cart="(product: Product) => addToCart(product)"
                 />
 
                 <!-- BOTTOM CTA CATALOG PROMOTION -->

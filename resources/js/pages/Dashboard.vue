@@ -133,6 +133,21 @@ interface Props {
             price: number;
         }>;
     }>;
+    supportTickets?: Array<{
+        id: string;
+        db_id: number;
+        category: string;
+        orderId: string;
+        status: string;
+        date: string;
+        messages: Array<{
+            id: number;
+            message: string;
+            sender: string;
+            is_admin: boolean;
+            date: string;
+        }>;
+    }>;
 }
 
 const props = defineProps<Props>();
@@ -202,30 +217,76 @@ const customerTab = ref<
     'home' | 'orders' | 'invoices' | 'support' | 'profile' | 'coupons'
 >('home');
 
+const isSupportEnabled = computed(() => {
+    const enabledModules = (page.props.enabled_modules as string[]) || [];
+    return enabledModules.includes('Support');
+});
+
 // Support Desk tickets state
-const supportTickets = ref([
+const localSupportTickets = ref([
     {
         id: 'TKT-8241',
+        db_id: 1,
         category: 'Delivery Issue',
         orderId: 'ORD-100201',
-        message:
-            'The package has not arrived yet. Tracking says it is still in warehouse.',
         status: 'Open',
         date: 'Jul 08, 2026',
+        messages: [
+            {
+                id: 1,
+                message: 'The package has not arrived yet. Tracking says it is still in warehouse.',
+                sender: 'Customer',
+                is_admin: false,
+                date: 'Jul 08, 2026 14:30'
+            }
+        ]
     },
     {
         id: 'TKT-3912',
+        db_id: 2,
         category: 'Billing Inquiry',
         orderId: 'ORD-100202',
-        message: 'Double charged for the order shipping. Please review.',
         status: 'Resolved',
         date: 'Jul 05, 2026',
+        messages: [
+            {
+                id: 2,
+                message: 'Double charged for the order shipping. Please review.',
+                sender: 'Customer',
+                is_admin: false,
+                date: 'Jul 05, 2026 10:15'
+            },
+            {
+                id: 3,
+                message: 'Hello! We reviewed the transaction and refunded the duplicate charge. Let us know if you need anything else.',
+                sender: 'Support Agent',
+                is_admin: true,
+                date: 'Jul 05, 2026 16:45'
+            }
+        ]
     },
 ]);
+
+const activeSupportTickets = computed(() => {
+    if (isSupportEnabled.value) {
+        return props.supportTickets || [];
+    }
+    return localSupportTickets.value;
+});
 
 const supportCategory = ref('Delivery Issue');
 const supportOrder = ref('');
 const supportMessage = ref('');
+const customerReplyText = ref<Record<number, string>>({});
+const expandedTicketId = ref<number | null>(null);
+
+const toggleTicketExpand = (dbId: number) => {
+    if (expandedTicketId.value === dbId) {
+        expandedTicketId.value = null;
+    } else {
+        expandedTicketId.value = dbId;
+    }
+};
 
 const handleCreateTicket = () => {
     if (!supportMessage.value.trim()) {
@@ -233,26 +294,86 @@ const handleCreateTicket = () => {
         return;
     }
 
-    const newTktId = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
-    const today = new Date().toLocaleDateString('en-US', {
-        month: 'short',
-        day: '2-digit',
-        year: 'numeric',
-    });
+    if (isSupportEnabled.value) {
+        router.post(
+            route('customer.support.store'),
+            {
+                category: supportCategory.value,
+                orderId: supportOrder.value,
+                message: supportMessage.value,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    supportMessage.value = '';
+                    triggerToast('💬 Support ticket submitted!');
+                },
+            }
+        );
+    } else {
+        const newTktId = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
+        const today = new Date().toLocaleDateString('en-US', {
+            month: 'short',
+            day: '2-digit',
+            year: 'numeric',
+        });
 
-    supportTickets.value.unshift({
-        id: newTktId,
-        category: supportCategory.value,
-        orderId: supportOrder.value || 'None',
-        message: supportMessage.value,
-        status: 'Open',
-        date: today,
-    });
+        localSupportTickets.value.unshift({
+            id: newTktId,
+            db_id: Math.floor(10000 + Math.random() * 90000),
+            category: supportCategory.value,
+            orderId: supportOrder.value || 'None',
+            status: 'Open',
+            date: today,
+            messages: [
+                {
+                    id: Math.floor(100000 + Math.random() * 900000),
+                    message: supportMessage.value,
+                    sender: 'Customer',
+                    is_admin: false,
+                    date: today,
+                }
+            ]
+        });
 
-    supportMessage.value = '';
-    triggerToast(
-        `💬 Support ticket ${newTktId} submitted! Our team will contact you shortly.`,
-    );
+        supportMessage.value = '';
+        triggerToast(
+            `💬 Support ticket ${newTktId} submitted! Our team will contact you shortly.`,
+        );
+    }
+};
+
+const handleReplyTicket = (dbId: number) => {
+    const text = customerReplyText.value[dbId];
+    if (!text || !text.trim()) return;
+
+    if (isSupportEnabled.value) {
+        router.post(
+            route('customer.support.reply', { ticket: dbId }),
+            { message: text },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    customerReplyText.value[dbId] = '';
+                    triggerToast('💬 Reply posted successfully!');
+                },
+            }
+        );
+    } else {
+        const ticket = localSupportTickets.value.find(t => t.db_id === dbId);
+        if (ticket) {
+            ticket.messages.push({
+                id: Math.floor(100000 + Math.random() * 900000),
+                message: text,
+                sender: 'Customer',
+                is_admin: false,
+                date: 'Just now',
+            });
+            ticket.status = 'Open';
+        }
+        customerReplyText.value[dbId] = '';
+        triggerToast('💬 Reply posted successfully!');
+    }
 };
 
 // Synchronize tab and display a toast for coming soon modules
@@ -1804,17 +1925,16 @@ const filteredCoupons = computed(() => {
                             </div>
                             <button
                                 @click="openInvoice(order)"
-                                class="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-[10px] font-bold text-white transition hover:bg-emerald-700"
+                                class="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-[10px] font-bold text-neutral-600 transition hover:bg-emerald-50 hover:text-emerald-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-emerald-950/40"
                             >
-                                <Eye class="h-3 w-3" />
-                                <span>View Invoice</span>
+                                <FileText class="h-3.5 w-3.5" /> View Invoice
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Tab 4: Shop Support -->
+             <!-- Tab 4: Shop Support -->
             <div
                 v-else-if="customerTab === 'support'"
                 class="grid gap-6 md:grid-cols-3"
@@ -1901,7 +2021,7 @@ const filteredCoupons = computed(() => {
                     </div>
                 </div>
 
-                <!-- Ticket list -->
+                <!-- Ticket list with conversation view -->
                 <div class="space-y-4 md:col-span-2">
                     <h3
                         class="text-xs font-bold tracking-wider text-neutral-400 uppercase"
@@ -1911,43 +2031,90 @@ const filteredCoupons = computed(() => {
 
                     <div class="space-y-3">
                         <div
-                            v-for="ticket in supportTickets"
+                            v-for="ticket in activeSupportTickets"
                             :key="ticket.id"
                             class="space-y-3 rounded-xl border border-neutral-200 bg-white p-4 shadow-xs dark:border-neutral-800 dark:bg-neutral-900"
                         >
-                            <div class="flex items-center justify-between">
+                            <div class="flex items-center justify-between cursor-pointer" @click="toggleTicketExpand(ticket.db_id)">
                                 <div class="flex items-center gap-2">
                                     <span
-                                        class="font-mono text-xs font-bold text-neutral-700 dark:text-neutral-300"
+                                        class="font-mono text-xs font-bold text-neutral-700 dark:text-neutral-355"
                                     >
                                         {{ ticket.id }}
                                     </span>
                                     <span
-                                        class="rounded bg-neutral-100 px-2 py-0.5 text-[9px] font-bold text-neutral-600 uppercase dark:bg-neutral-800 dark:text-neutral-400"
+                                        class="rounded bg-neutral-100 px-2 py-0.5 text-[9px] font-bold text-neutral-600 uppercase dark:bg-neutral-850 dark:text-neutral-400"
                                     >
                                         {{ ticket.category }}
                                     </span>
                                 </div>
-                                <span
-                                    :class="
-                                        ticket.status === 'Open'
-                                            ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400'
-                                            : 'bg-green-50 text-green-600 dark:bg-green-950/40 dark:text-green-400'
-                                    "
-                                    class="rounded-full px-2.5 py-0.5 text-[10px] font-bold"
-                                >
-                                    {{ ticket.status }}
-                                </span>
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        :class="
+                                            ticket.status === 'Open'
+                                                ? 'bg-red-50 text-red-650 dark:bg-red-955/40 dark:text-red-400'
+                                                : ticket.status === 'In Progress'
+                                                ? 'bg-amber-50 text-amber-650 dark:bg-amber-955/40 dark:text-amber-400'
+                                                : 'bg-green-50 text-green-650 dark:bg-green-955/40 dark:text-green-400'
+                                        "
+                                        class="rounded-full px-2.5 py-0.5 text-[10px] font-bold border border-transparent"
+                                    >
+                                        {{ ticket.status }}
+                                    </span>
+                                    <span class="text-xs text-neutral-400 dark:text-neutral-500">
+                                        {{ expandedTicketId === ticket.db_id ? '▲ Hide' : '▼ View Thread' }}
+                                    </span>
+                                </div>
                             </div>
 
-                            <p
-                                class="text-xs text-neutral-600 dark:text-neutral-400"
-                            >
-                                {{ ticket.message }}
-                            </p>
+                            <!-- Initial message preview or full discussion thread -->
+                            <div v-if="expandedTicketId !== ticket.db_id">
+                                <p class="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-1">
+                                    {{ ticket.messages[0]?.message || 'No messages.' }}
+                                </p>
+                            </div>
+
+                            <!-- Expanded discussion thread -->
+                            <div v-else class="space-y-4 pt-3 border-t border-neutral-100 dark:border-neutral-800/80">
+                                <div class="space-y-3 max-h-60 overflow-y-auto pr-1">
+                                    <div 
+                                        v-for="msg in ticket.messages" 
+                                        :key="msg.id"
+                                        :class="[
+                                            'p-3 rounded-lg border text-xs max-w-[90%]',
+                                            msg.is_admin 
+                                                ? 'bg-emerald-50 text-emerald-900 border-emerald-100 ml-auto dark:bg-emerald-950/20 dark:text-emerald-300 dark:border-emerald-900/30' 
+                                                : 'bg-neutral-50 text-neutral-800 border-neutral-150 mr-auto dark:bg-neutral-850 dark:text-neutral-200 dark:border-neutral-800'
+                                        ]"
+                                    >
+                                        <div class="flex items-center justify-between text-[9px] text-neutral-400 dark:text-neutral-500 mb-1">
+                                            <span class="font-bold">{{ msg.sender }}</span>
+                                            <span class="font-mono">{{ msg.date }}</span>
+                                        </div>
+                                        <p class="whitespace-pre-wrap">{{ msg.message }}</p>
+                                    </div>
+                                </div>
+
+                                <!-- Post reply composer -->
+                                <div v-if="ticket.status !== 'Closed'" class="flex gap-2 items-end pt-2 border-t border-neutral-100 dark:border-neutral-800/80">
+                                    <input 
+                                        type="text" 
+                                        v-model="customerReplyText[ticket.db_id]"
+                                        placeholder="Type your reply..."
+                                        class="flex-1 rounded-lg border border-neutral-200 p-2 text-xs bg-white dark:bg-neutral-955 dark:border-neutral-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                        @keydown.enter="handleReplyTicket(ticket.db_id)"
+                                    />
+                                    <button 
+                                        @click="handleReplyTicket(ticket.db_id)"
+                                        class="px-3 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition"
+                                    >
+                                        Send
+                                    </button>
+                                </div>
+                            </div>
 
                             <div
-                                class="flex items-center justify-between border-t border-neutral-50 pt-2 text-[10px] text-neutral-400 dark:border-neutral-800/60"
+                                class="flex items-center justify-between border-t border-neutral-50 pt-2 text-[10px] text-neutral-450 dark:border-neutral-800/60"
                             >
                                 <span
                                     >Linked Order:

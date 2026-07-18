@@ -5,8 +5,14 @@ import vue from '@vitejs/plugin-vue';
 import laravel from 'laravel-vite-plugin';
 import { bunny } from 'laravel-vite-plugin/fonts';
 import { defineConfig } from 'vite';
+import { resolve } from 'path';
 
 export default defineConfig({
+    resolve: {
+        alias: {
+            '@modules': resolve(__dirname, 'Modules'),
+        },
+    },
     plugins: [
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.ts'],
@@ -32,3 +38,4 @@ export default defineConfig({
         }),
     ],
 });
+

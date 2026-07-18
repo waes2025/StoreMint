@@ -108,6 +108,32 @@ class DashboardController extends Controller
                     ];
                 });
 
+            $supportTickets = [];
+            $businessId = $user->business_id ?? 1;
+            $businessModel = \App\Models\Business::find($businessId);
+            $enabledModules = $businessModel ? ($businessModel->enabled_modules ?? []) : [];
+            if (in_array('Support', $enabledModules) && class_exists('\Modules\Support\Models\SupportTicket')) {
+                $supportTickets = \Modules\Support\Models\SupportTicket::with('messages.user')
+                    ->where('user_id', $user->id)
+                    ->latest()
+                    ->get()
+                    ->map(fn($t) => [
+                        'id' => $t->ticket_number,
+                        'db_id' => $t->id,
+                        'category' => $t->category,
+                        'orderId' => $t->order_id ?: 'None',
+                        'status' => $t->status,
+                        'date' => $t->created_at->format('M d, Y'),
+                        'messages' => $t->messages->map(fn($m) => [
+                            'id' => $m->id,
+                            'message' => $m->message,
+                            'sender' => $m->user ? trim($m->user->first_name . ' ' . $m->user->last_name) : 'User',
+                            'is_admin' => $m->user ? ($m->user->user_type === 'admin') : false,
+                            'date' => $m->created_at->format('M d, Y H:i'),
+                        ])
+                    ]);
+            }
+
             return Inertia::render('Dashboard', [
                 'role' => 'customer',
                 'stats' => [
@@ -118,6 +144,7 @@ class DashboardController extends Controller
                 'orders' => $orders,
                 'coupons' => $coupons,
                 'recommendedProducts' => $recommendedProducts,
+                'supportTickets' => $supportTickets,
             ]);
         }
 

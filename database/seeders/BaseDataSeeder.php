@@ -66,6 +66,7 @@ class BaseDataSeeder extends Seeder
             'start_date' => now()->subYear()->toDateString(),
             'owner_id' => $userId,
             'default_profit_percent' => 40.00,
+            'enabled_modules' => json_encode(['Shop', 'Cart', 'Shipment', 'Support']),
             'created_at' => now(),
             'updated_at' => now(),
         ]);

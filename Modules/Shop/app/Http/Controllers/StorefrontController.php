@@ -35,7 +35,7 @@ class StorefrontController extends Controller
             session(['storefront_location_id' => (int) $request->input('location_id')]);
         }
 
-        return Inertia::render('Shop::Welcome', $this->getStorefrontData());
+        return Inertia::render('Welcome', $this->getStorefrontData());
     }
 
     /**

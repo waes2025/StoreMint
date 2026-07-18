@@ -1,0 +1,16 @@
+{
+    "name": "storemint/support",
+    "description": "StoreMint Support Ticket Management Module",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Support\\": "app/",
+            "Modules\\Support\\Database\\Factories\\": "database/factories/",
+            "Modules\\Support\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Support\\Tests\\": "tests/"
+        }
+    }
+}
