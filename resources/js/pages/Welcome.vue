@@ -48,6 +48,7 @@ import OrderSummary from '@modules/Cart/resources/assets/js/components/OrderSumm
 import FeaturedCollections from '@modules/Shop/resources/assets/js/components/FeaturedCollections.vue';
 import FeaturedProducts from '@modules/Shop/resources/assets/js/components/FeaturedProducts.vue';
 import BestSellers from '@modules/Shop/resources/assets/js/components/BestSellers.vue';
+import SupportHelpCenter from '@modules/Support/resources/assets/js/components/SupportHelpCenter.vue';
 
 const props = defineProps<{
     dbProducts?: DbProduct[];
@@ -148,12 +149,17 @@ const isShopEnabled = computed(() => {
 });
 
 const isCartEnabled = computed(() => {
-    return isShopEnabled.value && coreIsCartEnabled.value;
+    return coreIsCartEnabled.value;
 });
 
 const isBlogEnabled = computed(() => {
     const enabledModules = (page.props.enabled_modules as string[]) || [];
     return enabledModules.includes('Blog');
+});
+
+const isSupportEnabled = computed(() => {
+    const enabledModules = (page.props.enabled_modules as string[]) || [];
+    return enabledModules.includes('Support');
 });
 
 // Language setup
@@ -371,6 +377,7 @@ onClickOutside(langDropdownRef, () => {
                         Categories
                     </button>
                     <button
+                        v-if="isSupportEnabled"
                         @click="viewMode = 'support'"
                         :class="
                             viewMode === 'support'
@@ -819,271 +826,9 @@ onClickOutside(langDropdownRef, () => {
             </div>
 
             <!-- SUPPORT / HELP CENTER STATE -->
-            <div
-                v-else-if="viewMode === 'support'"
-                class="grid items-start gap-8 lg:grid-cols-12"
-            >
-                <!-- Support Info & FAQ (7 Cols) -->
-                <div class="space-y-8 lg:col-span-7">
-                    <div class="space-y-3">
-                        <span
-                            class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400"
-                        >
-                            <Info class="h-3.5 w-3.5" /> StoreMint Help Desk
-                        </span>
-                        <h1 class="text-3xl font-extrabold tracking-tight">
-                            How can we help?
-                        </h1>
-                        <p
-                            class="text-sm text-neutral-500 dark:text-neutral-400"
-                        >
-                            Browse frequently asked questions, create a support
-                            ticket, or chat with our automated support agent.
-                        </p>
-                    </div>
-
-                    <!-- FAQ Section -->
-                    <div class="space-y-4">
-                        <h3
-                            class="border-b border-neutral-100 pb-2 text-lg font-bold tracking-tight dark:border-neutral-800"
-                        >
-                            Frequently Asked Questions
-                        </h3>
-
-                        <div class="space-y-2">
-                            <div
-                                v-for="(faq, i) in [
-                                    {
-                                        q: 'How long does shipping take?',
-                                        a: 'Standard shipping takes 3-5 business days. Express shipping options take 1-2 business days. Tracking details will be emailed to you immediately after shipment.',
-                                        shipping: true,
-                                    },
-                                    {
-                                        q: 'What is your refund/return policy?',
-                                        a: 'We offer a 30-day hassle-free return policy. If you are not satisfied with your purchase, please email returns@storemint.com with your receipt to start the process.',
-                                    },
-                                    {
-                                        q: 'Do you offer international delivery?',
-                                        a: 'Yes! We deliver worldwide. Shipping rates and delivery timeframes vary by country and are calculated at checkout.',
-                                        shipping: true,
-                                    },
-                                    {
-                                        q: 'How can I update my billing information?',
-                                        a: 'You can update your personal billing information from the profile settings within the Admin Dashboard.',
-                                    },
-                                ].filter(faq => !faq.shipping || isShipmentEnabled)"
-                                :key="i"
-                                class="overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
-                            >
-                                <button
-                                    @click="
-                                        expandedFaq =
-                                            expandedFaq === i ? null : i
-                                    "
-                                    class="flex w-full items-center justify-between px-5 py-4 text-left text-xs font-bold text-neutral-800 transition select-none hover:text-emerald-500 dark:text-neutral-200"
-                                >
-                                    <span>{{ faq.q }}</span>
-                                    <Plus
-                                        v-if="expandedFaq !== i"
-                                        class="h-4 w-4 text-neutral-400"
-                                    />
-                                    <Minus
-                                        v-else
-                                        class="h-4 w-4 text-emerald-500"
-                                    />
-                                </button>
-
-                                <div
-                                    v-show="expandedFaq === i"
-                                    class="border-t border-neutral-50 px-5 pt-2 pb-4 text-xs leading-relaxed text-neutral-500 dark:border-neutral-800/50 dark:text-neutral-400"
-                                >
-                                    {{ faq.a }}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Create Ticket Form -->
-                    <div
-                        class="space-y-4 rounded-xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
-                    >
-                        <h3 class="text-sm font-bold tracking-tight">
-                            Create a Support Ticket
-                        </h3>
-
-                        <div
-                            v-if="supportSubmitted"
-                            class="flex items-start gap-2 rounded-lg border border-emerald-100 bg-emerald-50/50 p-4 text-xs text-emerald-600 dark:border-emerald-900 dark:bg-emerald-950/20 dark:text-emerald-400"
-                        >
-                            <CheckCircle2 class="mt-0.5 h-4 w-4 shrink-0" />
-                            <div>
-                                <span class="font-bold">Ticket Submitted!</span>
-                                Thank you. Our support engineers will review
-                                your request and get back to you within 2 hours.
-                            </div>
-                        </div>
-
-                        <form
-                            v-else
-                            @submit.prevent="submitSupportTicket"
-                            class="space-y-3"
-                        >
-                            <div class="grid gap-4 sm:grid-cols-2">
-                                <div class="flex flex-col gap-1">
-                                    <label
-                                        class="text-[10px] font-bold text-neutral-500"
-                                        >Your Name *</label
-                                    >
-                                    <input
-                                        v-model="supportForm.name"
-                                        type="text"
-                                        required
-                                        placeholder="e.g. John Doe"
-                                        class="h-9 rounded-lg border border-neutral-200 px-3 text-xs focus:border-emerald-500 focus:outline-none dark:border-neutral-800 dark:bg-neutral-950"
-                                    />
-                                </div>
-                                <div class="flex flex-col gap-1">
-                                    <label
-                                        class="text-[10px] font-bold text-neutral-500"
-                                        >Your Email *</label
-                                    >
-                                    <input
-                                        v-model="supportForm.email"
-                                        type="email"
-                                        required
-                                        placeholder="john@example.com"
-                                        class="h-9 rounded-lg border border-neutral-200 px-3 text-xs focus:border-emerald-500 focus:outline-none dark:border-neutral-800 dark:bg-neutral-950"
-                                    />
-                                </div>
-                            </div>
-
-                            <div class="flex flex-col gap-1">
-                                <label
-                                    class="text-[10px] font-bold text-neutral-500"
-                                    >Subject *</label
-                                >
-                                <input
-                                    v-model="supportForm.subject"
-                                    type="text"
-                                    required
-                                    placeholder="Brief summary of issue"
-                                    class="h-9 rounded-lg border border-neutral-200 px-3 text-xs focus:border-emerald-500 focus:outline-none dark:border-neutral-800 dark:bg-neutral-950"
-                                />
-                            </div>
-
-                            <div class="flex flex-col gap-1">
-                                <label
-                                    class="text-[10px] font-bold text-neutral-500"
-                                    >Description of Issue *</label
-                                >
-                                <textarea
-                                    v-model="supportForm.message"
-                                    rows="4"
-                                    required
-                                    placeholder="Detail your inquiry..."
-                                    class="rounded-lg border border-neutral-200 p-3 text-xs focus:border-emerald-500 focus:outline-none dark:border-neutral-800 dark:bg-neutral-950"
-                                ></textarea>
-                            </div>
-
-                            <button
-                                type="submit"
-                                class="inline-flex h-9 items-center justify-center rounded-lg bg-emerald-600 px-5 text-xs font-semibold text-white transition hover:bg-emerald-700"
-                            >
-                                Submit Ticket
-                            </button>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- Simulated Live Chat Widget (5 Cols) -->
-                <div
-                    class="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm lg:col-span-5 dark:border-neutral-800 dark:bg-neutral-900"
-                >
-                    <div
-                        class="flex items-center gap-2 bg-emerald-600 p-4 text-white"
-                    >
-                        <div class="relative">
-                            <span
-                                class="block h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-300"
-                            ></span>
-                        </div>
-                        <div>
-                            <h4 class="text-xs font-bold">
-                                Minty Live Assistant
-                            </h4>
-                            <span class="text-[10px] opacity-75"
-                                >Typically replies instantly</span
-                            >
-                        </div>
-                    </div>
-
-                    <div
-                        class="h-80 space-y-3 overflow-y-auto bg-neutral-50 p-4 dark:bg-neutral-950/20"
-                    >
-                        <div
-                            v-for="(msg, index) in chatMessages"
-                            :key="index"
-                            :class="
-                                msg.sender === 'user'
-                                    ? 'justify-end'
-                                    : 'justify-start'
-                            "
-                            class="flex"
-                        >
-                            <div
-                                :class="
-                                    msg.sender === 'user'
-                                        ? 'rounded-br-none bg-emerald-600 text-white'
-                                        : 'rounded-bl-none border border-neutral-100 bg-white text-neutral-800 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200'
-                                "
-                                class="max-w-[85%] rounded-2xl px-4 py-2.5 text-xs shadow-xs"
-                            >
-                                {{ msg.text }}
-                            </div>
-                        </div>
-
-                        <div v-if="chatProcessing" class="flex justify-start">
-                            <div
-                                class="flex items-center gap-1 rounded-2xl rounded-bl-none border border-neutral-100 bg-white px-4 py-2 text-xs dark:border-neutral-800 dark:bg-neutral-900"
-                            >
-                                <span
-                                    class="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400"
-                                    style="animation-delay: 0ms"
-                                ></span>
-                                <span
-                                    class="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400"
-                                    style="animation-delay: 150ms"
-                                ></span>
-                                <span
-                                    class="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400"
-                                    style="animation-delay: 300ms"
-                                ></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div
-                        class="space-y-2 border-t border-neutral-100 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900"
-                    >
-                        <p
-                            class="text-[10px] font-semibold text-neutral-400 uppercase"
-                        >
-                            Quick Actions:
-                        </p>
-                        <div class="flex flex-col gap-1.5">
-                            <button
-                                v-for="option in chatOptions"
-                                :key="option"
-                                @click="sendChatMessage(option)"
-                                :disabled="chatProcessing"
-                                class="w-full rounded-lg border border-neutral-200 px-3 py-2 text-left text-xs font-semibold text-neutral-700 transition hover:border-emerald-200 hover:bg-emerald-50 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-950"
-                            >
-                                {{ option }}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <SupportHelpCenter
+                v-else-if="viewMode === 'support' && isSupportEnabled"
+            />
 
             <!-- CHECKOUT VIEW STATE (Guidelines Section 1.3 / 3.2) -->
             <div v-else-if="viewMode === 'checkout'" class="space-y-6">
@@ -1886,16 +1631,10 @@ onClickOutside(langDropdownRef, () => {
                                                 available)
                                             </span>
                                             <span
-                                                v-else-if="
-                                                    selectedProduct.stock > 0
-                                                "
+                                                v-else-if="selectedProduct.stock > 0 && isShopEnabled"
                                                 class="inline-flex rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-600 dark:bg-amber-950 dark:text-amber-400"
                                             >
-                                                Low Stock (Only
-                                                {{
-                                                    selectedProduct.stock
-                                                }}
-                                                left!)
+                                                Low Stock (Only {{ selectedProduct.stock }} left!)
                                             </span>
                                             <span
                                                 v-else

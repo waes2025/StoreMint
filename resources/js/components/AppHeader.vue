@@ -13,11 +13,11 @@ import {
     Monitor,
     Moon,
 } from '@lucide/vue';
-import { computed, ref, useTemplateRef } from 'vue';
 import { onClickOutside } from '@vueuse/core';
-import { useAppearance } from '@/composables/useAppearance';
+import { computed, ref, useTemplateRef } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
+import NotificationDropdown from '@/components/NotificationDropdown.vue';
 import TeamSwitcher from '@/components/TeamSwitcher.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -46,6 +46,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import UserMenuContent from '@/components/UserMenuContent.vue';
+import { useAppearance } from '@/composables/useAppearance';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { getInitials } from '@/composables/useInitials';
 import { toUrl } from '@/lib/utils';
@@ -260,6 +261,8 @@ onClickOutside(langDropdownRef, () => {
                             </button>
                         </div>
                     </div>
+
+                    <NotificationDropdown />
 
                     <!-- Theme Selector (Segmented Control) -->
                     <div

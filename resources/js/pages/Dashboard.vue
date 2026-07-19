@@ -6,6 +6,11 @@ import CouponsManager from '../../../Modules/Cart/resources/assets/js/components
 import OrdersManager from '../../../Modules/Cart/resources/assets/js/components/OrdersManager.vue';
 import CartManager from '../../../Modules/Cart/resources/assets/js/components/CartManager.vue';
 import PaymentsTable from '../../../Modules/Cart/resources/assets/js/components/PaymentsTable.vue';
+import ProductsTable from '../../../Modules/Shop/resources/assets/js/components/ProductsTable.vue';
+import MonthlyRevenue from '../../../Modules/Cart/resources/assets/js/components/MonthlyRevenue.vue';
+import RecentActivityLogs from '../../../Modules/Cart/resources/assets/js/components/RecentActivityLogs.vue';
+import MonthlyRevenueOverview from '../../../Modules/Cart/resources/assets/js/components/MonthlyRevenueOverview.vue';
+import RecentActivityOverview from '../../../Modules/Cart/resources/assets/js/components/RecentActivityOverview.vue';
 import {
     TrendingUp,
     TrendingDown,
@@ -163,6 +168,11 @@ const isShipmentEnabled = computed(() => {
 const isCartEnabled = computed(() => {
     const enabledModules = (page.props.enabled_modules as string[]) || [];
     return enabledModules.includes('Cart');
+});
+
+const isShopEnabled = computed(() => {
+    const enabledModules = (page.props.enabled_modules as string[]) || [];
+    return enabledModules.includes('Shop');
 });
 
 // Breadcrumbs definition for layout
@@ -393,6 +403,8 @@ const syncParams = () => {
                 tabParam === 'carts') &&
             !isCartEnabled.value
         ) {
+            activeTab.value = 'overview';
+        } else if (tabParam === 'products' && !isShopEnabled.value) {
             activeTab.value = 'overview';
         } else {
             activeTab.value = tabParam as any;
@@ -896,8 +908,14 @@ const filteredCoupons = computed(() => {
                 </div>
             </div>
 
+            <!-- Monthly Revenue (Cart module) -->
+            <MonthlyRevenue v-if="isCartEnabled" :stats="props.stats" />
+
+            <!-- Recent Activity Logs (Cart module) -->
+            <RecentActivityLogs v-if="isCartEnabled" :activities="props.orders || []" />
+
             <!-- Low Stock widget -->
-            <div
+            <div v-if="isShopEnabled"
                 class="flex flex-col justify-between rounded-xl border border-neutral-200 bg-white p-5 shadow-xs dark:border-neutral-800 dark:bg-neutral-900"
             >
                 <div class="flex items-center justify-between text-neutral-400">
@@ -932,126 +950,10 @@ const filteredCoupons = computed(() => {
         <!-- 1. TAB: ANALYTICS OVERVIEW -->
         <div v-if="activeTab === 'overview'" class="space-y-6">
             <div v-if="isCartEnabled" class="grid gap-6 lg:grid-cols-3">
-                <div
-                    class="space-y-6 rounded-xl border border-neutral-200 bg-white p-6 shadow-xs lg:col-span-2 dark:border-neutral-800 dark:bg-neutral-900"
-                >
-                    <div
-                        class="flex items-center justify-between border-b border-neutral-100 pb-3 dark:border-neutral-800"
-                    >
-                        <h3
-                            class="flex items-center gap-2 text-base font-bold tracking-tight"
-                        >
-                            <Activity class="h-4 w-4 text-emerald-500" /> Monthly
-                            Revenue Analytics
-                        </h3>
-                        <span class="text-[10px] font-bold text-neutral-400"
-                            >FY 2026</span
-                        >
-                    </div>
-                    <div class="relative h-60 w-full pt-4">
-                        <svg
-                            class="h-full w-full overflow-visible"
-                            viewBox="0 0 100 50"
-                        >
-                            <line
-                                x1="0"
-                                y1="10"
-                                x2="100"
-                                y2="10"
-                                stroke="rgba(0,0,0,0.05)"
-                                stroke-width="0.5"
-                                class="dark:stroke-neutral-800"
-                            />
-                            <line
-                                x1="0"
-                                y1="20"
-                                x2="100"
-                                y2="20"
-                                stroke="rgba(0,0,0,0.05)"
-                                stroke-width="0.5"
-                                class="dark:stroke-neutral-800"
-                            />
-                            <line
-                                x1="0"
-                                y1="30"
-                                x2="100"
-                                y2="30"
-                                stroke="rgba(0,0,0,0.05)"
-                                stroke-width="0.5"
-                                class="dark:stroke-neutral-800"
-                            />
-                            <line
-                                x1="0"
-                                y1="40"
-                                x2="100"
-                                y2="40"
-                                stroke="rgba(0,0,0,0.05)"
-                                stroke-width="0.5"
-                                class="dark:stroke-neutral-800"
-                            />
-
-                            <text x="0" y="48" font-size="2" fill="#999">Jan</text>
-                            <text x="20" y="48" font-size="2" fill="#999">Mar</text>
-                            <text x="40" y="48" font-size="2" fill="#999">May</text>
-                            <text x="60" y="48" font-size="2" fill="#999">Jul</text>
-                            <text x="80" y="48" font-size="2" fill="#999">Sep</text>
-                            <text x="96" y="48" font-size="2" fill="#999">Nov</text>
-
-                            <path
-                                d="M0,45 L10,38 L20,41 L30,22 L40,25 L50,15 L60,18 L70,8 L80,12 L90,6 L100,2"
-                                fill="none"
-                                stroke="rgb(16,185,129)"
-                                stroke-width="1"
-                            />
-                            <path
-                                d="M0,45 L10,38 L20,41 L30,22 L40,25 L50,15 L60,18 L70,8 L80,12 L90,6 L100,2 L100,45 L0,45 Z"
-                                fill="rgba(16,185,129,0.08)"
-                            />
-                        </svg>
-                    </div>
-                </div>
+                <MonthlyRevenueOverview v-if="isCartEnabled" :stats="props.stats" />
 
                 <!-- Activity Log -->
-                <div
-                    class="space-y-4 rounded-xl border border-neutral-200 bg-white p-6 shadow-xs dark:border-neutral-800 dark:bg-neutral-900"
-                >
-                    <h3
-                        class="border-b border-neutral-100 pb-3 text-base font-bold tracking-tight dark:border-neutral-800"
-                    >
-                        Recent Activity Logs
-                    </h3>
-                    <div
-                        class="max-h-[16.5rem] space-y-4 overflow-y-auto pr-2 text-xs"
-                    >
-                        <div
-                            class="flex gap-2.5"
-                            v-for="order in (orders || []).slice(0, 3)"
-                            :key="order.id"
-                        >
-                            <div
-                                class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
-                            >
-                                <Check class="h-3 w-3" />
-                            </div>
-                            <div class="space-y-0.5">
-                                <p class="font-semibold">
-                                    Order #{{ order.id }} - {{ order.status }}
-                                </p>
-                                <span class="text-[10px] text-neutral-400"
-                                    >{{ order.customer }} · {{ order.date }}</span
-                                >
-                            </div>
-                        </div>
-                        <div
-                            class="flex gap-2.5"
-                            v-if="!orders || orders.length === 0"
-                        >
-                            <span class="text-neutral-400"
-                                >No recent orders yet.</span
-                            >
-                        </div>
-                    </div>
-                </div>
+                <RecentActivityOverview v-if="isCartEnabled" :orders="orders" />
             </div>
 
             <!-- When Cart is disabled, show Catalog Mode active placeholder -->
@@ -1065,99 +967,17 @@ const filteredCoupons = computed(() => {
         </div>
 
         <!-- 2. TAB: PRODUCTS TABLE -->
-        <div v-else-if="activeTab === 'products'" class="space-y-4">
-            <div
-                class="flex flex-col justify-between gap-4 border-b border-neutral-100 pb-4 sm:flex-row sm:items-center dark:border-neutral-800"
-            >
-                <div class="relative max-w-sm flex-1">
-                    <Search
-                        class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-400"
-                    />
-                    <input
-                        v-model="searchQuery"
-                        type="text"
-                        placeholder="Search products..."
-                        class="h-10 w-full rounded-lg border border-neutral-200 bg-white pr-4 pl-10 text-xs outline-none focus:border-emerald-500 dark:border-neutral-800 dark:bg-neutral-900"
-                    />
-                </div>
-            </div>
+        <div v-else-if="activeTab === 'products' && isShopEnabled" class="space-y-4">
+            <ProductsTable :products="products || []" />
+        </div>
 
-            <!-- Products Table -->
-            <div
-                class="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xs dark:border-neutral-800 dark:bg-neutral-900"
-            >
-                <div class="overflow-x-auto">
-                    <table class="w-full border-collapse text-left text-xs">
-                        <thead>
-                            <tr
-                                class="border-b border-neutral-200 bg-neutral-50 text-neutral-500 dark:border-neutral-800 dark:bg-neutral-800/40"
-                            >
-                                <th class="w-16 p-4 font-semibold">ID</th>
-                                <th class="p-4 font-semibold">Product Name</th>
-                                <th class="w-32 p-4 font-semibold">Category</th>
-                                <th class="w-28 p-4 text-center font-semibold">
-                                    Price
-                                </th>
-                                <th class="w-28 p-4 text-center font-semibold">
-                                    Stock Level
-                                </th>
-                                <th class="w-28 p-4 font-semibold">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody
-                            class="divide-y divide-neutral-200 dark:divide-neutral-800/50"
-                        >
-                            <tr
-                                v-for="product in filteredProducts"
-                                :key="product.id"
-                                class="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/20"
-                            >
-                                <td class="p-4 font-mono text-neutral-400">
-                                    #00{{ product.id }}
-                                </td>
-                                <td class="p-4 font-semibold">
-                                    {{ product.name }}
-                                </td>
-                                <td class="p-4 text-neutral-500">
-                                    {{ product.category }}
-                                </td>
-                                <td class="p-4 text-center font-mono font-bold">
-                                    {{ $page.props.currency_symbol ?? '$'
-                                    }}{{ product.price.toFixed(2) }}
-                                </td>
-                                <td class="p-4 text-center">
-                                    <span
-                                        class="font-mono font-bold text-neutral-800 dark:text-neutral-200"
-                                        >{{ product.stock }}</span
-                                    >
-                                </td>
-                                <td class="p-4">
-                                    <span
-                                        v-if="product.status === 'In Stock'"
-                                        class="inline-flex rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-bold text-green-600 dark:bg-green-950 dark:text-green-400"
-                                    >
-                                        In Stock
-                                    </span>
-                                    <span
-                                        v-else-if="
-                                            product.status === 'Low Stock'
-                                        "
-                                        class="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:bg-amber-950 dark:text-amber-400"
-                                    >
-                                        Low Stock
-                                    </span>
-                                    <span
-                                        v-else
-                                        class="inline-flex rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950 dark:text-red-400"
-                                    >
-                                        Out of Stock
-                                    </span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+        <!-- Shop Module Disabled Message -->
+        <div v-else-if="activeTab === 'products' && !isShopEnabled" class="rounded-xl border border-dashed border-neutral-200 p-12 text-center dark:border-neutral-800">
+            <Package class="mx-auto h-12 w-12 text-neutral-300 dark:text-neutral-700" />
+            <h3 class="mt-4 text-sm font-bold">Shop Module Disabled</h3>
+            <p class="mt-2 text-xs text-neutral-500 max-w-md mx-auto">
+                The Shop module is currently disabled. Product management is not available. Enable the Shop module to manage products.
+            </p>
         </div>
 
         <!-- 3. TAB: ORDERS TABLE -->

@@ -43,6 +43,11 @@ const isCartEnabled = computed(() => {
     return enabledModules.includes('Cart');
 });
 
+const isShopEnabled = computed(() => {
+    const enabledModules = (page.props.enabled_modules as string[]) || [];
+    return enabledModules.includes('Shop');
+});
+
 const dashboardUrl = computed(() => {
     if (isAdmin.value && page.props.currentTeam) {
         return route('dashboard', page.props.currentTeam.slug).url;
@@ -177,7 +182,7 @@ const sidebarModulesList = computed(() => {
                                 </Link>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
-                        <SidebarMenuItem>
+                        <SidebarMenuItem v-if="isShopEnabled">
                             <SidebarMenuButton
                                 :is-active="isTabActive('products')"
                                 as-child
@@ -225,7 +230,7 @@ const sidebarModulesList = computed(() => {
                                 </Link>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
-                        <SidebarMenuItem>
+                        <SidebarMenuItem v-if="isCartEnabled">
                             <SidebarMenuButton
                                 :is-active="isTabActive('payments')"
                                 as-child

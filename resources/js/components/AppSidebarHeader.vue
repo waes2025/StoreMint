@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, useTemplateRef } from 'vue';
-import { onClickOutside } from '@vueuse/core';
 import { Globe, ChevronDown, Check, Sun, Monitor, Moon } from '@lucide/vue';
-import { useAppearance } from '@/composables/useAppearance';
+import { onClickOutside } from '@vueuse/core';
+import { ref, useTemplateRef } from 'vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
+import NotificationDropdown from '@/components/NotificationDropdown.vue';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { useAppearance } from '@/composables/useAppearance';
 import type { BreadcrumbItem } from '@/types';
 
 withDefaults(
@@ -79,6 +80,8 @@ onClickOutside(langDropdownRef, () => {
                     </button>
                 </div>
             </div>
+
+            <NotificationDropdown />
 
             <!-- Theme Selector (Segmented Control) -->
             <div
