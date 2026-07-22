@@ -59,6 +59,10 @@ const sidebarNavItems = computed<NavItem[]>(() => {
             });
         }
         items.push({
+            title: 'Storefront Design',
+            href: route('settings.storefront-design.edit').url,
+        });
+        items.push({
             title: 'Modules',
             href: route('modules.edit').url,
         });

@@ -39,7 +39,8 @@ class HandleInertiaRequests extends Middleware
     {
         $user = $request->user();
 
-        $businessId = $request->input('business_id')
+        $businessId = currentBusinessId()
+            ?: $request->input('business_id')
             ?: session('storefront_business_id')
             ?: ($user?->business_id ?? config('ecommerce.business_id', 1));
 

@@ -3,6 +3,7 @@
 namespace Modules\Shop\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Settings\StorefrontDesignController;
 use App\Models\Brand;
 use App\Models\Category;
 use Modules\Cart\Models\Coupon;
@@ -194,13 +195,14 @@ class StorefrontController extends Controller
         }
 
         return [
-            'dbProducts' => $products,
-            'dbCategories' => $categories,
-            'dbBrands' => $brands,
-            'dbCoupons' => $coupons,
-            'gateways' => $gateways,
-            'announcement' => $announcement,
-            'heroSlides' => $heroSlides,
+            'dbProducts'       => $products,
+            'dbCategories'     => $categories,
+            'dbBrands'         => $brands,
+            'dbCoupons'        => $coupons,
+            'gateways'         => $gateways,
+            'announcement'     => $announcement,
+            'heroSlides'       => $heroSlides,
+            'storefrontDesign' => StorefrontDesignController::loadDesign($businessId),
         ];
     }
 

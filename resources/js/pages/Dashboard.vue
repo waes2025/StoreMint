@@ -391,6 +391,10 @@ const syncParams = () => {
     if (typeof window === 'undefined') return;
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get('tab');
+    if (tabParam === 'blog') {
+        router.visit(route('blog.adminIndex').url);
+        return;
+    }
     if (
         tabParam &&
         ['overview', 'products', 'orders', 'coupons', 'payments', 'carts'].includes(

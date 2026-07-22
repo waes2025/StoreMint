@@ -4,9 +4,10 @@ return [
     'name' => 'Blog',
     'menus' => [
         [
-            'title' => 'Blogs',
+            'title' => 'Blog',
             'icon' => 'BookOpen',
-            'route' => 'blog.index',
+            'route' => 'blog.adminIndex',
+            'href' => '/admin/blogs',
             'type' => 'sidebar',
             'order' => 10,
         ]

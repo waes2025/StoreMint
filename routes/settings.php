@@ -6,6 +6,7 @@ use App\Http\Controllers\Settings\HeroSlidesController;
 use App\Http\Controllers\Settings\ModulesController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
+use App\Http\Controllers\Settings\StorefrontDesignController;
 use App\Http\Controllers\Teams\TeamController;
 use App\Http\Controllers\Teams\TeamInvitationController;
 use App\Http\Controllers\Teams\TeamMemberController;
@@ -37,6 +38,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Hero slides managed by admin
     Route::get('settings/hero-slides', [HeroSlidesController::class, 'edit'])->name('settings.hero-slides.edit');
     Route::patch('settings/hero-slides', [HeroSlidesController::class, 'update'])->name('settings.hero-slides.update');
+
+    // Storefront design customiser
+    Route::get('settings/storefront-design', [StorefrontDesignController::class, 'edit'])->name('settings.storefront-design.edit');
+    Route::patch('settings/storefront-design', [StorefrontDesignController::class, 'update'])->name('settings.storefront-design.update');
 
     // Modules settings
     Route::get('settings/modules', [ModulesController::class, 'edit'])->name('modules.edit');
