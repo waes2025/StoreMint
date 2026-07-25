@@ -75,10 +75,16 @@ const props = defineProps<{
         bg_color: string;
         text_color: string;
     };
+    storefrontDesign?: Record<string, any>;
+    storefrontStyle?: Record<string, any>;
 }>();
 
 // Page properties
 const page = usePage();
+const sfDesign = computed(() => {
+    const fromPage = ((page.props as any).storefrontStyle || (page.props as any).storefrontDesign || {}) as Record<string, any>;
+    return { ...fromPage, ...(props.storefrontStyle || props.storefrontDesign || {}) };
+});
 const dashboardUrl = computed(() =>
     page.props.currentTeam
         ? route('dashboard', page.props.currentTeam.slug).url
@@ -338,7 +344,7 @@ onClickOutside(langDropdownRef, () => {
                     <span
                         class="text-xl font-bold tracking-tight text-neutral-900 dark:text-white"
                     >
-                        Store<span class="text-emerald-500">Mint</span>
+                        {{ sfDesign.store_name || 'StoreMint' }}
                     </span>
                 </div>
 
@@ -458,37 +464,50 @@ onClickOutside(langDropdownRef, () => {
                         class="relative z-10 max-w-2xl space-y-6 px-8 py-16 md:p-20"
                     >
                         <div
+                            v-if="sfDesign.show_hero_badge !== false"
                             class="inline-flex items-center gap-2 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-400"
                         >
                             <Sparkles class="h-3 w-3" />
-                            <span>REDESIGNED PLATFORM</span>
+                            <span>{{ sfDesign.hero_badge_text || 'REDESIGNED PLATFORM' }}</span>
                         </div>
                         <h1
                             class="text-4xl leading-tight font-extrabold tracking-tight md:text-5xl"
                         >
-                            State-of-the-Art <br />
-                            <span
-                                class="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent"
-                                >E-Commerce Redefined</span
-                            >
+                            {{ sfDesign.hero_heading || 'State-of-the-Art E-Commerce Redefined' }}
                         </h1>
                         <p
                             class="max-w-lg text-sm leading-relaxed text-neutral-300 md:text-base"
                         >
-                            Designed strictly according to the Design Grid &
-                            System Guidelines. Experience fluid 12-column
-                            layouts, unified spacing scales, and pixel-perfect
-                            contrast.
+                            {{ sfDesign.hero_subheading || 'Designed strictly according to modern Design Grid & System Guidelines.' }}
                         </p>
                         <div class="pt-4" v-if="isShopEnabled">
                             <button
                                 @click="scrollToCollection"
                                 class="inline-flex h-12 items-center gap-2 rounded-lg bg-emerald-500 px-6 text-sm font-semibold text-neutral-950 transition hover:bg-emerald-400"
                             >
-                                <span>Shop the Collection</span>
+                                <span>{{ sfDesign.hero_cta_text || 'Shop the Collection' }}</span>
                                 <ArrowRight class="h-4 w-4" />
                             </button>
                         </div>
+                    </div>
+                </section>
+
+                <!-- FEATURED BRANDS SECTION -->
+                <section
+                    v-if="sfDesign.show_brands !== false && sfDesign.brands_list && sfDesign.brands_list.length > 0"
+                    class="rounded-2xl border border-neutral-200 bg-white p-6 text-center shadow-xs dark:border-neutral-800 dark:bg-neutral-900 space-y-3"
+                >
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                        {{ sfDesign.brands_title || 'Trusted Brands & Partners' }}
+                    </h3>
+                    <div class="flex flex-wrap items-center justify-center gap-8 md:gap-12">
+                        <span
+                            v-for="brand in sfDesign.brands_list"
+                            :key="brand"
+                            class="text-sm font-extrabold tracking-tight text-neutral-600 dark:text-neutral-400 opacity-75 hover:opacity-100 transition"
+                        >
+                            {{ brand }}
+                        </span>
                     </div>
                 </section>
 

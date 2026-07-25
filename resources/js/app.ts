@@ -1,3 +1,18 @@
+// Polyfill Object.hasOwn for older browsers / webviews that do not support ES2022
+if (typeof Object.hasOwn !== 'function') {
+    Object.defineProperty(Object, 'hasOwn', {
+        value: function (object: any, property: PropertyKey): boolean {
+            if (object === null || object === undefined) {
+                throw new TypeError('Cannot convert undefined or null to object');
+            }
+            return Object.prototype.hasOwnProperty.call(object, property);
+        },
+        configurable: true,
+        writable: true,
+    });
+}
+
+import '../css/app.css';
 import { createApp, h } from 'vue';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { initializeTheme } from '@/composables/useAppearance';

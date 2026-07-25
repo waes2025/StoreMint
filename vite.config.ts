@@ -8,6 +8,13 @@ import { defineConfig } from 'vite';
 import { resolve } from 'path';
 
 export default defineConfig({
+    server: {
+        host: 'localhost',
+        cors: true,
+    },
+    build: {
+        target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14'],
+    },
     resolve: {
         alias: {
             '@modules': resolve(__dirname, 'Modules'),

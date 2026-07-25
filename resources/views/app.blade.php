@@ -20,13 +20,15 @@
             })();
         </script>
 
-        {{-- Inline style to set the HTML background color based on our theme in app.css --}}
+        {{-- Inline style to set the HTML background color with fallbacks for maximum browser compatibility --}}
         <style>
             html {
+                background-color: #ffffff;
                 background-color: oklch(1 0 0);
             }
 
             html.dark {
+                background-color: #09090b;
                 background-color: oklch(0.145 0 0);
             }
         </style>

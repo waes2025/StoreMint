@@ -14,7 +14,10 @@ class DatabaseSeeder extends Seeder
         $this->call([
             PermissionsTableSeeder::class,
             CurrenciesTableSeeder::class,
-            DemoDataSeeder::class,
         ]);
+
+        if (config('app.env') === 'demo') {
+            $this->call(DemoDataSeeder::class);
+        }
     }
 }

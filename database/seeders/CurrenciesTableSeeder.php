@@ -14,10 +14,6 @@ class CurrenciesTableSeeder extends Seeder
      */
     public function run()
     {
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-        DB::table('currencies')->truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-
         $data = [
             ['id' => '1', 'country' => 'Albania', 'currency' => 'Leke', 'code' => 'ALL', 'symbol' => 'Lek',
                 'thousand_separator' => ',', 'decimal_separator' => '.', 'created_at' => null, 'updated_at' => null],
@@ -288,22 +284,30 @@ class CurrenciesTableSeeder extends Seeder
             ['id' => '134', 'country' => 'Bangladesh', 'currency' => 'Taka', 'code' => 'BDT', 'symbol' => '৳', 'thousand_separator' => ',', 'decimal_separator' => '.', 'created_at' => null, 'updated_at' => null],
         ];
 
-        $cleanRow = function ($row) {
+        $extraData = [
+            ['id' => '135', 'country' => 'Algerie', 'currency' => 'Algerian dinar', 'code' => 'DZD', 'symbol' => 'د.ج', 'thousand_separator' => ' ', 'decimal_separator' => '.'],
+            ['id' => '136', 'country' => 'United Arab Emirates', 'currency' => 'United Arab Emirates dirham', 'code' => 'AED', 'symbol' => 'د.إ', 'thousand_separator' => ',', 'decimal_separator' => '.'],
+            ['id' => '137', 'country' => 'Uganda', 'currency' => 'Uganda shillings', 'code' => 'UGX', 'symbol' => 'USh', 'thousand_separator' => ',', 'decimal_separator' => '.'],
+            ['id' => '138', 'country' => 'Tanzania', 'currency' => 'Tanzanian shilling', 'code' => 'TZS', 'symbol' => 'TSh', 'thousand_separator' => ',', 'decimal_separator' => '.'],
+            ['id' => '139', 'country' => 'Angola', 'currency' => 'Kwanza', 'code' => 'AOA', 'symbol' => 'Kz', 'thousand_separator' => ',', 'decimal_separator' => '.'],
+            ['id' => '140', 'country' => 'Kuwait', 'currency' => 'Kuwaiti dinar', 'code' => 'KWD', 'symbol' => 'KD', 'thousand_separator' => ',', 'decimal_separator' => '.'],
+            ['id' => '141', 'country' => 'Bahrain', 'currency' => 'Bahraini dinar', 'code' => 'BHD', 'symbol' => 'BD', 'thousand_separator' => ',', 'decimal_separator' => '.'],
+        ];
+
+        foreach (array_merge($data, $extraData) as $row) {
             unset($row['created_at'], $row['updated_at']);
 
-            return $row;
-        };
+            $exists = DB::table('currencies')
+                ->when(isset($row['id']), function ($query) use ($row) {
+                    $query->where('id', $row['id']);
+                }, function ($query) use ($row) {
+                    $query->where('code', $row['code'])->where('country', $row['country']);
+                })
+                ->exists();
 
-        DB::table('currencies')->insert(array_map($cleanRow, $data));
-
-        DB::table('currencies')->insert(array_map($cleanRow, [
-            ['country' => 'Algerie', 'currency' => 'Algerian dinar', 'code' => 'DZD', 'symbol' => 'د.ج', 'thousand_separator' => ' ', 'decimal_separator' => '.'],
-            ['country' => 'United Arab Emirates', 'currency' => 'United Arab Emirates dirham', 'code' => 'AED', 'symbol' => 'د.إ', 'thousand_separator' => ',', 'decimal_separator' => '.'],
-            ['country' => 'Uganda', 'currency' => 'Uganda shillings', 'code' => 'UGX', 'symbol' => 'USh', 'thousand_separator' => ',', 'decimal_separator' => '.'],
-            ['country' => 'Tanzania', 'currency' => 'Tanzanian shilling', 'code' => 'TZS', 'symbol' => 'TSh', 'thousand_separator' => ',', 'decimal_separator' => '.'],
-            ['country' => 'Angola', 'currency' => 'Kwanza', 'code' => 'AOA', 'symbol' => 'Kz', 'thousand_separator' => ',', 'decimal_separator' => '.'],
-            ['country' => 'Kuwait', 'currency' => 'Kuwaiti dinar', 'code' => 'KWD', 'symbol' => 'KD', 'thousand_separator' => ',', 'decimal_separator' => '.'],
-            ['country' => 'Bahrain', 'currency' => 'Bahraini dinar', 'code' => 'BHD', 'symbol' => 'BD', 'thousand_separator' => ',', 'decimal_separator' => '.'],
-        ]));
+            if (! $exists) {
+                DB::table('currencies')->insert($row);
+            }
+        }
     }
 }

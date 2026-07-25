@@ -73,10 +73,16 @@ const props = defineProps<{
         bg_color: string;
         text_color: string;
     };
+    storefrontDesign?: Record<string, any>;
+    storefrontStyle?: Record<string, any>;
 }>();
 
 // Page properties
 const page = usePage();
+const sfDesign = computed(() => {
+    const fromPage = ((page.props as any).storefrontStyle || (page.props as any).storefrontDesign || {}) as Record<string, any>;
+    return { ...fromPage, ...(props.storefrontStyle || props.storefrontDesign || {}) };
+});
 const dashboardUrl = computed(() =>
     page.props.currentTeam
         ? route('dashboard', page.props.currentTeam.slug).url
@@ -343,7 +349,7 @@ onMounted(() => {
                     <span
                         class="text-xl font-bold tracking-tight text-neutral-900 dark:text-white"
                     >
-                        Store<span class="text-emerald-500">Mint</span>
+                        {{ sfDesign.store_name || 'StoreMint' }}
                     </span>
                 </div>
 

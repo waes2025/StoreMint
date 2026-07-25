@@ -1,13 +1,21 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { ref, computed } from 'vue';
+import { Link, usePage } from '@inertiajs/vue3';
 import { Leaf, Mail, Phone, MapPin, Send, Heart } from '@lucide/vue';
 
 type Props = {
     viewMode?: string;
+    storefrontDesign?: Record<string, any>;
+    storefrontStyle?: Record<string, any>;
 };
 
 const props = defineProps<Props>();
+const page = usePage();
+
+const sfDesign = computed(() => {
+    const fromPage = ((page.props as any).storefrontStyle || (page.props as any).storefrontDesign || {}) as Record<string, any>;
+    return { ...fromPage, ...(props.storefrontStyle || props.storefrontDesign || {}) };
+});
 const emit = defineEmits<{
     (
         e: 'update:viewMode',
@@ -75,16 +83,14 @@ const currentYear = new Date().getFullYear();
                     <span
                         class="text-xl font-bold tracking-tight text-neutral-900 dark:text-white"
                     >
-                        Store<span class="text-emerald-500">Mint</span>
+                        {{ sfDesign.store_name || 'StoreMint' }}
                     </span>
                 </div>
 
                 <p
                     class="max-w-sm text-xs leading-relaxed text-neutral-500 dark:text-neutral-400"
                 >
-                    StoreMint is a state-of-the-art e-commerce platform offering
-                    premium hand-crafted products designed to elevate your style
-                    and space. Pixel-perfect, fluid, and sustainable.
+                    {{ sfDesign.footer_tagline || 'StoreMint is a state-of-the-art e-commerce platform offering premium hand-crafted products designed to elevate your style and space.' }}
                 </p>
 
                 <!-- Social Links with animations -->
@@ -98,6 +104,8 @@ const currentYear = new Date().getFullYear();
                         title="Facebook"
                     >
                         <svg
+                            width="16"
+                            height="16"
                             class="h-4 w-4 fill-current"
                             viewBox="0 0 24 24"
                             xmlns="http://www.w3.org/2000/svg"
@@ -116,6 +124,8 @@ const currentYear = new Date().getFullYear();
                         title="Twitter"
                     >
                         <svg
+                            width="16"
+                            height="16"
                             class="h-4 w-4 fill-current"
                             viewBox="0 0 24 24"
                             xmlns="http://www.w3.org/2000/svg"
@@ -134,6 +144,8 @@ const currentYear = new Date().getFullYear();
                         title="Instagram"
                     >
                         <svg
+                            width="16"
+                            height="16"
                             class="h-4 w-4"
                             viewBox="0 0 24 24"
                             fill="none"
@@ -166,6 +178,8 @@ const currentYear = new Date().getFullYear();
                         title="LinkedIn"
                     >
                         <svg
+                            width="16"
+                            height="16"
                             class="h-4 w-4 fill-current"
                             viewBox="0 0 24 24"
                             xmlns="http://www.w3.org/2000/svg"
@@ -184,6 +198,8 @@ const currentYear = new Date().getFullYear();
                         title="GitHub"
                     >
                         <svg
+                            width="16"
+                            height="16"
                             class="h-4 w-4 fill-current"
                             viewBox="0 0 24 24"
                             xmlns="http://www.w3.org/2000/svg"
@@ -350,11 +366,11 @@ const currentYear = new Date().getFullYear();
                 >
                     <div class="flex items-center gap-2">
                         <Phone class="h-3.5 w-3.5 shrink-0 text-emerald-500" />
-                        <span class="font-medium">+1 (800) 555-0199</span>
+                        <span class="font-medium">{{ sfDesign.topbar_phone || '+1 (800) 555-0199' }}</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <Mail class="h-3.5 w-3.5 shrink-0 text-emerald-500" />
-                        <span class="font-medium">support@storemint.com</span>
+                        <span class="font-medium">{{ sfDesign.topbar_email || 'support@storemint.com' }}</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <MapPin class="h-3.5 w-3.5 shrink-0 text-emerald-500" />
@@ -375,8 +391,7 @@ const currentYear = new Date().getFullYear();
             >
                 <div class="flex flex-wrap items-center justify-center gap-1.5">
                     <span
-                        >&copy; {{ currentYear }} StoreMint Inc. All rights
-                        reserved.</span
+                        >{{ sfDesign.footer_copyright || `© ${currentYear} ${sfDesign.store_name || 'StoreMint'}. All rights reserved.` }}</span
                     >
                     <span
                         class="hidden text-neutral-300 sm:inline dark:text-neutral-800"

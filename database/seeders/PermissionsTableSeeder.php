@@ -40,11 +40,21 @@ class PermissionsTableSeeder extends Seeder
         $insert_data = [];
         $time_stamp = now()->toDateTimeString();
         foreach ($data as $d) {
-            $d['guard_name'] = 'web';
-            $d['created_at'] = $time_stamp;
-            $d['updated_at'] = $time_stamp;
-            $insert_data[] = $d;
+            $exists = DB::table('permissions')
+                ->where('name', $d['name'])
+                ->where('guard_name', 'web')
+                ->exists();
+
+            if (! $exists) {
+                $d['guard_name'] = 'web';
+                $d['created_at'] = $time_stamp;
+                $d['updated_at'] = $time_stamp;
+                $insert_data[] = $d;
+            }
         }
-        DB::table('permissions')->insert($insert_data);
+
+        if (! empty($insert_data)) {
+            DB::table('permissions')->insert($insert_data);
+        }
     }
 }

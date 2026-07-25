@@ -203,6 +203,7 @@ class StorefrontController extends Controller
             'announcement'     => $announcement,
             'heroSlides'       => $heroSlides,
             'storefrontDesign' => StorefrontDesignController::loadDesign($businessId),
+            'storefrontStyle'  => StorefrontDesignController::loadDesign($businessId),
         ];
     }
 
